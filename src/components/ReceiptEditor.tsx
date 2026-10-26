@@ -126,7 +126,7 @@ export const ReceiptEditor: React.FC<ReceiptEditorProps> = ({
               type="text"
               value={data.loket}
               onChange={(e) => handleFieldChange('loket', e.target.value)}
-              placeholder="Contoh: PPOB ATHAR DIGITAL"
+              placeholder="Contoh: LOKET PPOB ATHAR DIGITAL"
               className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm font-bold text-white focus:outline-none focus:border-cyan-500 transition"
             />
           </div>
@@ -139,7 +139,7 @@ export const ReceiptEditor: React.FC<ReceiptEditorProps> = ({
               type="text"
               value={data.headerTitle}
               onChange={(e) => handleFieldChange('headerTitle', e.target.value)}
-              placeholder="PEMBAYARAN TAGIHAN LISTRIK"
+              placeholder="STRUK PEMBAYARAN TAGIHAN LISTRIK"
               className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500 transition"
             />
           </div>
@@ -206,18 +206,6 @@ export const ReceiptEditor: React.FC<ReceiptEditorProps> = ({
             />
           </div>
 
-          <div>
-            <label className="block text-xs font-medium text-slate-300 mb-1">
-              No Meter (Opsional)
-            </label>
-            <input
-              type="text"
-              value={data.noMeter}
-              onChange={(e) => handleFieldChange('noMeter', e.target.value)}
-              placeholder="Contoh: 32019482019"
-              className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm font-mono text-white focus:outline-none focus:border-cyan-500 transition"
-            />
-          </div>
 
           <div>
             <label className="block text-xs font-medium text-slate-300 mb-1">

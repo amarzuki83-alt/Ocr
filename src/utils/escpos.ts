@@ -85,8 +85,8 @@ export function generatePlainTextReceipt(data: ReceiptData, paperSize: PaperSize
     return ' '.repeat(pad) + trimmed;
   };
 
-  // Header: Baris 1: Loket (PPOB ATHAR DIGITAL), Baris 2: Judul (PEMBAYARAN TAGIHAN LISTRIK)
-  if (data.loket) lines.push(center(data.loket));
+  // Header: Baris 1: Loket (LOKET PPOB ATHAR DIGITAL), Baris 2: Judul (STRUK PEMBAYARAN TAGIHAN LISTRIK)
+  lines.push(center(data.loket || 'LOKET PPOB ATHAR DIGITAL'));
   if (data.headerTitle) lines.push(center(data.headerTitle));
   if (data.subHeader) lines.push(center(data.subHeader));
   lines.push(doubleDivider);
@@ -98,7 +98,6 @@ export function generatePlainTextReceipt(data: ReceiptData, paperSize: PaperSize
 
   // Customer info
   if (data.idPel) lines.push(formatTwoColumns('NO PELANGGAN', data.idPel, width));
-  if (data.noMeter) lines.push(formatTwoColumns('NO METER', data.noMeter, width));
   if (data.nama) lines.push(formatTwoColumns('NAMA', data.nama, width));
   if (data.tarifDaya) lines.push(formatTwoColumns('TARIF/DAYA', data.tarifDaya, width));
   if (data.blnThn) lines.push(formatTwoColumns('BLN/THN', data.blnThn, width));
@@ -184,11 +183,11 @@ export function buildEscPosBuffer(data: ReceiptData, paperSize: PaperSize = '58m
   addBytes(ESC_POS.ALIGN_CENTER);
   addBytes(ESC_POS.BOLD_ON);
   addBytes(ESC_POS.DOUBLE_HEIGHT);
-  // Baris 1: PPOB ATHAR DIGITAL
-  addText((data.loket || 'PPOB ATHAR DIGITAL') + '\n');
+  // Baris 1: LOKET PPOB ATHAR DIGITAL
+  addText((data.loket || 'LOKET PPOB ATHAR DIGITAL') + '\n');
   addBytes(ESC_POS.NORMAL_SIZE);
 
-  // Baris 2: PEMBAYARAN TAGIHAN LISTRIK
+  // Baris 2: STRUK PEMBAYARAN TAGIHAN LISTRIK
   if (data.headerTitle) {
     addText(data.headerTitle + '\n');
   }
@@ -210,7 +209,6 @@ export function buildEscPosBuffer(data: ReceiptData, paperSize: PaperSize = '58m
     addText(formatTwoColumns('IDPEL/NO PEL', data.idPel, width) + '\n');
     addBytes(ESC_POS.BOLD_OFF);
   }
-  if (data.noMeter) addText(formatTwoColumns('NO METER', data.noMeter, width) + '\n');
   if (data.nama) addText(formatTwoColumns('NAMA', data.nama, width) + '\n');
   if (data.tarifDaya) addText(formatTwoColumns('TARIF/DAYA', data.tarifDaya, width) + '\n');
   if (data.blnThn) addText(formatTwoColumns('BLN/THN', data.blnThn, width) + '\n');

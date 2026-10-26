@@ -159,15 +159,15 @@ export const ThermalReceipt: React.FC<ThermalReceiptProps> = ({
           <div className="absolute inset-y-0 left-1/2 w-[1px] bg-black/[0.015] pointer-events-none" />
 
           {/* Header Section:
-              Baris 1: PPOB ATHAR DIGITAL (Paling Atas)
-              Baris 2: PEMBAYARAN TAGIHAN LISTRIK (Di bawahnya)
+              Baris 1: LOKET PPOB ATHAR DIGITAL (Paling Atas)
+              Baris 2: STRUK PEMBAYARAN TAGIHAN LISTRIK (Di bawahnya)
           */}
           <div className="text-center pb-2">
             <h2 className="text-base sm:text-lg font-extrabold tracking-tight text-slate-950 uppercase">
-              {data.loket || 'PPOB ATHAR DIGITAL'}
+              {data.loket || 'LOKET PPOB ATHAR DIGITAL'}
             </h2>
             <h3 className="text-xs sm:text-sm font-bold text-slate-800 uppercase mt-0.5 tracking-wide">
-              {data.headerTitle || 'PEMBAYARAN TAGIHAN LISTRIK'}
+              {data.headerTitle || 'STRUK PEMBAYARAN TAGIHAN LISTRIK'}
             </h3>
             {data.subHeader && (
               <p className="text-[11px] font-semibold text-slate-600 uppercase tracking-wide mt-0.5">
@@ -204,12 +204,7 @@ export const ThermalReceipt: React.FC<ThermalReceiptProps> = ({
                 <span className="text-slate-950 font-bold tracking-wider">{data.idPel}</span>
               </div>
             )}
-            {data.noMeter && (
-              <div className="flex justify-between">
-                <span className="text-slate-600">NO METER</span>
-                <span className="text-slate-900">{data.noMeter}</span>
-              </div>
-            )}
+
             {data.nama && (
               <div className="flex justify-between font-bold">
                 <span className="text-slate-700">NAMA</span>

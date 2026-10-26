@@ -40,17 +40,17 @@ export function generateReceiptCanvas(data: ReceiptData, paperSize: PaperSize = 
   // Clean straight paper edges (Efek sobekan kertas dihilangkan)
   let y = 46;
 
-  // Header Baris 1: PPOB ATHAR DIGITAL (Bold, Large, Centered)
+  // Header Baris 1: LOKET PPOB ATHAR DIGITAL (Bold, Large, Centered)
   ctx.fillStyle = '#09090b';
   ctx.textAlign = 'center';
   ctx.font = 'bold 32px "Courier Prime", "Courier New", monospace';
-  ctx.fillText((data.loket || 'PPOB ATHAR DIGITAL').toUpperCase(), width / 2, y);
+  ctx.fillText((data.loket || 'LOKET PPOB ATHAR DIGITAL').toUpperCase(), width / 2, y);
   y += 36;
 
-  // Header Baris 2: PEMBAYARAN TAGIHAN LISTRIK (Semi-bold, Centered)
+  // Header Baris 2: STRUK PEMBAYARAN TAGIHAN LISTRIK (Semi-bold, Centered)
   ctx.font = 'bold 22px "Courier Prime", "Courier New", monospace';
   ctx.fillStyle = '#27272a';
-  ctx.fillText((data.headerTitle || 'PEMBAYARAN TAGIHAN LISTRIK').toUpperCase(), width / 2, y);
+  ctx.fillText((data.headerTitle || 'STRUK PEMBAYARAN TAGIHAN LISTRIK').toUpperCase(), width / 2, y);
   y += 26;
 
   // Optional subheader
@@ -90,10 +90,6 @@ export function generateReceiptCanvas(data: ReceiptData, paperSize: PaperSize = 
     drawTwoColText(ctx, 'IDPEL / NO PEL', data.idPel, paddingX, width - paddingX, y);
     ctx.font = '19px "Courier Prime", "Courier New", monospace';
     y += 28;
-  }
-  if (data.noMeter) {
-    drawTwoColText(ctx, 'NO METER', data.noMeter, paddingX, width - paddingX, y);
-    y += 26;
   }
   if (data.nama) {
     ctx.font = 'bold 20px "Courier Prime", "Courier New", monospace';
@@ -277,7 +273,7 @@ export async function shareReceiptToWhatsApp(
     // WhatsApp summary caption
     const captionText = [
       `*STRUK BUKTI PEMBAYARAN LISTRIK PLN*`,
-      `*${data.loket || 'PPOB ATHAR DIGITAL'}*`,
+      `*${data.loket || 'LOKET PPOB ATHAR DIGITAL'}*`,
       `---------------------------------`,
       `*IDPEL* : ${data.idPel || '-'}`,
       `*NAMA* : ${data.nama || '-'}`,

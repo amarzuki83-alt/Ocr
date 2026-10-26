@@ -276,8 +276,8 @@ export function parseReceiptFromOcr(ocrText: string): Partial<ReceiptData> {
   const lines = text.split('\n').map((l) => l.trim()).filter(Boolean);
 
   const parsed: Partial<ReceiptData> = {
-    loket: 'PPOB ATHAR DIGITAL',
-    headerTitle: 'PEMBAYARAN TAGIHAN LISTRIK',
+    loket: 'LOKET PPOB ATHAR DIGITAL',
+    headerTitle: 'STRUK PEMBAYARAN TAGIHAN LISTRIK',
     subHeader: '',
     footerDisclaimer: 'PLN menyatakan struk ini sbg bukti pembayaran yg sah. Info hub 123',
     footerGreeting: 'Terima Kasih Atas Pembayaran Anda',
@@ -291,7 +291,7 @@ export function parseReceiptFromOcr(ocrText: string): Partial<ReceiptData> {
   } else if (/BPJS/i.test(text)) {
     parsed.headerTitle = 'STRUK PEMBAYARAN IURAN BPJS';
   } else {
-    parsed.headerTitle = 'PEMBAYARAN TAGIHAN LISTRIK';
+    parsed.headerTitle = 'STRUK PEMBAYARAN TAGIHAN LISTRIK';
   }
 
   // 1. Loket / Agen
@@ -310,13 +310,7 @@ export function parseReceiptFromOcr(ocrText: string): Partial<ReceiptData> {
     parsed.idPel = cleanDigitSequence(idPelMatch[1]);
   }
 
-  // 3. No Meter (11-12 digits)
-  const noMeterMatch = text.match(/(?:NO\s*METER|NOMOR\s*METER|NO\.?\s*MTR|MTR)\s*[:.]?\s*([0-9OIlSBZ\s-]{8,16})/i);
-  if (noMeterMatch && noMeterMatch[1]) {
-    parsed.noMeter = cleanDigitSequence(noMeterMatch[1]);
-  }
-
-  // 4. Nama Pelanggan (guaranteed Afandi, zero typos)
+  // 3. Nama Pelanggan (guaranteed Afandi, zero typos)
   const namaMatch = text.match(/(?:NAMA|NAME|NAMA\s*PELANGGAN)\s*[:.]?\s*([A-Za-z0-9\s\.\,\'\-]+)/i);
   if (namaMatch && namaMatch[1]) {
     const rawNama = namaMatch[1].trim().split('\n')[0];
@@ -422,11 +416,11 @@ export function parseReceiptFromOcr(ocrText: string): Partial<ReceiptData> {
  */
 export const SAMPLE_PRESETS: Record<string, ReceiptData> = {
   plnPostpaid: {
-    loket: 'PPOB ATHAR DIGITAL',
-    headerTitle: 'PEMBAYARAN TAGIHAN LISTRIK',
+    loket: 'LOKET PPOB ATHAR DIGITAL',
+    headerTitle: 'STRUK PEMBAYARAN TAGIHAN LISTRIK',
     subHeader: '',
     idPel: '537210984521',
-    noMeter: '32019482019',
+    noMeter: '',
     nama: 'AFANDI',
     tarifDaya: 'R1 / 900 VA',
     standMeter: '014280 - 014520 (240 kWh)',
@@ -441,11 +435,11 @@ export const SAMPLE_PRESETS: Record<string, ReceiptData> = {
     extraFields: [],
   },
   plnPrepaid: {
-    loket: 'PPOB ATHAR DIGITAL',
+    loket: 'LOKET PPOB ATHAR DIGITAL',
     headerTitle: 'STRUK PEMBELIAN TOKEN LISTRIK',
     subHeader: '',
     idPel: '14238910452',
-    noMeter: '32098716253',
+    noMeter: '',
     nama: 'HENDRA WIJAYA',
     tarifDaya: 'R1M / 1300 VA',
     standMeter: 'ANGSURAN: RP 0',
@@ -464,11 +458,11 @@ export const SAMPLE_PRESETS: Record<string, ReceiptData> = {
     ],
   },
   pdam: {
-    loket: 'PPOB ATHAR DIGITAL',
+    loket: 'LOKET PPOB ATHAR DIGITAL',
     headerTitle: 'STRUK PEMBAYARAN AIR PDAM',
     subHeader: '',
     idPel: '0812948192',
-    noMeter: 'MTR-88419',
+    noMeter: '',
     nama: 'HJ. SITI FATIMAH',
     tarifDaya: 'R2 / RUMAH TANGGA B',
     standMeter: '00321 - 00346 (25 m³)',

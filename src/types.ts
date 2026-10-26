@@ -9,7 +9,7 @@ export interface ReceiptData {
   subHeader: string;
   loket: string;
   idPel: string;
-  noMeter: string;
+  noMeter?: string;
   nama: string;
   tarifDaya: string;
   standMeter: string;

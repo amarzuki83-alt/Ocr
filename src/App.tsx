@@ -65,9 +65,9 @@ export default function App() {
     setReceiptData((prev) => ({
       ...prev,
       ...parsed,
-      // Default to PPOB ATHAR DIGITAL unless user uploaded a specific custom merchant
-      loket: parsed.loket || prev.loket || 'PPOB ATHAR DIGITAL',
-      headerTitle: parsed.headerTitle || 'PEMBAYARAN TAGIHAN LISTRIK',
+      // Default to LOKET PPOB ATHAR DIGITAL unless user uploaded a specific custom merchant
+      loket: parsed.loket || prev.loket || 'LOKET PPOB ATHAR DIGITAL',
+      headerTitle: parsed.headerTitle || 'STRUK PEMBAYARAN TAGIHAN LISTRIK',
       footerDisclaimer: parsed.footerDisclaimer || 'PLN menyatakan struk ini sbg bukti pembayaran yg sah. Info hub 123',
     }));
     setActiveTab('editor');
@@ -83,8 +83,8 @@ export default function App() {
   // Reset Form
   const handleResetForm = () => {
     setReceiptData({
-      loket: 'PPOB ATHAR DIGITAL',
-      headerTitle: 'PEMBAYARAN TAGIHAN LISTRIK',
+      loket: 'LOKET PPOB ATHAR DIGITAL',
+      headerTitle: 'STRUK PEMBAYARAN TAGIHAN LISTRIK',
       subHeader: '',
       idPel: '',
       noMeter: '',

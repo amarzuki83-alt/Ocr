@@ -28,16 +28,16 @@ export function generateReceiptCanvas(data: ReceiptData, paperSize: PaperSize = 
   canvas.width = width;
   canvas.height = estimatedHeight;
 
-  // Background Paper: Pure clean white (#ffffff)
-  ctx.fillStyle = '#ffffff';
+  // Background Paper
+  ctx.fillStyle = '#fafaf7';
   ctx.fillRect(0, 0, width, estimatedHeight);
 
-  // Subtle clean crisp border
-  ctx.strokeStyle = '#e4e4e7';
+  // Subtle paper borders
+  ctx.strokeStyle = '#e2e8f0';
   ctx.lineWidth = 2;
-  ctx.strokeRect(1, 1, width - 2, estimatedHeight - 2);
+  ctx.strokeRect(4, 4, width - 8, estimatedHeight - 8);
 
-  // Motif sobekan/irisan kertas atas & bawah telah dihapus (Rata bersih)
+  // Clean straight paper edges (Efek sobekan kertas dihilangkan)
   let y = 46;
 
   // Header Baris 1: PPOB ATHAR DIGITAL (Bold, Large, Centered)

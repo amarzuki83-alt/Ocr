@@ -11,9 +11,15 @@
   font-family: 'Courier Prime', 'VT323', 'Courier New', Courier, monospace;
 }
 
-/* Pure clean white thermal paper */
+/* Efek sobekan kertas dihilangkan untuk tampilan rapi */
+
+/* Subtle thermal paper texture */
 .bg-thermal-paper {
-  background-color: #ffffff;
+  background-color: #fafaf7;
+  background-image: 
+    radial-gradient(#e5e7eb 0.75px, transparent 0.75px),
+    linear-gradient(to right, rgba(0, 0, 0, 0.02) 1px, transparent 1px);
+  background-size: 16px 16px, 4px 100%;
 }
 
 /* Print Stylesheet for thermal receipt roll */

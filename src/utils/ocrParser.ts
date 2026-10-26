@@ -42,22 +42,25 @@ export async function preprocessImageForOcr(imageFile: File | Blob): Promise<str
         const imgData = ctx.getImageData(0, 0, width, height);
         const data = imgData.data;
 
-        // Convert to grayscale and apply smooth S-curve contrast stretch
-        // to avoid artificial pixel spurs that cause Tesseract to mistake 'i' for 't'
+        // Convert to grayscale and apply contrast curve
         for (let i = 0; i < data.length; i += 4) {
           const r = data[i];
           const g = data[i + 1];
           const b = data[i + 2];
-          // Luminance
-          const gray = 0.299 * r + 0.587 * g + 0.114 * b;
-          const norm = gray / 255;
-          // Smooth sigmoid contrast curve centered at 0.55
-          const enhanced = 1 / (1 + Math.exp(-8 * (norm - 0.55)));
-          const finalVal = Math.round(enhanced * 255);
+          // Luminance weights
+          let gray = 0.299 * r + 0.587 * g + 0.114 * b;
 
-          data[i] = finalVal;
-          data[i + 1] = finalVal;
-          data[i + 2] = finalVal;
+          // Simple dynamic thresholding / contrast enhancement
+          // Darken text, whiten background
+          if (gray < 130) {
+            gray = Math.max(0, gray * 0.7);
+          } else {
+            gray = Math.min(255, gray * 1.25);
+          }
+
+          data[i] = gray;
+          data[i + 1] = gray;
+          data[i + 2] = gray;
         }
 
         ctx.putImageData(imgData, 0, 0);
@@ -86,85 +89,10 @@ export function parseCleanNumber(text: string): number {
 }
 
 /**
- * Post-processes OCR names to correct frequent character confusion on thermal receipts:
- * - Fixes 'afandt' / 'afand1' / 'afand|' -> 'AFANDI' (resolves user issue where 'i' was read as 't')
- * - Fixes Indonesian name endings where terminal 't' is misrecognized for 'i' (e.g. efendt -> efendi, kusnadt -> kusnadi)
- * - Normalizes OCR numbers inside names (0 -> O, 1 -> I, 5 -> S)
- */
-export function cleanIndonesianName(raw: string): string {
-  if (!raw) return '';
-  let name = raw.trim();
-
-  // Remove common honorific prefixes
-  name = name.replace(/^(BAPAK|IBU|SDR|SDRI|TN|NY|MR|MRS)\.?\s+/i, '');
-
-  const words = name.split(/\s+/).map((word) => {
-    let w = word.trim();
-    if (!w) return '';
-
-    // Fix OCR numbers and punctuation inside names
-    w = w.replace(/0/g, 'O')
-         .replace(/1/g, 'I')
-         .replace(/[|!]/g, 'I')
-         .replace(/5/g, 'S');
-
-    const isUpper = w === w.toUpperCase();
-    const isCapitalized = /^[A-Z][a-z]+$/.test(w);
-
-    // Specific direct fix for Afandi / Efendi variants (fixes afandt -> afandi)
-    if (/^afand[tl1|!]$/i.test(w)) {
-      return isUpper ? 'AFANDI' : isCapitalized ? 'Afandi' : 'afandi';
-    }
-    if (/^efend[tl1|!]$/i.test(w)) {
-      return isUpper ? 'EFENDI' : isCapitalized ? 'Efendi' : 'efendi';
-    }
-    if (/^alfand[tl1|!]$/i.test(w)) {
-      return isUpper ? 'ALFANDI' : isCapitalized ? 'Alfandi' : 'alfandi';
-    }
-    if (/^arfand[tl1|!]$/i.test(w)) {
-      return isUpper ? 'ARFANDI' : isCapitalized ? 'Arfandi' : 'arfandi';
-    }
-
-    // Fix common Indonesian name endings where terminal 't' is misrecognized for 'i':
-    // 1) Words ending in -nd[t] -> -ndi (e.g. Suwandt -> Suwandi, Rusmandt -> Rusmandi, Kusnadt -> Kusnadi)
-    if (/([a-zA-Z]+)nd[tl1|!]$/i.test(w)) {
-      const base = w.slice(0, -1);
-      return base + (isUpper ? 'I' : 'i');
-    }
-
-    // 2) Words ending in vowel + d + [t] -> -di (e.g. Budt -> Budi, Hadt -> Hadi, Dedt -> Dedi, Yudt -> Yudi)
-    if (/([a-zA-Z]+[aeiou])d[tl1|!]$/i.test(w)) {
-      const base = w.slice(0, -1);
-      return base + (isUpper ? 'I' : 'i');
-    }
-
-    // 3) Words ending in -at[t] / -it[t] -> -ati / -iti (e.g. Watt -> Wati, Sitt -> Siti, Yantt -> Yanti)
-    if (/([a-zA-Z]+[aeiou]n?t)[tl1|!]$/i.test(w)) {
-      const base = w.slice(0, -1);
-      return base + (isUpper ? 'I' : 'i');
-    }
-
-    return w;
-  });
-
-  return words.filter(Boolean).join(' ');
-}
-
-/**
  * Specialized Indonesian PLN & PPOB receipt regex parser
  */
 export function parseReceiptFromOcr(ocrText: string): Partial<ReceiptData> {
-  let text = ocrText || '';
-
-  // Pre-correct typical thermal OCR misreads before regex matching:
-  // Direct fix for afandt -> afandi
-  text = text.replace(/\bAFAND[Tl1|!]\b/gi, (match) => (match === match.toUpperCase() ? 'AFANDI' : 'Afandi'));
-  text = text.replace(/\bEFEND[Tl1|!]\b/gi, (match) => (match === match.toUpperCase() ? 'EFENDI' : 'Efendi'));
-  text = text.replace(/(\b[a-zA-Z]+)ND[Tl1!](\b)/g, '$1NDI$2');
-  text = text.replace(/(\b[a-zA-Z]+)nd[tl1!](\b)/g, '$1ndi$2');
-  text = text.replace(/(\b[a-zA-Z]+[aeiou])D[Tl1!](\b)/g, '$1DI$2');
-  text = text.replace(/(\b[a-zA-Z]+[aeiou])d[tl1!](\b)/g, '$1di$2');
-
+  const text = ocrText || '';
   const lines = text.split('\n').map((l) => l.trim()).filter(Boolean);
 
   const parsed: Partial<ReceiptData> = {
@@ -207,10 +135,10 @@ export function parseReceiptFromOcr(ocrText: string): Partial<ReceiptData> {
   }
 
   // 4. Nama Pelanggan
-  const namaMatch = text.match(/(?:NAMA|NAME|NAMA\s*PELANGGAN)\s*[:.]?\s*([A-Za-z0-9\s\.\,\'\-]+)/i);
+  const namaMatch = text.match(/(?:NAMA|NAME|NAMA\s*PELANGGAN)\s*[:.]?\s*([A-Za-z\s\.\,\'\-]+)/i);
   if (namaMatch && namaMatch[1]) {
     const rawNama = namaMatch[1].trim().split('\n')[0];
-    parsed.nama = cleanIndonesianName(rawNama).substring(0, 28).trim();
+    parsed.nama = rawNama.replace(/^(BAPAK|IBU|SDR|SDRI)\s+/i, '').substring(0, 28).trim();
   }
 
   // 5. Tarif / Daya

@@ -28,41 +28,17 @@ export function generateReceiptCanvas(data: ReceiptData, paperSize: PaperSize = 
   canvas.width = width;
   canvas.height = estimatedHeight;
 
-  // Background Paper
-  ctx.fillStyle = '#fafaf7';
+  // Background Paper: Pure clean white (#ffffff)
+  ctx.fillStyle = '#ffffff';
   ctx.fillRect(0, 0, width, estimatedHeight);
 
-  // Subtle paper borders
-  ctx.strokeStyle = '#e2e8f0';
+  // Subtle clean crisp border
+  ctx.strokeStyle = '#e4e4e7';
   ctx.lineWidth = 2;
-  ctx.strokeRect(4, 4, width - 8, estimatedHeight - 8);
+  ctx.strokeRect(1, 1, width - 2, estimatedHeight - 2);
 
-  // Top Serrated Jagged Tear Effect
-  ctx.fillStyle = '#0f172a'; // match outer dark bg or transparent
-  const toothWidth = 16;
-  const toothHeight = 10;
-  ctx.beginPath();
-  ctx.moveTo(0, 0);
-  for (let x = 0; x < width; x += toothWidth * 2) {
-    ctx.lineTo(x + toothWidth, toothHeight);
-    ctx.lineTo(x + toothWidth * 2, 0);
-  }
-  ctx.lineTo(width, 0);
-  ctx.closePath();
-  ctx.fill();
-
-  // Bottom Serrated Jagged Tear Effect
-  ctx.beginPath();
-  ctx.moveTo(0, estimatedHeight);
-  for (let x = 0; x < width; x += toothWidth * 2) {
-    ctx.lineTo(x + toothWidth, estimatedHeight - toothHeight);
-    ctx.lineTo(x + toothWidth * 2, estimatedHeight);
-  }
-  ctx.lineTo(width, estimatedHeight);
-  ctx.closePath();
-  ctx.fill();
-
-  let y = 50;
+  // Motif sobekan/irisan kertas atas & bawah telah dihapus (Rata bersih)
+  let y = 46;
 
   // Header Baris 1: PPOB ATHAR DIGITAL (Bold, Large, Centered)
   ctx.fillStyle = '#09090b';

@@ -150,9 +150,9 @@ export const ThermalReceipt: React.FC<ThermalReceiptProps> = ({
         <div
           id="printable-receipt"
           ref={receiptRef}
-          className={`bg-thermal-paper text-slate-900 shadow-2xl relative transition-all duration-300 font-receipt select-text ${
+          className={`bg-white text-slate-900 shadow-2xl relative transition-all duration-300 font-receipt select-text rounded-2xl border border-slate-300/80 ${
             is58 ? 'w-[320px] max-w-[320px] text-xs' : 'receipt-80mm w-[430px] max-w-[430px] text-sm'
-          } p-4 sm:p-5 pt-7 pb-8 receipt-tear-top receipt-tear-bottom border-x border-slate-300/40`}
+          } p-5 sm:p-6 pt-6 pb-6`}
           style={{ letterSpacing: '-0.02em', lineHeight: '1.4' }}
         >
           {/* Subtle paper roll center fold indicator */}

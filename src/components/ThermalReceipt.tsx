@@ -1,7 +1,18 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { ReceiptData, PaperSize } from '../types';
 import { formatRupiah } from '../utils/escpos';
-import { Copy, Download, Printer, Check, Sparkles } from 'lucide-react';
+import { generateReceiptCanvas, shareReceiptToWhatsApp } from '../utils/receiptCanvas';
+import { 
+  Copy, 
+  Download, 
+  Printer, 
+  Check, 
+  Sparkles, 
+  Share2, 
+  Send, 
+  X,
+  Phone
+} from 'lucide-react';
 
 interface ThermalReceiptProps {
   data: ReceiptData;
@@ -10,6 +21,7 @@ interface ThermalReceiptProps {
   onBrowserPrint: () => void;
   onCopyText: () => void;
   isCopied: boolean;
+  onToast?: (msg: string) => void;
 }
 
 export const ThermalReceipt: React.FC<ThermalReceiptProps> = ({
@@ -19,50 +31,42 @@ export const ThermalReceipt: React.FC<ThermalReceiptProps> = ({
   onBrowserPrint,
   onCopyText,
   isCopied,
+  onToast,
 }) => {
   const receiptRef = useRef<HTMLDivElement>(null);
+  const [isSharingWa, setIsSharingWa] = useState(false);
+  const [showWaModal, setShowWaModal] = useState(false);
+  const [customerPhone, setCustomerPhone] = useState('');
 
-  // Download thermal receipt as PNG using Canvas
+  // Download thermal receipt as high-res PNG
   const handleDownloadImage = () => {
-    if (!receiptRef.current) return;
-    const element = receiptRef.current;
-
-    // Use simple SVG/canvas drawing or html canvas to export
-    const canvas = document.createElement('canvas');
-    const scale = 2; // high res
-    const rect = element.getBoundingClientRect();
-    canvas.width = rect.width * scale;
-    canvas.height = rect.height * scale;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    ctx.scale(scale, scale);
-    ctx.fillStyle = '#fafaf7';
-    ctx.fillRect(0, 0, rect.width, rect.height);
-
-    // We can trigger browser print or save directly, or draw text representation
-    // Let's create an offscreen rasterizer using SVG foreignObject
-    const svgData = `
-      <svg xmlns="http://www.w3.org/2000/svg" width="${rect.width}" height="${rect.height}">
-        <foreignObject width="100%" height="100%">
-          <div xmlns="http://www.w3.org/1999/xhtml" style="font-family: monospace; background: #fafaf7; padding: 16px; color: #111;">
-            ${element.innerHTML}
-          </div>
-        </foreignObject>
-      </svg>
-    `;
-    const img = new Image();
-    const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
-    const url = URL.createObjectURL(svgBlob);
-    img.onload = () => {
-      ctx.drawImage(img, 0, 0);
-      URL.revokeObjectURL(url);
+    try {
+      const canvas = generateReceiptCanvas(data, paperSize);
       const link = document.createElement('a');
       link.download = `struk-${data.idPel || 'pln'}-${Date.now()}.png`;
       link.href = canvas.toDataURL('image/png');
       link.click();
-    };
-    img.src = url;
+      if (onToast) onToast('Gambar struk PNG berhasil diunduh!');
+    } catch (e: any) {
+      console.error('Error downloading receipt PNG:', e);
+    }
+  };
+
+  // Direct Share to WhatsApp with PNG format
+  const handleShareToWhatsApp = async (phone?: string) => {
+    setIsSharingWa(true);
+    try {
+      const res = await shareReceiptToWhatsApp(data, paperSize, phone);
+      if (onToast && res.message) {
+        onToast(res.message);
+      }
+      setShowWaModal(false);
+    } catch (err: any) {
+      console.error('Failed to share to WA:', err);
+      if (onToast) onToast('Gagal membagikan ke WhatsApp: ' + (err.message || 'Error'));
+    } finally {
+      setIsSharingWa(false);
+    }
   };
 
   const is58 = paperSize === '58mm';
@@ -70,7 +74,7 @@ export const ThermalReceipt: React.FC<ThermalReceiptProps> = ({
   return (
     <div className="flex flex-col items-center w-full">
       {/* Paper Size & Action Controls */}
-      <div className="w-full flex items-center justify-between gap-2 mb-3 bg-slate-800/80 p-2.5 rounded-xl border border-slate-700/60 shadow-sm backdrop-blur">
+      <div className="w-full flex items-center justify-between gap-2 mb-3 bg-slate-800/80 p-2.5 rounded-xl border border-slate-700/60 shadow-sm backdrop-blur flex-wrap">
         <div className="flex items-center gap-1.5">
           <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider pl-1">Lebar Kertas:</span>
           <div className="flex bg-slate-900/90 rounded-lg p-0.5 border border-slate-700">
@@ -95,7 +99,20 @@ export const ThermalReceipt: React.FC<ThermalReceiptProps> = ({
           </div>
         </div>
 
-        <div className="flex items-center gap-1.5">
+        {/* Action Buttons */}
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {/* WhatsApp Share PNG Button */}
+          <button
+            type="button"
+            onClick={() => setShowWaModal(true)}
+            disabled={isSharingWa}
+            title="Bagikan Struk PNG ke WhatsApp"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm transition active:scale-95 disabled:opacity-50"
+          >
+            <Share2 className="w-3.5 h-3.5" />
+            <span>Kirim WA (PNG)</span>
+          </button>
+
           <button
             type="button"
             onClick={onCopyText}
@@ -109,11 +126,11 @@ export const ThermalReceipt: React.FC<ThermalReceiptProps> = ({
           <button
             type="button"
             onClick={handleDownloadImage}
-            title="Unduh Gambar Struk"
+            title="Unduh Gambar Struk PNG"
             className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-lg bg-slate-700/80 hover:bg-slate-700 text-slate-200 transition active:scale-95"
           >
             <Download className="w-3.5 h-3.5 text-emerald-400" />
-            <span className="hidden sm:inline">PNG</span>
+            <span className="hidden sm:inline">Unduh PNG</span>
           </button>
 
           <button
@@ -123,7 +140,7 @@ export const ThermalReceipt: React.FC<ThermalReceiptProps> = ({
             className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-lg bg-slate-700/80 hover:bg-slate-700 text-slate-200 transition active:scale-95"
           >
             <Printer className="w-3.5 h-3.5 text-blue-400" />
-            <span className="hidden sm:inline">PDF / Browser</span>
+            <span className="hidden sm:inline">PDF</span>
           </button>
         </div>
       </div>
@@ -141,19 +158,20 @@ export const ThermalReceipt: React.FC<ThermalReceiptProps> = ({
           {/* Subtle paper roll center fold indicator */}
           <div className="absolute inset-y-0 left-1/2 w-[1px] bg-black/[0.015] pointer-events-none" />
 
-          {/* Header Section */}
+          {/* Header Section:
+              Baris 1: PPOB ATHAR DIGITAL (Paling Atas)
+              Baris 2: PEMBAYARAN TAGIHAN LISTRIK (Di bawahnya)
+          */}
           <div className="text-center pb-2">
-            <h2 className="text-base sm:text-lg font-bold tracking-tight text-slate-950 uppercase">
-              {data.headerTitle || 'PEMBAYARAN TAGIHAN LISTRIK'}
+            <h2 className="text-base sm:text-lg font-extrabold tracking-tight text-slate-950 uppercase">
+              {data.loket || 'PPOB ATHAR DIGITAL'}
             </h2>
+            <h3 className="text-xs sm:text-sm font-bold text-slate-800 uppercase mt-0.5 tracking-wide">
+              {data.headerTitle || 'PEMBAYARAN TAGIHAN LISTRIK'}
+            </h3>
             {data.subHeader && (
-              <p className="text-[11px] font-semibold text-slate-700 uppercase tracking-wide">
+              <p className="text-[11px] font-semibold text-slate-600 uppercase tracking-wide mt-0.5">
                 {data.subHeader}
-              </p>
-            )}
-            {data.loket && (
-              <p className="text-[11px] text-slate-800 font-bold uppercase mt-0.5">
-                {data.loket}
               </p>
             )}
           </div>
@@ -306,6 +324,86 @@ export const ThermalReceipt: React.FC<ThermalReceiptProps> = ({
           </div>
         </div>
       </div>
+
+      {/* WhatsApp Sharing Dialog Modal */}
+      {showWaModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-in fade-in duration-150">
+          <div className="bg-slate-900 border border-slate-700 w-full max-w-sm rounded-2xl shadow-2xl p-5 text-white space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
+                  <Share2 className="w-4 h-4" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-sm">Bagikan Struk ke WhatsApp</h4>
+                  <p className="text-[11px] text-slate-400">Format Gambar PNG Resolusi Tinggi</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowWaModal(false)}
+                className="p-1 text-slate-400 hover:text-white rounded-lg"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  Nomor WhatsApp Pelanggan (Opsional):
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3 top-2.5 text-xs text-slate-400 flex items-center gap-1">
+                    <Phone className="w-3.5 h-3.5" />
+                  </span>
+                  <input
+                    type="tel"
+                    value={customerPhone}
+                    onChange={(e) => setCustomerPhone(e.target.value)}
+                    placeholder="Contoh: 081234567890"
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl pl-9 pr-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+                <p className="text-[10px] text-slate-400 mt-1">
+                  Kosongkan jika ingin memilih kontak langsung di aplikasi WhatsApp.
+                </p>
+              </div>
+
+              <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 text-[11px] text-slate-300 space-y-1">
+                <span className="font-semibold text-emerald-400 block">Isi Pesan Struk:</span>
+                <p>• {data.loket || 'PPOB ATHAR DIGITAL'}</p>
+                <p>• IDPEL: {data.idPel || '-'}</p>
+                <p>• Nama: {data.nama || '-'}</p>
+                <p>• Total Bayar: {formatRupiah(data.totalBayar)}</p>
+                <p className="text-slate-400 italic mt-1">
+                  File gambar PNG struk thermal otomatis disertakan.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => setShowWaModal(false)}
+                className="flex-1 py-2 rounded-xl text-xs font-semibold bg-slate-800 text-slate-300 hover:bg-slate-700 transition"
+              >
+                Batal
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleShareToWhatsApp(customerPhone)}
+                disabled={isSharingWa}
+                className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg transition active:scale-95 disabled:opacity-50"
+              >
+                <Send className="w-3.5 h-3.5" />
+                <span>{isSharingWa ? 'Memproses...' : 'Kirim Sekarang'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

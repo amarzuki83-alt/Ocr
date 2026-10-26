@@ -119,8 +119,21 @@ export const ReceiptEditor: React.FC<ReceiptEditorProps> = ({
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
-            <label className="block text-xs font-medium text-slate-300 mb-1">
-              Judul Struk (Header)
+            <label className="block text-xs font-semibold text-cyan-300 mb-1">
+              Nama Loket / Agen (Header Baris 1 - Paling Atas)
+            </label>
+            <input
+              type="text"
+              value={data.loket}
+              onChange={(e) => handleFieldChange('loket', e.target.value)}
+              placeholder="Contoh: PPOB ATHAR DIGITAL"
+              className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm font-bold text-white focus:outline-none focus:border-cyan-500 transition"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-300 mb-1">
+              Judul Struk (Header Baris 2)
             </label>
             <input
               type="text"
@@ -130,31 +143,18 @@ export const ReceiptEditor: React.FC<ReceiptEditorProps> = ({
               className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500 transition"
             />
           </div>
-
-          <div>
-            <label className="block text-xs font-medium text-slate-300 mb-1">
-              Nama Loket / Agen / Kasir
-            </label>
-            <input
-              type="text"
-              value={data.loket}
-              onChange={(e) => handleFieldChange('loket', e.target.value)}
-              placeholder="Contoh: LOKET KASIR AMANAH JAYA"
-              className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500 transition"
-            />
-          </div>
         </div>
 
         <div>
-          <label className="block text-xs font-medium text-slate-300 mb-1">
-            Sub Header / Cabang PLN (Opsional)
+          <label className="block text-xs font-medium text-slate-400 mb-1">
+            Catatan Tambahan Header (Opsional - Kosongkan jika tidak perlu)
           </label>
           <input
             type="text"
             value={data.subHeader}
             onChange={(e) => handleFieldChange('subHeader', e.target.value)}
-            placeholder="Contoh: PLN DISTRIBUSI JAWA BARAT"
-            className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500 transition"
+            placeholder="Kosong (atau isi bila ada unit/rayon)"
+            className="w-full bg-slate-900/60 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-300 focus:outline-none focus:border-cyan-500 transition"
           />
         </div>
       </div>

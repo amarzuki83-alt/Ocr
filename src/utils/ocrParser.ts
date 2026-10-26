@@ -96,7 +96,9 @@ export function parseReceiptFromOcr(ocrText: string): Partial<ReceiptData> {
   const lines = text.split('\n').map((l) => l.trim()).filter(Boolean);
 
   const parsed: Partial<ReceiptData> = {
+    loket: 'PPOB ATHAR DIGITAL',
     headerTitle: 'PEMBAYARAN TAGIHAN LISTRIK',
+    subHeader: '',
     footerDisclaimer: 'PLN menyatakan struk ini sbg bukti pembayaran yg sah. Info hub 123',
     footerGreeting: 'Terima Kasih Atas Pembayaran Anda',
   };
@@ -113,12 +115,10 @@ export function parseReceiptFromOcr(ocrText: string): Partial<ReceiptData> {
     parsed.headerTitle = 'STRUK PEMBAYARAN IURAN BPJS';
   }
 
-  // 1. Loket / Agen
+  // 1. Loket / Agen (if explicitly detected in OCR image)
   const loketMatch = text.match(/(?:LOKET|KASIR|AGEN|MERCHANT|MITRA)\s*[:.]?\s*([A-Za-z0-9\s\-_\.]+)/i);
   if (loketMatch && loketMatch[1]) {
     parsed.loket = loketMatch[1].trim().split('\n')[0].substring(0, 30);
-  } else if (lines.length > 0 && /LOKET|KASIR|PAYMENT|PPOB/i.test(lines[0])) {
-    parsed.loket = lines[0].substring(0, 30);
   }
 
   // 2. ID Pelanggan / IDPEL
@@ -213,9 +213,9 @@ export function parseReceiptFromOcr(ocrText: string): Partial<ReceiptData> {
  */
 export const SAMPLE_PRESETS: Record<string, ReceiptData> = {
   plnPostpaid: {
+    loket: 'PPOB ATHAR DIGITAL',
     headerTitle: 'PEMBAYARAN TAGIHAN LISTRIK',
-    subHeader: 'PLN DISTRIBUSI JAWA BARAT',
-    loket: 'LOKET KASIR AMANAH JAYA',
+    subHeader: '',
     idPel: '537210984521',
     noMeter: '32019482019',
     nama: 'BAPAK SUTRISNO',
@@ -232,9 +232,9 @@ export const SAMPLE_PRESETS: Record<string, ReceiptData> = {
     extraFields: [],
   },
   plnPrepaid: {
+    loket: 'PPOB ATHAR DIGITAL',
     headerTitle: 'STRUK PEMBELIAN TOKEN LISTRIK',
-    subHeader: 'PLN PRABAYAR (PREPAID)',
-    loket: 'LOKET KASIR AMANAH JAYA',
+    subHeader: '',
     idPel: '14238910452',
     noMeter: '32098716253',
     nama: 'HENDRA WIJAYA',
@@ -255,9 +255,9 @@ export const SAMPLE_PRESETS: Record<string, ReceiptData> = {
     ],
   },
   pdam: {
+    loket: 'PPOB ATHAR DIGITAL',
     headerTitle: 'STRUK PEMBAYARAN AIR PDAM',
-    subHeader: 'PERUMDA AIR MINUM TIRTA',
-    loket: 'LOKET KASIR AMANAH JAYA',
+    subHeader: '',
     idPel: '0812948192',
     noMeter: 'MTR-88419',
     nama: 'HJ. SITI FATIMAH',

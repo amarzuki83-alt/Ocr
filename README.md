@@ -11,17 +11,21 @@ Aplikasi web modern berbasis **React.js + Vite + Tailwind CSS + Lucide Icons** u
    - Prapemrosesan gambar pada canvas HTML5 (grayscale, high contrast binarization) untuk mengenali teks struk yang buram, kusut, atau miring.
    - Algoritma pencocokan regex cerdas untuk memetakan: IDPEL / No Pelanggan, Nama Pelanggan, Tarif/Daya, Stand Meter, Bulan/Tahun, RP TAG PLN, Biaya Admin Bank, Total Bayar, Tanggal Transaksi, dan No Referensi.
 
-2. **Editor Data Struk Interaktif:**
+2. **Editor Data Struk Interaktif & Branding:**
    - Semua field dapat diedit dan langsung merubah tampilan struk seketika (*live reactive update*).
-   - Teks header default: `"PEMBAYARAN TAGIHAN LISTRIK"`.
+   - Susunan Header Struk:
+     * **Baris 1 (Paling Atas):** `PPOB ATHAR DIGITAL` (Menonjol & Tebal)
+     * **Baris 2:** `PEMBAYARAN TAGIHAN LISTRIK`
+   - Subheader default "PLN DISTRIBUSI JAWA BARAT" telah dihapus sesuai permintaan.
    - Disclaimer footer default resmi: `"PLN menyatakan struk ini sbg bukti pembayaran yg sah. Info hub 123"`.
    - Dukungan penambahan baris ekstra secara dinamis (misalnya Token Stroom 20 digit, Bea Meterai, dll.).
    - Tombol cepat untuk Admin Bank (Rp 2.500, Rp 3.000, Rp 5.000) dan kalkulasi total otomatis.
 
-3. **Live Thermal Receipt Preview:**
+3. **Live Thermal Receipt Preview & Berbagi ke WhatsApp (PNG):**
    - Desain otentik kertas thermal kasir dengan efek sobekan bergerigi atas-bawah (*serrated tear edge*), tekstur kertas, font monospace kasir, serta barcode/QR code representatif.
+   - **Fitur Share ke WhatsApp (PNG):** Langsung membagikan gambar struk kasir dalam format file PNG resolusi tinggi ke WhatsApp via Web Share API di Android/iOS, lengkap dengan teks rincian struk dan nomor tujuan.
    - Toggle ukuran kertas: **58 mm** (32 karakter/baris) dan **80 mm** (42-48 karakter/baris).
-   - Ekspor struk ke format PNG resolusi tinggi serta tombol salin teks monospaced.
+   - Ekspor struk ke format PNG serta tombol salin teks monospaced.
 
 4. **Integrasi Hardware Printer Thermal Bluetooth (ESC/POS):**
    - Menggunakan **Web Bluetooth API** bawaan Google Chrome.

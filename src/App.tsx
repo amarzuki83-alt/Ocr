@@ -65,7 +65,8 @@ export default function App() {
     setReceiptData((prev) => ({
       ...prev,
       ...parsed,
-      // Ensure key required headers remain standard
+      // Default to PPOB ATHAR DIGITAL unless user uploaded a specific custom merchant
+      loket: parsed.loket || prev.loket || 'PPOB ATHAR DIGITAL',
       headerTitle: parsed.headerTitle || 'PEMBAYARAN TAGIHAN LISTRIK',
       footerDisclaimer: parsed.footerDisclaimer || 'PLN menyatakan struk ini sbg bukti pembayaran yg sah. Info hub 123',
     }));
@@ -82,9 +83,9 @@ export default function App() {
   // Reset Form
   const handleResetForm = () => {
     setReceiptData({
+      loket: 'PPOB ATHAR DIGITAL',
       headerTitle: 'PEMBAYARAN TAGIHAN LISTRIK',
       subHeader: '',
-      loket: 'LOKET KASIR AMANAH JAYA',
       idPel: '',
       noMeter: '',
       nama: '',
@@ -256,28 +257,41 @@ export default function App() {
               onBrowserPrint={handleBrowserPrint}
               onCopyText={handleCopyReceiptText}
               isCopied={isCopied}
+              onToast={showToast}
             />
 
-            {/* Quick Bluetooth Print Button under Preview */}
-            <div className="no-print flex gap-2 pt-2">
+            {/* Quick Actions under Preview */}
+            <div className="no-print space-y-2 pt-1">
               <button
                 type="button"
                 onClick={() => setIsBluetoothModalOpen(true)}
-                className="flex-1 flex items-center justify-center gap-2 py-3 px-4 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold text-sm rounded-xl shadow-lg shadow-cyan-950 transition active:scale-95"
+                className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold text-sm rounded-xl shadow-lg shadow-cyan-950 transition active:scale-95"
               >
                 <Bluetooth className="w-4 h-4" />
                 <span>Cetak Thermal Bluetooth (ESC/POS)</span>
               </button>
 
-              <button
-                type="button"
-                onClick={handleBrowserPrint}
-                title="Cetak via dialog browser / PDF"
-                className="flex items-center justify-center gap-2 py-3 px-4 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-semibold text-sm rounded-xl transition active:scale-95"
-              >
-                <Printer className="w-4 h-4 text-blue-400" />
-                <span className="hidden sm:inline">Cetak PDF</span>
-              </button>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={handleBrowserPrint}
+                  title="Cetak via dialog browser / PDF"
+                  className="flex items-center justify-center gap-2 py-2.5 px-3 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-semibold text-xs rounded-xl transition active:scale-95"
+                >
+                  <Printer className="w-3.5 h-3.5 text-blue-400" />
+                  <span>Cetak PDF / Roll</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleCopyReceiptText}
+                  title="Salin teks struk format rapi"
+                  className="flex items-center justify-center gap-2 py-2.5 px-3 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-semibold text-xs rounded-xl transition active:scale-95"
+                >
+                  <FileText className="w-3.5 h-3.5 text-cyan-400" />
+                  <span>Salin Teks Struk</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>

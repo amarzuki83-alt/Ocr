@@ -85,10 +85,10 @@ export function generatePlainTextReceipt(data: ReceiptData, paperSize: PaperSize
     return ' '.repeat(pad) + trimmed;
   };
 
-  // Header
-  lines.push(center(data.headerTitle || 'PEMBAYARAN TAGIHAN LISTRIK'));
-  if (data.subHeader) lines.push(center(data.subHeader));
+  // Header: Baris 1: Loket (PPOB ATHAR DIGITAL), Baris 2: Judul (PEMBAYARAN TAGIHAN LISTRIK)
   if (data.loket) lines.push(center(data.loket));
+  if (data.headerTitle) lines.push(center(data.headerTitle));
+  if (data.subHeader) lines.push(center(data.subHeader));
   lines.push(doubleDivider);
 
   // Core metadata
@@ -184,14 +184,16 @@ export function buildEscPosBuffer(data: ReceiptData, paperSize: PaperSize = '58m
   addBytes(ESC_POS.ALIGN_CENTER);
   addBytes(ESC_POS.BOLD_ON);
   addBytes(ESC_POS.DOUBLE_HEIGHT);
-  addText(data.headerTitle + '\n');
+  // Baris 1: PPOB ATHAR DIGITAL
+  addText((data.loket || 'PPOB ATHAR DIGITAL') + '\n');
   addBytes(ESC_POS.NORMAL_SIZE);
 
+  // Baris 2: PEMBAYARAN TAGIHAN LISTRIK
+  if (data.headerTitle) {
+    addText(data.headerTitle + '\n');
+  }
   if (data.subHeader) {
     addText(data.subHeader + '\n');
-  }
-  if (data.loket) {
-    addText(data.loket + '\n');
   }
   addBytes(ESC_POS.BOLD_OFF);
   addText(doubleDivider);

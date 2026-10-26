@@ -1,0 +1,96 @@
+@import "tailwindcss";
+
+@layer base {
+  body {
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  }
+}
+
+/* Custom font styling for authentic thermal receipt look */
+.font-receipt {
+  font-family: 'Courier Prime', 'VT323', 'Courier New', Courier, monospace;
+}
+
+/* Thermal receipt paper serrated tear effect top and bottom */
+.receipt-tear-top {
+  clip-path: polygon(
+    0% 12px, 2% 0, 4% 12px, 6% 0, 8% 12px, 10% 0, 12% 12px, 14% 0, 16% 12px, 18% 0,
+    20% 12px, 22% 0, 24% 12px, 26% 0, 28% 12px, 30% 0, 32% 12px, 34% 0, 36% 12px, 38% 0,
+    40% 12px, 42% 0, 44% 12px, 46% 0, 48% 12px, 50% 0, 52% 12px, 54% 0, 56% 12px, 58% 0,
+    60% 12px, 62% 0, 64% 12px, 66% 0, 68% 12px, 70% 0, 72% 12px, 74% 0, 76% 12px, 78% 0,
+    80% 12px, 82% 0, 84% 12px, 86% 0, 88% 12px, 90% 0, 92% 12px, 94% 0, 96% 12px, 98% 0, 100% 12px,
+    100% 100%, 0% 100%
+  );
+}
+
+.receipt-tear-bottom {
+  clip-path: polygon(
+    0% 0%, 100% 0%,
+    100% calc(100% - 12px), 98% 100%, 96% calc(100% - 12px), 94% 100%, 92% calc(100% - 12px), 90% 100%,
+    88% calc(100% - 12px), 86% 100%, 84% calc(100% - 12px), 82% 100%, 80% calc(100% - 12px), 78% 100%,
+    76% calc(100% - 12px), 74% 100%, 72% calc(100% - 12px), 70% 100%, 68% calc(100% - 12px), 66% 100%,
+    64% calc(100% - 12px), 62% 100%, 60% calc(100% - 12px), 58% 100%, 56% calc(100% - 12px), 54% 100%,
+    52% calc(100% - 12px), 50% 100%, 48% calc(100% - 12px), 46% 100%, 44% calc(100% - 12px), 42% 100%,
+    40% calc(100% - 12px), 38% 100%, 36% calc(100% - 12px), 34% 100%, 32% calc(100% - 12px), 30% 100%,
+    28% calc(100% - 12px), 26% 100%, 24% calc(100% - 12px), 22% 100%, 20% calc(100% - 12px), 18% 100%,
+    16% calc(100% - 12px), 14% 100%, 12% calc(100% - 12px), 10% 100%, 8% calc(100% - 12px), 6% 100%,
+    4% calc(100% - 12px), 2% 100%, 0% calc(100% - 12px)
+  );
+}
+
+/* Subtle thermal paper texture */
+.bg-thermal-paper {
+  background-color: #fafaf7;
+  background-image: 
+    radial-gradient(#e5e7eb 0.75px, transparent 0.75px),
+    linear-gradient(to right, rgba(0, 0, 0, 0.02) 1px, transparent 1px);
+  background-size: 16px 16px, 4px 100%;
+}
+
+/* Print Stylesheet for thermal receipt roll */
+@media print {
+  body {
+    background: transparent !important;
+    color: #000000 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* Hide entire interface when printing */
+  .no-print, nav, header, aside, .app-header, .app-editor, .app-toolbar, button {
+    display: none !important;
+  }
+
+  /* Only display the printable receipt container */
+  #printable-receipt-wrapper {
+    display: block !important;
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  #printable-receipt {
+    display: block !important;
+    width: 58mm; /* standard 58mm thermal paper roll */
+    max-width: 58mm;
+    margin: 0 auto;
+    padding: 2mm 1mm;
+    box-shadow: none !important;
+    border: none !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+
+  #printable-receipt.receipt-80mm {
+    width: 80mm !important;
+    max-width: 80mm !important;
+  }
+
+  @page {
+    size: auto;
+    margin: 2mm;
+  }
+}

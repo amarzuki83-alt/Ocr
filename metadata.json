@@ -1,0 +1,6 @@
+{
+  "name": "StrukKilat - OCR & Thermal Bluetooth Print PWA",
+  "description": "Aplikasi OCR Struk & Nota Pembayaran Tagihan Listrik PLN/PPOB, live visual thermal receipt preview, ESC/POS Bluetooth print, dan PWA siap instal di Android.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

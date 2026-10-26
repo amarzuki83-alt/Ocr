@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0284c7" />
+      <stop offset="100%" stop-color="#0f172a" />
+    </linearGradient>
+    <linearGradient id="paperGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="100%" stop-color="#f1f5f9" />
+    </linearGradient>
+    <linearGradient id="cyanAccent" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="100%" stop-color="#06b6d4" />
+    </linearGradient>
+    <linearGradient id="yellowBolt" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fbbf24" />
+      <stop offset="100%" stop-color="#f59e0b" />
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="12" stdDeviation="16" flood-color="#000" flood-opacity="0.35" />
+    </filter>
+  </defs>
+
+  <!-- Background rounded squircle with padding for maskable safe-zone -->
+  <rect width="512" height="512" rx="112" fill="url(#bgGrad)" />
+
+  <!-- Printer Slot Device -->
+  <g filter="url(#shadow)">
+    <!-- Main Printer Top Slot Case -->
+    <rect x="96" y="96" width="320" height="90" rx="16" fill="#1e293b" stroke="#334155" stroke-width="4" />
+    <!-- Slot Opening -->
+    <rect x="128" y="145" width="256" height="12" rx="6" fill="#0f172a" />
+    <!-- LED Indicators -->
+    <circle cx="132" cy="120" r="7" fill="#22c55e" />
+    <circle cx="156" cy="120" r="7" fill="#38bdf8" />
+    
+    <!-- Thermal Paper Dispensed from Slot -->
+    <path d="M 140 152 
+             L 372 152 
+             L 372 400 
+             L 353 388 L 334 400 L 315 388 L 296 400 L 277 388 L 258 400 L 239 388 L 220 400 L 201 388 L 182 400 L 163 388 L 144 400 L 140 395 Z" 
+          fill="url(#paperGrad)" />
+
+    <!-- Receipt Header Bar -->
+    <rect x="168" y="180" width="176" height="10" rx="5" fill="#0284c7" />
+    
+    <!-- Receipt Text Lines (Simulated Thermal Print) -->
+    <rect x="168" y="206" width="100" height="6" rx="3" fill="#64748b" />
+    <rect x="300" y="206" width="44" height="6" rx="3" fill="#64748b" />
+
+    <rect x="168" y="224" width="80" height="6" rx="3" fill="#64748b" />
+    <rect x="290" y="224" width="54" height="6" rx="3" fill="#64748b" />
+
+    <line x1="168" y1="244" x2="344" y2="244" stroke="#cbd5e1" stroke-width="2" stroke-dasharray="4 4" />
+
+    <rect x="168" y="258" width="60" height="7" rx="3" fill="#0f172a" />
+    <rect x="270" y="258" width="74" height="7" rx="3" fill="#0f172a" />
+
+    <!-- Simulated Barcode / QR -->
+    <g fill="#334155" opacity="0.85">
+      <rect x="175" y="285" width="4" height="24" />
+      <rect x="183" y="285" width="8" height="24" />
+      <rect x="195" y="285" width="4" height="24" />
+      <rect x="203" y="285" width="12" height="24" />
+      <rect x="220" y="285" width="4" height="24" />
+      <rect x="228" y="285" width="8" height="24" />
+      <rect x="240" y="285" width="12" height="24" />
+      <rect x="256" y="285" width="4" height="24" />
+      <rect x="264" y="285" width="8" height="24" />
+      <rect x="276" y="285" width="16" height="24" />
+      <rect x="296" y="285" width="6" height="24" />
+      <rect x="306" y="285" width="10" height="24" />
+      <rect x="320" y="285" width="14" height="24" />
+    </g>
+
+    <!-- Bluetooth Badge & Electricity Lightning Icon -->
+    <circle cx="340" cy="340" r="46" fill="#0284c7" stroke="#ffffff" stroke-width="4" filter="url(#shadow)" />
+    <!-- Lightning Bolt (PLN Electric Power) -->
+    <path d="M 345 310 L 320 338 L 336 338 L 331 368 L 358 335 L 342 335 Z" fill="url(#yellowBolt)" />
+  </g>
+</svg>

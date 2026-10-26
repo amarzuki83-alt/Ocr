@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { createWorker } from 'tesseract.js';
+import { createWorker, PSM } from 'tesseract.js';
 import { 
   Camera, 
   Upload, 
@@ -66,10 +66,16 @@ export const OcrScanner: React.FC<OcrScannerProps> = ({
             setProgressState({
               isProcessing: true,
               progress: pct,
-              status: `Mengenali teks struk... ${Math.round((m.progress || 0) * 100)}%`,
+              status: `Mengenali teks struk (Presisi Tinggi)... ${Math.round((m.progress || 0) * 100)}%`,
             });
           }
         },
+      });
+
+      // Set PSM 6 (Uniform Block) and whitelist to prevent misrecognition on thermal receipts
+      await worker.setParameters({
+        tessedit_pageseg_mode: PSM.SINGLE_BLOCK, // PSM 6: Assume a single uniform block of text
+        tessedit_char_whitelist: '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz .,:/()-+=%#',
       });
 
       // 3. Recognize text

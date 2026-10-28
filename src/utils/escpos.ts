@@ -48,23 +48,23 @@ export function formatRupiah(amount: number | string): string {
 }
 
 /**
- * Format two columns with exact width padding for thermal printing
- * e.g., Left: "NO PELANGGAN" Right: "53201928301" -> padded to width
+ * Format two columns with aligned colon separator for thermal printing and plain text
+ * e.g., Left: "IDPEL", Right: "53201928301" -> "IDPEL       : 53201928301"
  */
-export function formatTwoColumns(left: string, right: string, maxChars: number): string {
+export function formatTwoColumns(left: string, right: string, maxChars: number, colonPos?: number): string {
   const leftStr = left || '';
   const rightStr = right || '';
+  const cPos = colonPos || (maxChars <= 32 ? 11 : 13);
 
-  if (leftStr.length + rightStr.length >= maxChars) {
-    const space = maxChars - rightStr.length;
-    if (space > 3) {
-      return leftStr.substring(0, space - 1) + ' ' + rightStr;
-    }
-    return leftStr + '\n' + rightStr.padStart(maxChars);
+  const paddedLeft = leftStr.padEnd(cPos, ' ');
+  const prefix = `${paddedLeft}: `;
+
+  if (prefix.length + rightStr.length <= maxChars) {
+    return prefix + rightStr;
   }
 
-  const spacesNeeded = maxChars - leftStr.length - rightStr.length;
-  return leftStr + ' '.repeat(spacesNeeded) + rightStr;
+  // If content exceeds width, truncate or fit
+  return prefix + rightStr.substring(0, maxChars - prefix.length);
 }
 
 /**

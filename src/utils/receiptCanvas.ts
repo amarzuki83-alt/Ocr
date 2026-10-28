@@ -28,34 +28,33 @@ export function generateReceiptCanvas(data: ReceiptData, paperSize: PaperSize = 
   canvas.width = width;
   canvas.height = estimatedHeight;
 
-  // Background Paper
-  ctx.fillStyle = '#fafaf7';
+  // Background Paper: Putih bersih terang (#ffffff)
+  ctx.fillStyle = '#ffffff';
   ctx.fillRect(0, 0, width, estimatedHeight);
 
-  // Subtle paper borders
+  // Subtle clean paper border
   ctx.strokeStyle = '#e2e8f0';
-  ctx.lineWidth = 2;
-  ctx.strokeRect(4, 4, width - 8, estimatedHeight - 8);
+  ctx.lineWidth = 1.5;
+  ctx.strokeRect(3, 3, width - 6, estimatedHeight - 6);
 
-  // Clean straight paper edges (Efek sobekan kertas dihilangkan)
   let y = 46;
 
   // Header Baris 1: LOKET PPOB ATHAR DIGITAL (Bold, Large, Centered)
   ctx.fillStyle = '#09090b';
   ctx.textAlign = 'center';
-  ctx.font = 'bold 32px "Courier Prime", "Courier New", monospace';
+  ctx.font = 'bold 30px "Courier Prime", "Courier New", monospace';
   ctx.fillText((data.loket || 'LOKET PPOB ATHAR DIGITAL').toUpperCase(), width / 2, y);
   y += 36;
 
   // Header Baris 2: STRUK PEMBAYARAN TAGIHAN LISTRIK (Semi-bold, Centered)
   ctx.font = 'bold 22px "Courier Prime", "Courier New", monospace';
-  ctx.fillStyle = '#27272a';
+  ctx.fillStyle = '#18181b';
   ctx.fillText((data.headerTitle || 'STRUK PEMBAYARAN TAGIHAN LISTRIK').toUpperCase(), width / 2, y);
   y += 26;
 
   // Optional subheader
   if (data.subHeader) {
-    ctx.font = '18px "Courier Prime", "Courier New", monospace';
+    ctx.font = '17px "Courier Prime", "Courier New", monospace';
     ctx.fillStyle = '#52525b';
     ctx.fillText(data.subHeader.toUpperCase(), width / 2, y);
     y += 24;
@@ -64,18 +63,23 @@ export function generateReceiptCanvas(data: ReceiptData, paperSize: PaperSize = 
   // Double divider
   y += 8;
   drawDashedLine(ctx, paddingX, width - paddingX, y, 4, '#18181b', 2);
-  y += 22;
+  y += 24;
+
+  // Column layout coordinates for 2-column format with colon separator:
+  // Column 1: Label (left-aligned at xLabel)
+  // Column 2: Colon ':' (centered or aligned at xColon)
+  // Column 3: Value (left-aligned at xValue)
+  const xLabel = paddingX;
+  const xColon = is58 ? paddingX + 175 : paddingX + 225;
+  const xValue = xColon + 18;
 
   // Metadata: Tanggal & No Ref
-  ctx.font = '19px "Courier Prime", "Courier New", monospace';
-  ctx.textAlign = 'left';
-
   if (data.tanggal) {
-    drawTwoColText(ctx, 'TANGGAL', data.tanggal, paddingX, width - paddingX, y);
+    drawRowWithColon(ctx, 'TANGGAL', data.tanggal, xLabel, xColon, xValue, y);
     y += 26;
   }
   if (data.noRef) {
-    drawTwoColText(ctx, 'NO REF', data.noRef, paddingX, width - paddingX, y);
+    drawRowWithColon(ctx, 'NO REF', data.noRef, xLabel, xColon, xValue, y);
     y += 26;
   }
 
@@ -84,29 +88,25 @@ export function generateReceiptCanvas(data: ReceiptData, paperSize: PaperSize = 
   drawDashedLine(ctx, paddingX, width - paddingX, y, 3, '#71717a', 1);
   y += 24;
 
-  // Customer details
+  // Customer details: IDPEL, NAMA, TARIF/DAYA, BLN/THN, STAND METER
   if (data.idPel) {
-    ctx.font = 'bold 21px "Courier Prime", "Courier New", monospace';
-    drawTwoColText(ctx, 'IDPEL / NO PEL', data.idPel, paddingX, width - paddingX, y);
-    ctx.font = '19px "Courier Prime", "Courier New", monospace';
+    drawRowWithColon(ctx, 'IDPEL', data.idPel, xLabel, xColon, xValue, y, { boldValue: true, fontSize: 20 });
     y += 28;
   }
   if (data.nama) {
-    ctx.font = 'bold 20px "Courier Prime", "Courier New", monospace';
-    drawTwoColText(ctx, 'NAMA', data.nama.toUpperCase(), paddingX, width - paddingX, y);
-    ctx.font = '19px "Courier Prime", "Courier New", monospace';
+    drawRowWithColon(ctx, 'NAMA', data.nama.toUpperCase(), xLabel, xColon, xValue, y, { boldValue: true, fontSize: 20 });
     y += 28;
   }
   if (data.tarifDaya) {
-    drawTwoColText(ctx, 'TARIF / DAYA', data.tarifDaya, paddingX, width - paddingX, y);
+    drawRowWithColon(ctx, 'TARIF / DAYA', data.tarifDaya, xLabel, xColon, xValue, y);
     y += 26;
   }
   if (data.blnThn) {
-    drawTwoColText(ctx, 'BLN / THN', data.blnThn, paddingX, width - paddingX, y);
+    drawRowWithColon(ctx, 'BLN / THN', data.blnThn, xLabel, xColon, xValue, y);
     y += 26;
   }
   if (data.standMeter) {
-    drawTwoColText(ctx, 'STAND METER', data.standMeter, paddingX, width - paddingX, y);
+    drawRowWithColon(ctx, 'STAND METER', data.standMeter, xLabel, xColon, xValue, y);
     y += 26;
   }
 
@@ -114,8 +114,7 @@ export function generateReceiptCanvas(data: ReceiptData, paperSize: PaperSize = 
   if (data.extraFields && data.extraFields.length > 0) {
     for (const f of data.extraFields) {
       if (f.label && f.value) {
-        ctx.font = 'bold 19px "Courier Prime", "Courier New", monospace';
-        drawTwoColText(ctx, f.label.toUpperCase(), f.value, paddingX, width - paddingX, y);
+        drawRowWithColon(ctx, f.label.toUpperCase(), f.value, xLabel, xColon, xValue, y, { boldValue: true });
         y += 26;
       }
     }
@@ -126,19 +125,24 @@ export function generateReceiptCanvas(data: ReceiptData, paperSize: PaperSize = 
   drawDashedLine(ctx, paddingX, width - paddingX, y, 3, '#71717a', 1);
   y += 24;
 
-  // Financials
-  ctx.font = '20px "Courier Prime", "Courier New", monospace';
-  drawTwoColText(ctx, 'RP TAG PLN', formatRupiah(data.tagihan), paddingX, width - paddingX, y);
+  // Financials: RP TAG PLN, ADMIN BANK
+  drawRowWithColon(ctx, 'RP TAG PLN', formatRupiah(data.tagihan), xLabel, xColon, xValue, y, { boldValue: true });
   y += 28;
-  drawTwoColText(ctx, 'ADMIN BANK', formatRupiah(data.adminBank), paddingX, width - paddingX, y);
+  drawRowWithColon(ctx, 'ADMIN BANK', formatRupiah(data.adminBank), xLabel, xColon, xValue, y, { boldValue: true });
   y += 28;
 
   // Double line for total
   drawDashedLine(ctx, paddingX, width - paddingX, y, 4, '#09090b', 2);
   y += 26;
 
-  ctx.font = 'bold 26px "Courier Prime", "Courier New", monospace';
-  drawTwoColText(ctx, 'TOTAL BAYAR', formatRupiah(data.totalBayar), paddingX, width - paddingX, y);
+  // TOTAL BAYAR (Bold, Prominent with aligned colon)
+  drawRowWithColon(ctx, 'TOTAL BAYAR', formatRupiah(data.totalBayar), xLabel, xColon, xValue, y, {
+    boldLabel: true,
+    boldValue: true,
+    fontSize: 24,
+    labelColor: '#09090b',
+    valueColor: '#09090b',
+  });
   y += 12;
 
   drawDashedLine(ctx, paddingX, width - paddingX, y, 4, '#09090b', 2);
@@ -207,6 +211,43 @@ function drawDashedLine(
   ctx.restore();
 }
 
+function drawRowWithColon(
+  ctx: CanvasRenderingContext2D,
+  label: string,
+  value: string,
+  xLabel: number,
+  xColon: number,
+  xValue: number,
+  y: number,
+  options?: {
+    boldLabel?: boolean;
+    boldValue?: boolean;
+    fontSize?: number;
+    labelColor?: string;
+    valueColor?: string;
+  }
+) {
+  const fontSize = options?.fontSize || 19;
+  const labelColor = options?.labelColor || '#3f3f46';
+  const valueColor = options?.valueColor || '#09090b';
+
+  // 1. Draw Label (Left Aligned)
+  ctx.textAlign = 'left';
+  ctx.font = `${options?.boldLabel ? 'bold ' : ''}${fontSize}px "Courier Prime", "Courier New", monospace`;
+  ctx.fillStyle = labelColor;
+  ctx.fillText(label, xLabel, y);
+
+  // 2. Draw Colon (Aligned at xColon)
+  ctx.font = `bold ${fontSize}px "Courier Prime", "Courier New", monospace`;
+  ctx.fillStyle = '#18181b';
+  ctx.fillText(':', xColon, y);
+
+  // 3. Draw Value (Aligned at xValue)
+  ctx.font = `${options?.boldValue ? 'bold ' : ''}${fontSize}px "Courier Prime", "Courier New", monospace`;
+  ctx.fillStyle = valueColor;
+  ctx.fillText(value, xValue, y);
+}
+
 function drawTwoColText(
   ctx: CanvasRenderingContext2D,
   left: string,
@@ -270,27 +311,27 @@ export async function shareReceiptToWhatsApp(
 
     const file = new File([blob], fileName, { type: 'image/png' });
 
-    // WhatsApp summary caption
+    // WhatsApp summary caption with two-column colon alignment
     const captionText = [
-      `*STRUK BUKTI PEMBAYARAN LISTRIK PLN*`,
+      `*STRUK PEMBAYARAN TAGIHAN LISTRIK*`,
       `*${data.loket || 'LOKET PPOB ATHAR DIGITAL'}*`,
       `---------------------------------`,
-      `*IDPEL* : ${data.idPel || '-'}`,
-      `*NAMA* : ${data.nama || '-'}`,
-      `*TARIF/DAYA* : ${data.tarifDaya || '-'}`,
-      `*BLN/THN* : ${data.blnThn || '-'}`,
-      `*STAND* : ${data.standMeter || '-'}`,
+      `*IDPEL*       : ${data.idPel || '-'}`,
+      `*NAMA*        : ${data.nama || '-'}`,
+      `*TARIF/DAYA*  : ${data.tarifDaya || '-'}`,
+      `*BLN/THN*     : ${data.blnThn || '-'}`,
+      `*STAND METER* : ${data.standMeter || '-'}`,
       `---------------------------------`,
-      `*RP TAG PLN* : ${formatRupiah(data.tagihan)}`,
-      `*ADMIN BANK* : ${formatRupiah(data.adminBank)}`,
+      `*RP TAG PLN*  : ${formatRupiah(data.tagihan)}`,
+      `*ADMIN BANK*  : ${formatRupiah(data.adminBank)}`,
       `*TOTAL BAYAR* : ${formatRupiah(data.totalBayar)}`,
       `---------------------------------`,
-      `*NO REF* : ${data.noRef || '-'}`,
-      `*TANGGAL* : ${data.tanggal || '-'}`,
-      `_${data.footerDisclaimer || 'PLN menyatakan struk ini sbg bukti pembayaran yg sah.'}_`,
+      `*NO REF*      : ${data.noRef || '-'}`,
+      `*TANGGAL*     : ${data.tanggal || '-'}`,
+      `_${data.footerDisclaimer || 'PLN menyatakan struk ini sbg bukti pembayaran yg sah. Info hub 123'}_`,
       ``,
       `*Status: LUNAS / SAH*`,
-      `_Gambar struk thermal resmi terlampir._`,
+      `_Gambar struk PNG latar putih bersih resmi terlampir._`,
     ].join('\n');
 
     // 1. Try Mobile Web Share API with file support (Chrome Android, Safari iOS, etc.)

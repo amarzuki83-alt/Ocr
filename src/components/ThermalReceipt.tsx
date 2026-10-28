@@ -150,14 +150,11 @@ export const ThermalReceipt: React.FC<ThermalReceiptProps> = ({
         <div
           id="printable-receipt"
           ref={receiptRef}
-          className={`bg-thermal-paper text-slate-900 shadow-2xl relative transition-all duration-300 font-receipt select-text rounded-xl border border-slate-300/60 ${
+          className={`bg-white text-slate-950 shadow-2xl relative transition-all duration-300 font-receipt select-text rounded-xl border border-slate-200 ${
             is58 ? 'w-[320px] max-w-[320px] text-xs' : 'receipt-80mm w-[430px] max-w-[430px] text-sm'
           } p-5 sm:p-6`}
           style={{ letterSpacing: '-0.02em', lineHeight: '1.4' }}
         >
-          {/* Subtle paper roll center fold indicator */}
-          <div className="absolute inset-y-0 left-1/2 w-[1px] bg-black/[0.015] pointer-events-none" />
-
           {/* Header Section:
               Baris 1: LOKET PPOB ATHAR DIGITAL (Paling Atas)
               Baris 2: STRUK PEMBAYARAN TAGIHAN LISTRIK (Di bawahnya)
@@ -176,88 +173,99 @@ export const ThermalReceipt: React.FC<ThermalReceiptProps> = ({
             )}
           </div>
 
-          <div className="border-b-2 border-dashed border-slate-400 my-2" />
+          <div className="border-b-2 border-dashed border-slate-800 my-2" />
 
-          {/* Transaction Metadata */}
-          <div className="space-y-0.5 text-[11px] sm:text-xs">
+          {/* Transaction Metadata: Format dua kolom dengan pemisah titik dua */}
+          <div className="space-y-1 text-[11px] sm:text-xs">
             {data.tanggal && (
-              <div className="flex justify-between">
-                <span className="text-slate-600">TANGGAL</span>
-                <span className="font-semibold text-slate-900">{data.tanggal}</span>
+              <div className={`grid ${is58 ? 'grid-cols-[100px_14px_1fr]' : 'grid-cols-[130px_16px_1fr]'} items-baseline`}>
+                <span className="text-slate-600 font-medium">TANGGAL</span>
+                <span className="text-slate-900 font-bold text-center">:</span>
+                <span className="font-semibold text-slate-900 text-left">{data.tanggal}</span>
               </div>
             )}
             {data.noRef && (
-              <div className="flex justify-between">
-                <span className="text-slate-600">NO REF</span>
-                <span className="font-semibold text-slate-900">{data.noRef}</span>
+              <div className={`grid ${is58 ? 'grid-cols-[100px_14px_1fr]' : 'grid-cols-[130px_16px_1fr]'} items-baseline`}>
+                <span className="text-slate-600 font-medium">NO REF</span>
+                <span className="text-slate-900 font-bold text-center">:</span>
+                <span className="font-semibold text-slate-900 text-left">{data.noRef}</span>
               </div>
             )}
           </div>
 
-          <div className="border-b border-dashed border-slate-400 my-2" />
+          <div className="border-b border-dashed border-slate-300 my-2" />
 
-          {/* Customer & Bill Details */}
+          {/* Customer & Bill Details: Format dua kolom dengan pemisah titik dua */}
           <div className="space-y-1 text-[11px] sm:text-xs">
             {data.idPel && (
-              <div className="flex justify-between items-baseline font-bold">
-                <span className="text-slate-700">IDPEL / NO PEL</span>
-                <span className="text-slate-950 font-bold tracking-wider">{data.idPel}</span>
+              <div className={`grid ${is58 ? 'grid-cols-[100px_14px_1fr]' : 'grid-cols-[130px_16px_1fr]'} items-baseline`}>
+                <span className="text-slate-700 font-semibold">IDPEL</span>
+                <span className="text-slate-900 font-bold text-center">:</span>
+                <span className="text-slate-950 font-bold tracking-wider text-left">{data.idPel}</span>
               </div>
             )}
 
             {data.nama && (
-              <div className="flex justify-between font-bold">
-                <span className="text-slate-700">NAMA</span>
-                <span className="text-slate-950 uppercase text-right max-w-[200px] truncate">{data.nama}</span>
+              <div className={`grid ${is58 ? 'grid-cols-[100px_14px_1fr]' : 'grid-cols-[130px_16px_1fr]'} items-baseline`}>
+                <span className="text-slate-700 font-semibold">NAMA</span>
+                <span className="text-slate-900 font-bold text-center">:</span>
+                <span className="text-slate-950 font-bold uppercase text-left truncate">{data.nama}</span>
               </div>
             )}
             {data.tarifDaya && (
-              <div className="flex justify-between">
-                <span className="text-slate-600">TARIF / DAYA</span>
-                <span className="text-slate-900 font-semibold">{data.tarifDaya}</span>
+              <div className={`grid ${is58 ? 'grid-cols-[100px_14px_1fr]' : 'grid-cols-[130px_16px_1fr]'} items-baseline`}>
+                <span className="text-slate-600 font-medium">TARIF / DAYA</span>
+                <span className="text-slate-900 font-bold text-center">:</span>
+                <span className="text-slate-900 font-semibold text-left">{data.tarifDaya}</span>
               </div>
             )}
             {data.blnThn && (
-              <div className="flex justify-between">
-                <span className="text-slate-600">BLN / THN</span>
-                <span className="text-slate-900">{data.blnThn}</span>
+              <div className={`grid ${is58 ? 'grid-cols-[100px_14px_1fr]' : 'grid-cols-[130px_16px_1fr]'} items-baseline`}>
+                <span className="text-slate-600 font-medium">BLN / THN</span>
+                <span className="text-slate-900 font-bold text-center">:</span>
+                <span className="text-slate-900 text-left">{data.blnThn}</span>
               </div>
             )}
             {data.standMeter && (
-              <div className="flex justify-between">
-                <span className="text-slate-600">STAND METER</span>
-                <span className="text-slate-900 text-right">{data.standMeter}</span>
+              <div className={`grid ${is58 ? 'grid-cols-[100px_14px_1fr]' : 'grid-cols-[130px_16px_1fr]'} items-baseline`}>
+                <span className="text-slate-600 font-medium">STAND METER</span>
+                <span className="text-slate-900 font-bold text-center">:</span>
+                <span className="text-slate-900 text-left">{data.standMeter}</span>
               </div>
             )}
 
-            {/* Extra Custom Fields (e.g., Token Stroom 20 digit, Admin Loket, dll) */}
+            {/* Extra Custom Fields */}
             {data.extraFields && data.extraFields.map((field) => (
-              <div key={field.id} className="flex justify-between bg-slate-100/60 px-1 py-0.5 rounded">
+              <div key={field.id} className={`grid ${is58 ? 'grid-cols-[100px_14px_1fr]' : 'grid-cols-[130px_16px_1fr]'} items-baseline bg-slate-50 px-1 py-0.5 rounded`}>
                 <span className="text-slate-700 font-semibold uppercase">{field.label}</span>
-                <span className="text-slate-950 font-bold text-right">{field.value}</span>
+                <span className="text-slate-900 font-bold text-center">:</span>
+                <span className="text-slate-950 font-bold text-left">{field.value}</span>
               </div>
             ))}
           </div>
 
-          <div className="border-b border-dashed border-slate-400 my-2" />
+          <div className="border-b border-dashed border-slate-300 my-2" />
 
-          {/* Financial Calculation Section */}
+          {/* Financial Calculation Section: Format dua kolom dengan pemisah titik dua */}
           <div className="space-y-1 text-[11px] sm:text-xs">
-            <div className="flex justify-between">
-              <span className="text-slate-600">RP TAG PLN</span>
-              <span className="text-slate-900 font-medium">{formatRupiah(data.tagihan)}</span>
+            <div className={`grid ${is58 ? 'grid-cols-[100px_14px_1fr]' : 'grid-cols-[130px_16px_1fr]'} items-baseline`}>
+              <span className="text-slate-600 font-medium">RP TAG PLN</span>
+              <span className="text-slate-900 font-bold text-center">:</span>
+              <span className="text-slate-900 font-semibold text-left">{formatRupiah(data.tagihan)}</span>
             </div>
-            <div className="flex justify-between">
-              <span className="text-slate-600">ADMIN BANK</span>
-              <span className="text-slate-900 font-medium">{formatRupiah(data.adminBank)}</span>
+            <div className={`grid ${is58 ? 'grid-cols-[100px_14px_1fr]' : 'grid-cols-[130px_16px_1fr]'} items-baseline`}>
+              <span className="text-slate-600 font-medium">ADMIN BANK</span>
+              <span className="text-slate-900 font-bold text-center">:</span>
+              <span className="text-slate-900 font-semibold text-left">{formatRupiah(data.adminBank)}</span>
             </div>
 
             <div className="border-b-2 border-dashed border-slate-800 my-1.5" />
 
             {/* Total Bayar Highlight */}
-            <div className="flex justify-between items-baseline pt-0.5 font-bold text-xs sm:text-sm">
-              <span className="text-slate-950">TOTAL BAYAR</span>
-              <span className="text-slate-950 text-sm sm:text-base font-extrabold tracking-tight">
+            <div className={`grid ${is58 ? 'grid-cols-[100px_14px_1fr]' : 'grid-cols-[130px_16px_1fr]'} items-baseline pt-0.5 font-bold text-xs sm:text-sm`}>
+              <span className="text-slate-950 font-extrabold uppercase">TOTAL BAYAR</span>
+              <span className="text-slate-950 font-extrabold text-center">:</span>
+              <span className="text-slate-950 text-sm sm:text-base font-extrabold tracking-tight text-left">
                 {formatRupiah(data.totalBayar)}
               </span>
             </div>

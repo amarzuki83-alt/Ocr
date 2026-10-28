@@ -13,13 +13,9 @@
 
 /* Efek sobekan kertas dihilangkan untuk tampilan rapi */
 
-/* Subtle thermal paper texture */
+/* Clean pure bright white receipt paper */
 .bg-thermal-paper {
-  background-color: #fafaf7;
-  background-image: 
-    radial-gradient(#e5e7eb 0.75px, transparent 0.75px),
-    linear-gradient(to right, rgba(0, 0, 0, 0.02) 1px, transparent 1px);
-  background-size: 16px 16px, 4px 100%;
+  background-color: #ffffff;
 }
 
 /* Print Stylesheet for thermal receipt roll */

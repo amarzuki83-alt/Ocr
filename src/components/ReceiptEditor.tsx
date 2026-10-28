@@ -559,35 +559,58 @@ export const ReceiptEditor: React.FC<ReceiptEditorProps> = ({
           <div>
             <div className="flex items-center justify-between mb-1">
               <label className="block text-xs font-medium text-slate-300">
-                Admin Bank {isToken && <span className="text-amber-400 font-bold">(Default Token: 5k)</span>}
+                Admin Bank {isToken && <span className="text-amber-400 font-bold">(Default Token: 5.000)</span>}
               </label>
-              <div className="flex gap-1 text-[10px]">
-                <button
-                  type="button"
-                  onClick={() => handleAdminPreset(2500)}
-                  className="px-1.5 py-0.5 rounded bg-slate-700 hover:bg-slate-600 text-slate-200"
-                >
-                  2.5k
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleAdminPreset(3000)}
-                  className="px-1.5 py-0.5 rounded bg-slate-700 hover:bg-slate-600 text-slate-200"
-                >
-                  3k
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleAdminPreset(5000)}
-                  className={`px-1.5 py-0.5 rounded font-bold transition ${
-                    isToken
-                      ? 'bg-amber-600 text-white shadow-sm ring-1 ring-amber-400'
-                      : 'bg-slate-700 hover:bg-slate-600 text-slate-200'
-                  }`}
-                >
-                  5k
-                </button>
-              </div>
+              {isToken ? (
+                <div className="flex gap-1.5 text-[10px]">
+                  <button
+                    type="button"
+                    onClick={() => handleAdminPreset(5000)}
+                    className={`px-2 py-0.5 rounded font-bold transition ${
+                      data.adminBank === 5000
+                        ? 'bg-amber-600 text-white shadow-sm ring-1 ring-amber-400'
+                        : 'bg-slate-700 hover:bg-slate-600 text-slate-200'
+                    }`}
+                  >
+                    5.000 (Default)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleAdminPreset(10000)}
+                    className={`px-2 py-0.5 rounded font-bold transition ${
+                      data.adminBank === 10000
+                        ? 'bg-amber-600 text-white shadow-sm ring-1 ring-amber-400'
+                        : 'bg-slate-700 hover:bg-slate-600 text-slate-200'
+                    }`}
+                  >
+                    10.000
+                  </button>
+                </div>
+              ) : (
+                <div className="flex gap-1 text-[10px]">
+                  <button
+                    type="button"
+                    onClick={() => handleAdminPreset(2500)}
+                    className="px-1.5 py-0.5 rounded bg-slate-700 hover:bg-slate-600 text-slate-200"
+                  >
+                    2.5k
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleAdminPreset(3000)}
+                    className="px-1.5 py-0.5 rounded bg-slate-700 hover:bg-slate-600 text-slate-200"
+                  >
+                    3k
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleAdminPreset(5000)}
+                    className="px-1.5 py-0.5 rounded bg-slate-700 hover:bg-slate-600 text-slate-200"
+                  >
+                    5k
+                  </button>
+                </div>
+              )}
             </div>
             <div className="relative">
               <span className="absolute left-3 top-2 text-xs font-bold text-slate-400">Rp</span>

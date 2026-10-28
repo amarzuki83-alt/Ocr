@@ -195,6 +195,30 @@ export function cleanIndonesianName(raw: string): string {
       return isUpper ? 'ARFANDI' : isCapitalized ? 'Arfandi' : 'arfandi';
     }
 
+    // Indonesian Arabic-derived names where 'I.' or 'I'' is misread as 'L' by OCR:
+    // e.g. YAFI.AH -> YAFLAH, RAFI.AH -> RAFLAH, ROFI.AH -> ROFLAH, SYAFI.AH -> SYAFLAH
+    if (/^yaflah$/i.test(w) || /^yafi['`.]ah$/i.test(w)) {
+      return isUpper ? 'YAFI.AH' : isCapitalized ? 'Yafi.ah' : 'YAFI.AH';
+    }
+    if (/^raflah$/i.test(w) || /^rafi['`.]ah$/i.test(w)) {
+      return isUpper ? 'RAFI.AH' : isCapitalized ? 'Rafi.ah' : 'RAFI.AH';
+    }
+    if (/^roflah$/i.test(w) || /^rofi['`.]ah$/i.test(w)) {
+      return isUpper ? 'ROFI.AH' : isCapitalized ? 'Rofi.ah' : 'ROFI.AH';
+    }
+    if (/^syaflah$/i.test(w) || /^syafi['`.]ah$/i.test(w)) {
+      return isUpper ? 'SYAFI.AH' : isCapitalized ? 'Syafi.ah' : 'SYAFI.AH';
+    }
+    if (/^naflah$/i.test(w) || /^nafi['`.]ah$/i.test(w)) {
+      return isUpper ? 'NAFI.AH' : isCapitalized ? 'Nafi.ah' : 'NAFI.AH';
+    }
+    if (/^maflah$/i.test(w) || /^mafi['`.]ah$/i.test(w)) {
+      return isUpper ? 'MAFI.AH' : isCapitalized ? 'Mafi.ah' : 'MAFI.AH';
+    }
+    if (/^khoflah$/i.test(w) || /^khofi['`.]ah$/i.test(w)) {
+      return isUpper ? 'KHOFI.AH' : isCapitalized ? 'Khofi.ah' : 'KHOFI.AH';
+    }
+
     // Fix common Indonesian name endings where terminal 't' is misrecognized for 'i':
     // 1) Words ending in -nd[t] -> -ndi (e.g. Suwandt -> Suwandi, Rusmandt -> Rusmandi, Kusnadt -> Kusnadi)
     if (/([a-zA-Z]+)nd[tl1|!/]$/i.test(w)) {
@@ -214,8 +238,8 @@ export function cleanIndonesianName(raw: string): string {
       return base + (isUpper ? 'I' : 'i');
     }
 
-    // 4) Clean remaining non-alpha
-    return w.replace(/[^A-Za-z]/g, '');
+    // 4) Clean remaining non-alpha, but preserve valid dots and apostrophes (e.g. YAFI.AH, SITI MA'RUFAH, M. RIDWAN)
+    return w.replace(/[^A-Za-z.']/g, '');
   });
 
   return words.filter(Boolean).join(' ');
@@ -563,6 +587,15 @@ export function parseReceiptFromOcr(ocrText: string): Partial<ReceiptData> {
     .replace(/(\b[A-Za-z]+)nd[tl1|!](\b)/g, '$1ndi$2')
     .replace(/(\b[A-Za-z]+[aeiou])D[Tl1|!](\b)/g, '$1DI$2')
     .replace(/(\b[A-Za-z]+[aeiou])d[tl1|!](\b)/g, '$1di$2')
+    // Pre-correct OCR misread of I. as L in Indonesian names (e.g. YAFI.AH -> YAFLAH)
+    .replace(/\bYAFLAH\b/gi, (m) => (m === m.toUpperCase() ? 'YAFI.AH' : 'Yafi.ah'))
+    .replace(/\bRAFLAH\b/gi, (m) => (m === m.toUpperCase() ? 'RAFI.AH' : 'Rafi.ah'))
+    .replace(/\bROFLAH\b/gi, (m) => (m === m.toUpperCase() ? 'ROFI.AH' : 'Rofi.ah'))
+    .replace(/\bSYAFLAH\b/gi, (m) => (m === m.toUpperCase() ? 'SYAFI.AH' : 'Syafi.ah'))
+    .replace(/\bNAFLAH\b/gi, (m) => (m === m.toUpperCase() ? 'NAFI.AH' : 'Nafi.ah'))
+    .replace(/\bMAFLAH\b/gi, (m) => (m === m.toUpperCase() ? 'MAFI.AH' : 'Mafi.ah'))
+    .replace(/\bKHOFLAH\b/gi, (m) => (m === m.toUpperCase() ? 'KHOFI.AH' : 'Khofi.ah'))
+    .replace(/\bYAF[I1|!]['`]?AH\b/gi, (m) => (m === m.toUpperCase() ? 'YAFI.AH' : 'Yafi.ah'))
     // Pre-correct common OCR misreads of Tarif & Daya labels
     .replace(/\b(?:TAFIF|TAKIF|TAR!F|TAR1F|TARLF|TRF|TARIP)\b/gi, 'TARIF')
     .replace(/\b(?:DAVA|DAY4|D4YA|DA7A|OAYA|OAVA)\b/gi, 'DAYA')

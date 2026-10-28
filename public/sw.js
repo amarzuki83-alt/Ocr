@@ -1,11 +1,43 @@
-// Service Worker for StrukKilat PWA
-const CACHE_NAME = 'struk-kilat-v1';
+// Service Worker for LOKET PPOB ATHAR DIGITAL / StrukKilat PWA
+const CACHE_NAME = 'struk-kilat-v2';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
   '/manifest.json',
   '/icon.svg'
 ];
+
+// Helper to save shared media from phone gallery into IndexedDB
+function saveSharedImageToIdb(file) {
+  return new Promise((resolve) => {
+    try {
+      const req = indexedDB.open('AtharDigitalPwaDB', 1);
+      req.onupgradeneeded = (e) => {
+        const db = e.target.result;
+        if (!db.objectStoreNames.contains('sharedFiles')) {
+          db.createObjectStore('sharedFiles');
+        }
+      };
+      req.onsuccess = (e) => {
+        const db = e.target.result;
+        const tx = db.transaction('sharedFiles', 'readwrite');
+        const store = tx.objectStore('sharedFiles');
+        store.put(file, 'latest-shared-image');
+        tx.oncomplete = () => {
+          db.close();
+          resolve(true);
+        };
+        tx.onerror = () => {
+          db.close();
+          resolve(false);
+        };
+      };
+      req.onerror = () => resolve(false);
+    } catch (e) {
+      resolve(false);
+    }
+  });
+}
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -32,7 +64,34 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  // Only handle GET requests
+  const url = new URL(event.request.url);
+
+  // 1. Intercept Web Share Target POST requests (Image shared from Mobile Gallery)
+  if (event.request.method === 'POST' && url.pathname.includes('/share-target')) {
+    event.respondWith((async () => {
+      try {
+        const formData = await event.request.formData();
+        const mediaFile = formData.get('image') || formData.get('file') || formData.get('media');
+
+        if (mediaFile) {
+          await saveSharedImageToIdb(mediaFile);
+        }
+      } catch (err) {
+        console.error('[PWA SW] Gagal memproses gambar yang dibagikan:', err);
+      }
+      // Redirect with 303 (See Other) to launch app and load the shared image
+      return Response.redirect('/?shared=image', 303);
+    })());
+    return;
+  }
+
+  // Handle fallback GET to /share-target
+  if (event.request.method === 'GET' && url.pathname.includes('/share-target')) {
+    event.respondWith(Response.redirect('/?shared=image', 302));
+    return;
+  }
+
+  // Only handle standard GET requests for assets
   if (event.request.method !== 'GET') return;
 
   // Let browser handle chrome extensions or external cross-origin APIs if needed

@@ -2,8 +2,8 @@ import {createRoot} from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
 
-// Register Service Worker for PWA compliance and offline support
-if ('serviceWorker' in navigator && process.env.NODE_ENV !== 'development') {
+// Register Service Worker for PWA compliance, offline support, and Web Share Target from mobile gallery
+if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker
       .register('/sw.js')

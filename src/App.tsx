@@ -20,6 +20,7 @@ import {
 import { ReceiptData, PaperSize, BluetoothPrinterState } from './types';
 import { SAMPLE_PRESETS } from './utils/ocrParser';
 import { generatePlainTextReceipt } from './utils/escpos';
+import { getSharedImageFromIdb } from './utils/sharedImageHandler';
 import { ThermalReceipt } from './components/ThermalReceipt';
 import { ReceiptEditor } from './components/ReceiptEditor';
 import { OcrScanner } from './components/OcrScanner';
@@ -36,6 +37,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<'editor' | 'scanner'>('scanner');
   const [isCopied, setIsCopied] = useState<boolean>(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [incomingSharedFile, setIncomingSharedFile] = useState<File | null>(null);
 
   // Modals
   const [isBluetoothModalOpen, setIsBluetoothModalOpen] = useState<boolean>(false);
@@ -59,6 +61,32 @@ export default function App() {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 3000);
   };
+
+  // Check for shared images from Android/Phone Gallery Share Target
+  useEffect(() => {
+    async function checkSharedMedia() {
+      const sharedFile = await getSharedImageFromIdb();
+      if (sharedFile) {
+        setIncomingSharedFile(sharedFile);
+        setActiveTab('scanner');
+        showToast('Foto diterima dari Menu Bagikan Galeri HP! Memulai pemindaian OCR...');
+        if (window.location.search.includes('shared=')) {
+          window.history.replaceState({}, document.title, window.location.pathname);
+        }
+      }
+    }
+
+    checkSharedMedia();
+
+    // Re-check when window regains visibility (e.g. app resumes after user shared photo)
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        checkSharedMedia();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, []);
 
   // Handle OCR Completion: merge detected fields with existing
   const handleOcrScanComplete = (parsed: Partial<ReceiptData>, rawText: string) => {
@@ -143,14 +171,14 @@ export default function App() {
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="font-extrabold text-base sm:text-lg tracking-tight bg-gradient-to-r from-white via-slate-100 to-cyan-300 bg-clip-text text-transparent">
-                  StrukKilat
+                  ATHAR DIGITAL
                 </h1>
                 <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
-                  PWA & OCR
+                  PWA &amp; OCR
                 </span>
               </div>
               <p className="hidden sm:block text-[11px] text-slate-400">
-                OCR Struk & Cetak Thermal Bluetooth ESC/POS
+                LOKET PPOB &bull; Cetak Struk Listrik &amp; Token
               </p>
             </div>
           </div>
@@ -232,6 +260,8 @@ export default function App() {
               <OcrScanner
                 onScanComplete={handleOcrScanComplete}
                 onLoadPreset={handleLoadPreset}
+                incomingFile={incomingSharedFile}
+                onClearIncomingFile={() => setIncomingSharedFile(null)}
               />
             </div>
 

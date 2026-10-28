@@ -13,15 +13,20 @@ import {
 } from 'lucide-react';
 import { preprocessImageForOcr, parseReceiptFromOcr, SAMPLE_PRESETS } from '../utils/ocrParser';
 import { ReceiptData, OcrProgressState } from '../types';
+import { Share2, Info, X } from 'lucide-react';
 
 interface OcrScannerProps {
   onScanComplete: (parsedData: Partial<ReceiptData>, rawText: string) => void;
   onLoadPreset: (preset: ReceiptData) => void;
+  incomingFile?: File | null;
+  onClearIncomingFile?: () => void;
 }
 
 export const OcrScanner: React.FC<OcrScannerProps> = ({
   onScanComplete,
   onLoadPreset,
+  incomingFile,
+  onClearIncomingFile,
 }) => {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [progressState, setProgressState] = useState<OcrProgressState>({
@@ -32,9 +37,18 @@ export const OcrScanner: React.FC<OcrScannerProps> = ({
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [rawOcrText, setRawOcrText] = useState<string>('');
   const [showRawText, setShowRawText] = useState(false);
+  const [showShareGuide, setShowShareGuide] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
+
+  // Auto-process incoming file shared from mobile phone gallery
+  React.useEffect(() => {
+    if (incomingFile) {
+      handleProcessImage(incomingFile);
+      onClearIncomingFile?.();
+    }
+  }, [incomingFile]);
 
   const handleProcessImage = async (file: File) => {
     if (!file) return;
@@ -288,6 +302,92 @@ export const OcrScanner: React.FC<OcrScannerProps> = ({
           )}
         </div>
       </div>
+
+      {/* Share Target Mobile Gallery Helper Banner */}
+      <div className="p-3 bg-gradient-to-r from-blue-950/60 to-slate-900/80 rounded-xl border border-blue-500/30 flex items-center justify-between gap-3 flex-wrap">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-lg bg-blue-500/20 text-cyan-400 flex items-center justify-center shrink-0 border border-blue-500/30">
+            <Share2 className="w-4 h-4" />
+          </div>
+          <div>
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs font-bold text-white">Bisa Bagikan Langsung dari Galeri HP</span>
+              <span className="text-[10px] bg-cyan-500/20 text-cyan-300 font-bold px-1.5 py-0.2 rounded border border-cyan-500/30">
+                PWA Share Target
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-300">
+              Buka Galeri HP &gt; Pilih foto struk &gt; Tekan <strong>Bagikan (Share)</strong> &gt; Pilih <strong>ATHAR DIGITAL</strong>.
+            </p>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setShowShareGuide(true)}
+          className="text-xs font-semibold text-cyan-400 hover:text-cyan-300 bg-cyan-500/10 hover:bg-cyan-500/20 px-3 py-1.5 rounded-lg border border-cyan-500/30 transition flex items-center gap-1 shrink-0"
+        >
+          <Info className="w-3.5 h-3.5" />
+          <span>Cara Mengaktifkan</span>
+        </button>
+      </div>
+
+      {/* Share Target Instruction Modal */}
+      {showShareGuide && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md bg-slate-900 border border-slate-700 rounded-2xl p-5 shadow-2xl text-white space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
+              <div className="flex items-center gap-2">
+                <Share2 className="w-5 h-5 text-cyan-400" />
+                <h3 className="text-sm sm:text-base font-bold text-white">
+                  Cara Membagikan Foto dari Galeri HP
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowShareGuide(false)}
+                className="p-1 text-slate-400 hover:text-white rounded-lg transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs text-slate-300 leading-relaxed">
+              <div className="flex gap-2.5 items-start bg-slate-800/60 p-2.5 rounded-lg border border-slate-700/60">
+                <span className="w-5 h-5 rounded-full bg-cyan-600 text-white font-bold flex items-center justify-center shrink-0 text-[10px]">1</span>
+                <div>
+                  <strong className="text-white block mb-0.5">Instal Aplikasi ke Layar Utama HP</strong>
+                  Klik tombol <strong>"Instal Aplikasi HP"</strong> di menu atas (atau menu Chrome titik 3 &gt; <em>Tambahkan ke Layar Utama / Install App</em>).
+                </div>
+              </div>
+
+              <div className="flex gap-2.5 items-start bg-slate-800/60 p-2.5 rounded-lg border border-slate-700/60">
+                <span className="w-5 h-5 rounded-full bg-cyan-600 text-white font-bold flex items-center justify-center shrink-0 text-[10px]">2</span>
+                <div>
+                  <strong className="text-white block mb-0.5">Buka Galeri Foto di HP Anda</strong>
+                  Buka aplikasi Galeri, File Manager, atau Google Photos di HP Anda, lalu buka foto struk / nota listrik.
+                </div>
+              </div>
+
+              <div className="flex gap-2.5 items-start bg-slate-800/60 p-2.5 rounded-lg border border-slate-700/60">
+                <span className="w-5 h-5 rounded-full bg-cyan-600 text-white font-bold flex items-center justify-center shrink-0 text-[10px]">3</span>
+                <div>
+                  <strong className="text-white block mb-0.5">Tekan Tombol Bagikan (Share)</strong>
+                  Pilih <strong>AtharDigital / LOKET PPOB ATHAR DIGITAL</strong> di daftar aplikasi. Foto struk akan otomatis terbuka dan langsung dipindai tanpa perlu upload manual!
+                </div>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowShareGuide(false)}
+              className="w-full py-2 px-4 rounded-xl bg-cyan-600 hover:bg-cyan-500 font-bold text-xs text-white transition active:scale-95 shadow-md"
+            >
+              Mengerti &amp; Tutup
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

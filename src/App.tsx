@@ -95,8 +95,8 @@ export default function App() {
       const cleanExtra = (parsed.extraFields || prev.extraFields || []).filter((f) => 
         !isTokenScan || (!/PPJ/i.test(f.label) && !/ppj/i.test(f.id) && !/TOKEN|STROOM/i.test(f.label) && !/token/i.test(f.id))
       );
-      // Requirement: Pada struk token listrik admin bank 5000 jadikan otomatis tanpa perlu klik lagi
-      const adminBank = isTokenScan ? 5000 : (parsed.adminBank !== undefined ? parsed.adminBank : (prev.adminBank || 3000));
+      // Requirement: Admin bank 5000 otomatis untuk struk token maupun pascabayar tanpa perlu klik lagi
+      const adminBank = 5000;
       const tagihan = parsed.tagihan !== undefined ? parsed.tagihan : (prev.tagihan || 0);
       const totalBayar = tagihan > 0 ? tagihan + adminBank : (parsed.totalBayar || prev.totalBayar || adminBank);
 
@@ -141,8 +141,8 @@ export default function App() {
       stroomToken: '',
       kwh: '',
       tagihan: 0,
-      adminBank: 3000,
-      totalBayar: 3000,
+      adminBank: 5000,
+      totalBayar: 5000,
       tanggal: new Date().toLocaleDateString('id-ID') + ' ' + new Date().toLocaleTimeString('id-ID') + ' WIB',
       noRef: 'PLN' + Date.now().toString().slice(-10),
       footerDisclaimer: 'PLN menyatakan struk ini sbg bukti pembayaran yg sah. Info hub 123',

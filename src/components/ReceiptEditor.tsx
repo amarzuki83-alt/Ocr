@@ -66,7 +66,7 @@ export const ReceiptEditor: React.FC<ReceiptEditorProps> = ({
 
   // Switch to Tagihan Listrik (Pascabayar)
   const handleSelectPostpaidType = () => {
-    const defaultPostpaidAdmin = 3000;
+    const defaultPostpaidAdmin = 5000;
     const currentTagihan = data.tagihan || 324500;
     onChange({
       ...data,
@@ -111,8 +111,8 @@ export const ReceiptEditor: React.FC<ReceiptEditorProps> = ({
     // Auto calculate total if enabled and tagihan/admin changed
     if (autoCalculate && (field === 'tagihan' || field === 'adminBank')) {
       const tag = field === 'tagihan' ? Number(value) || 0 : data.tagihan || 0;
-      const adm = field === 'adminBank' ? Number(value) || 0 : (isToken ? (data.adminBank || 5000) : (data.adminBank || 0));
-      if (isToken && !data.adminBank && field !== 'adminBank') {
+      const adm = field === 'adminBank' ? Number(value) || 0 : (data.adminBank !== undefined ? data.adminBank : 5000);
+      if (!data.adminBank && field !== 'adminBank') {
         updated.adminBank = 5000;
       }
       updated.totalBayar = tag + (updated.adminBank || adm);
@@ -558,7 +558,7 @@ export const ReceiptEditor: React.FC<ReceiptEditorProps> = ({
           <div>
             <div className="flex items-center justify-between mb-1">
               <label className="block text-xs font-medium text-slate-300">
-                Admin Bank {isToken && <span className="text-amber-400 font-bold">(Default Token: 5.000)</span>}
+                Admin Bank <span className="text-emerald-400 font-bold">(Otomatis: 5.000)</span>
               </label>
               {isToken ? (
                 <div className="flex gap-1.5 text-[10px]">
@@ -589,24 +589,36 @@ export const ReceiptEditor: React.FC<ReceiptEditorProps> = ({
                 <div className="flex gap-1 text-[10px]">
                   <button
                     type="button"
-                    onClick={() => handleAdminPreset(2500)}
-                    className="px-1.5 py-0.5 rounded bg-slate-700 hover:bg-slate-600 text-slate-200"
+                    onClick={() => handleAdminPreset(5000)}
+                    className={`px-2 py-0.5 rounded font-bold transition ${
+                      data.adminBank === 5000 || !data.adminBank
+                        ? 'bg-cyan-600 text-white shadow-sm ring-1 ring-cyan-400'
+                        : 'bg-slate-700 hover:bg-slate-600 text-slate-200'
+                    }`}
                   >
-                    2.5k
+                    5.000 (Otomatis)
                   </button>
                   <button
                     type="button"
                     onClick={() => handleAdminPreset(3000)}
-                    className="px-1.5 py-0.5 rounded bg-slate-700 hover:bg-slate-600 text-slate-200"
+                    className={`px-1.5 py-0.5 rounded font-medium transition ${
+                      data.adminBank === 3000
+                        ? 'bg-cyan-600 text-white shadow-sm ring-1 ring-cyan-400'
+                        : 'bg-slate-700 hover:bg-slate-600 text-slate-200'
+                    }`}
                   >
                     3k
                   </button>
                   <button
                     type="button"
-                    onClick={() => handleAdminPreset(5000)}
-                    className="px-1.5 py-0.5 rounded bg-slate-700 hover:bg-slate-600 text-slate-200"
+                    onClick={() => handleAdminPreset(10000)}
+                    className={`px-1.5 py-0.5 rounded font-medium transition ${
+                      data.adminBank === 10000
+                        ? 'bg-cyan-600 text-white shadow-sm ring-1 ring-cyan-400'
+                        : 'bg-slate-700 hover:bg-slate-600 text-slate-200'
+                    }`}
                   >
-                    5k
+                    10k
                   </button>
                 </div>
               )}
@@ -617,9 +629,9 @@ export const ReceiptEditor: React.FC<ReceiptEditorProps> = ({
                 type="number"
                 value={data.adminBank || ''}
                 onChange={(e) => handleFieldChange('adminBank', Number(e.target.value))}
-                placeholder={isToken ? "5000" : "3000"}
+                placeholder="5000"
                 className={`w-full bg-slate-900 border rounded-lg pl-9 pr-3 py-2 text-sm font-semibold text-white focus:outline-none transition ${
-                  isToken ? 'border-amber-500/70 focus:border-amber-400' : 'border-slate-700 focus:border-emerald-500'
+                  isToken ? 'border-amber-500/70 focus:border-amber-400' : 'border-slate-700 focus:border-cyan-500'
                 }`}
               />
             </div>

@@ -703,17 +703,8 @@ export function parseReceiptFromOcr(ocrText: string): Partial<ReceiptData> {
     parsed.tagihan = parseCleanNumber(tagihanMatch[1]);
   }
 
-  // 9. Admin Bank (For token listrik, always automatically 5000 without requiring click)
-  if (isTokenScan) {
-    parsed.adminBank = 5000;
-  } else {
-    const adminMatch = text.match(/(?:ADMIN\s*BANK|BIAYA\s*ADMIN|BIAYA\s*BANK|ADMIN)\s*[:.]?\s*RP?\.?\s*([\d\.,Oo]+)/i);
-    if (adminMatch && adminMatch[1]) {
-      parsed.adminBank = parseCleanNumber(adminMatch[1]);
-    } else {
-      parsed.adminBank = 3000;
-    }
-  }
+  // 9. Admin Bank (Automatically 5000 for token & postpaid electricity receipts)
+  parsed.adminBank = 5000;
 
   // 10. STROOM / TOKEN (20 Digit for Prepaid)
   const tokenMatch = text.match(/(?:STROOM[\s/]*TOKEN|TOKEN|STROOM)\s*[:.]?\s*([0-9\s-]{20,29})/i) ||
@@ -740,18 +731,13 @@ export function parseReceiptFromOcr(ocrText: string): Partial<ReceiptData> {
     parsed.totalBayar = parseCleanNumber(totalMatch[1]);
   }
 
-  // Mathematical verification: Total = Tagihan + Admin
-  if (isTokenScan && parsed.tagihan) {
+  // Mathematical verification: Total = Tagihan + Admin (5000)
+  if (parsed.tagihan) {
     parsed.adminBank = 5000;
     parsed.totalBayar = parsed.tagihan + 5000;
-  } else if (parsed.tagihan && parsed.adminBank) {
-    const calculatedTotal = parsed.tagihan + parsed.adminBank;
-    // If total was missing or misread by 1 digit, reconcile to mathematical truth
-    if (!parsed.totalBayar || Math.abs(parsed.totalBayar - calculatedTotal) < 100) {
-      parsed.totalBayar = calculatedTotal;
-    }
-  } else if (parsed.totalBayar && parsed.adminBank && !parsed.tagihan) {
-    parsed.tagihan = Math.max(0, parsed.totalBayar - parsed.adminBank);
+  } else if (parsed.totalBayar && !parsed.tagihan) {
+    parsed.adminBank = 5000;
+    parsed.tagihan = Math.max(0, parsed.totalBayar - 5000);
   }
 
   // 13. Tanggal & Waktu
@@ -795,8 +781,8 @@ export const SAMPLE_PRESETS: Record<string, ReceiptData> = {
     standMeter: '014280 - 014520 (240 kWh)',
     blnThn: 'OKT 2026',
     tagihan: 324500,
-    adminBank: 3000,
-    totalBayar: 327500,
+    adminBank: 5000,
+    totalBayar: 329500,
     tanggal: '26/10/2026 18:45:10 WIB',
     noRef: 'PLN2610269874561230',
     footerDisclaimer: 'PLN menyatakan struk ini sbg bukti pembayaran yg sah. Info hub 123',

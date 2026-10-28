@@ -100,7 +100,8 @@ export default function App() {
         ...parsed,
         blnThn: isTokenScan ? '' : (parsed.blnThn !== undefined ? parsed.blnThn : prev.blnThn),
         standMeter: isTokenScan ? '' : (parsed.standMeter !== undefined ? parsed.standMeter : prev.standMeter),
-        kwh: isTokenScan ? (parsed.kwh || prev.kwh || '') : prev.kwh,
+        tarifDaya: parsed.tarifDaya || prev.tarifDaya,
+        kwh: isTokenScan ? (parsed.kwh !== undefined ? parsed.kwh : (prev.kwh || '')) : (parsed.kwh || prev.kwh || ''),
         // Default to LOKET PPOB ATHAR DIGITAL unless user uploaded a specific custom merchant
         loket: parsed.loket || prev.loket || 'LOKET PPOB ATHAR DIGITAL',
         headerTitle: parsed.headerTitle || (isTokenScan ? 'STRUK PEMBELIAN TOKEN LISTRIK' : 'STRUK PEMBAYARAN TAGIHAN LISTRIK'),

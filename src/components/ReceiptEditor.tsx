@@ -107,12 +107,10 @@ export const ReceiptEditor: React.FC<ReceiptEditorProps> = ({
   };
 
   const handleSelectTariffPreset = (tarif: string) => {
-    const nominal = data.tagihan || 100000;
-    const newKwh = calculateKwh(nominal, tarif);
     onChange({
       ...data,
       tarifDaya: tarif,
-      kwh: newKwh,
+      kwh: data.kwh || calculateKwh(data.tagihan || 100000, tarif),
     });
   };
 
@@ -124,9 +122,9 @@ export const ReceiptEditor: React.FC<ReceiptEditorProps> = ({
       const tag = field === 'tagihan' ? Number(value) || 0 : data.tagihan || 0;
       const adm = field === 'adminBank' ? Number(value) || 0 : data.adminBank || 0;
       updated.totalBayar = tag + adm;
-      // Auto re-estimate kWh when nominal tagihan changes in token mode
-      if (isToken && field === 'tagihan') {
-        updated.kwh = calculateKwh(tag, updated.tarifDaya || 'R1M / 1300 VA');
+      // Auto re-estimate kWh when nominal tagihan changes ONLY if kwh is currently empty
+      if (isToken && field === 'tagihan' && !data.kwh) {
+        updated.kwh = calculateKwh(tag, updated.tarifDaya || 'R1 / 900 VA');
       }
     }
 

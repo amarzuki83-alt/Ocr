@@ -246,8 +246,8 @@ export function extractDaya(raw: string): string {
            .replace(/[Il|!]300/g, '1300')
            .replace(/[Il|!]3[Oo0]{2}/g, '1300');
 
-  // Match standard Indonesian PLN Daya numbers
-  const standardMatch = str.match(/\b(450|900|1300|2200|3500|4400|5500|6600|7700|10600|11000|13200|16500|22000|33000|41500)\b/);
+  // Match standard Indonesian PLN Daya numbers (with or without attached VA)
+  const standardMatch = str.match(/\b(450|900|1300|2200|3500|4400|5500|6600|7700|10600|11000|13200|16500|22000|33000|41500)(?:\s*VA|\b)/i);
   if (standardMatch) {
     return `${standardMatch[1]} VA`;
   }
@@ -325,10 +325,8 @@ export function extractTarif(raw: string): string {
  * Examples:
  * - "RIM/1300VA" -> "R1M / 1300 VA"
  * - "R1T / 1300 VA" -> "R1T / 1300 VA"
- * - "R1MT / 1.300 VA" -> "R1MT / 1300 VA"
- * - "R1/9OO VA" -> "R1 / 900 VA"
- * - "TARIF : R1M, DAYA : 1300" -> "R1M / 1300 VA"
- * - "1300 VA / R1M" -> "R1M / 1300 VA"
+ * - "R1 / 900 VA" -> "R1 / 900 VA"
+ * - "R1/450VA" -> "R1 / 450 VA"
  */
 export function cleanTarifDaya(raw: string): string {
   if (!raw) return '';
@@ -350,11 +348,16 @@ export function cleanTarifDaya(raw: string): string {
     return `${tarif} / ${daya}`;
   }
 
-  // If only Daya was found, deduce official default Tariff based on Daya
+  // If only Daya was found, inspect raw string for any tariff indicator before defaulting
   if (daya && !tarif) {
-    if (daya.includes('1300')) return `R1M / ${daya}`;
+    if (/\bR[-_\s]?1[-_\s]?T\b/i.test(str)) return `R1T / ${daya}`;
+    if (/\bR[-_\s]?1[-_\s]?M\b/i.test(str)) return `R1M / ${daya}`;
+    if (/\bR[-_\s]?1\b/i.test(str)) return `R1 / ${daya}`;
+    if (/\bB[-_\s]?1[-_\s]?T\b/i.test(str)) return `B1T / ${daya}`;
+    if (/\bB[-_\s]?1\b/i.test(str)) return `B1 / ${daya}`;
     if (daya.includes('900')) return `R1 / ${daya}`;
     if (daya.includes('450')) return `R1 / ${daya}`;
+    if (daya.includes('1300')) return `R1 / ${daya}`;
     if (daya.includes('2200')) return `R1 / ${daya}`;
     if (daya.includes('3500')) return `R2 / ${daya}`;
     return `R1 / ${daya}`;
@@ -375,7 +378,7 @@ export function cleanTarifDaya(raw: string): string {
     return `${pdamFormat[1].trim()} / ${pdamFormat[2].trim()}`;
   }
 
-  return str.replace(/[^A-Za-z0-9/\s]/g, '').trim() || 'R1M / 1300 VA';
+  return str.replace(/[^A-Za-z0-9/\s]/g, '').trim() || 'R1 / 900 VA';
 }
 
 /**
@@ -390,6 +393,160 @@ export function cleanBlnThn(raw: string): string {
            .replace(/D3S/g, 'DES')
            .replace(/AGUST/g, 'AGU');
   return str;
+}
+
+/**
+ * Extracts and normalizes Tarif & Daya strictly matching what is in the uploaded photo.
+ * Guarantees zero substitution: if photo has R1 / 900 VA, keeps R1 / 900 VA.
+ */
+export function extractTarifDayaFromText(text: string, lines: string[]): string {
+  // Strategy 1: Check lines for combined TARIF / DAYA label
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const combinedMatch = line.match(/(?:TARIF[\s/|:;]*DAYA|DAYA[\s/|:;]*TARIF|TARIP[\s/|:;]*DAYA|TRF[\s/|:;]*DAYA|TAR!F[\s/|:;]*DAYA|TAFIF[\s/|:;]*DAYA|TARIF[\s/|:;]*DAVA|TARIF[\s/|:;]*DAY4)\s*[:.]?\s*(.*)/i);
+    if (combinedMatch) {
+      let val = combinedMatch[1].trim();
+      // If label line is empty or just punctuation, inspect next line
+      if (!val || val === ':' || val === '-' || val.length < 2) {
+        if (i + 1 < lines.length && !/IDPEL|NAMA|RP|TAG|ADMIN|TOTAL|STAND|BLN|REF/i.test(lines[i + 1])) {
+          val = lines[i + 1].trim();
+        }
+      }
+      if (val) {
+        const cleaned = cleanTarifDaya(val);
+        if (cleaned && cleaned.includes('/')) {
+          return cleaned;
+        }
+      }
+    }
+  }
+
+  // Strategy 2: Check separate TARIF and DAYA lines (m-Banking, PPOB apps, Shopee, Tokopedia)
+  let foundTarif = '';
+  let foundDaya = '';
+  for (const line of lines) {
+    if (!foundTarif) {
+      const tMatch = line.match(/(?:TARIF|TRF|TARIP|GOLONGAN)\s*[:.]?\s*([^\n\r]+)/i);
+      if (tMatch && !/DAYA/i.test(line)) {
+        foundTarif = extractTarif(tMatch[1]);
+      }
+    }
+    if (!foundDaya) {
+      const dMatch = line.match(/(?:DAYA|DAVA|DAY4|KAPASITAS)\s*[:.]?\s*([^\n\r]+)/i);
+      if (dMatch && !/TARIF/i.test(line)) {
+        foundDaya = extractDaya(dMatch[1]);
+      }
+    }
+  }
+  if (foundTarif && foundDaya) {
+    return `${foundTarif} / ${foundDaya}`;
+  } else if (foundTarif || foundDaya) {
+    const combined = cleanTarifDaya(`${foundTarif} ${foundDaya}`);
+    if (combined && combined.includes('/')) {
+      return combined;
+    }
+  }
+
+  // Strategy 3: Global pattern scan across text (e.g. "R1/900VA", "R1T/900", "R1M/1300VA", "R1/1300VA", "R1/450VA")
+  const globalMatch = text.match(/\b([RBITMSP]\s*[-/]?\s*[1-3Il|!]\s*(?:MT|TM|M|T)?)\s*[/\\-|\s]\s*(\d{1,2}[.,]?\d{3}|[49]\d{2}|[49][Oo0]{2}|1[3Oo0]{3}|2[2Oo0]{3})\s*(?:VA|WATT|VOLT|W)?\b/i) ||
+                      text.match(/\b(\d{1,2}[.,]?\d{3}|[49]\d{2}|[49][Oo0]{2}|1[3Oo0]{3}|2[2Oo0]{3})\s*(?:VA)?\s*[/\\-|\s]\s*([RBITMSP]\s*[-/]?\s*[1-3Il|!]\s*(?:MT|TM|M|T)?)\b/i);
+  if (globalMatch) {
+    return cleanTarifDaya(`${globalMatch[1]} / ${globalMatch[2]}`);
+  }
+
+  // Strategy 4: Extract any standalone daya and tarif in the text
+  const anyDaya = extractDaya(text);
+  const anyTarif = extractTarif(text);
+  if (anyDaya && anyTarif) {
+    return `${anyTarif} / ${anyDaya}`;
+  } else if (anyDaya) {
+    return cleanTarifDaya(anyDaya);
+  }
+
+  return '';
+}
+
+/**
+ * Extracts the exact kWh number from OCR text of the uploaded photo.
+ * Recognizes all standard Indonesian PLN Token receipt formats and OCR variations:
+ * - JML KWH : 67,30
+ * - JML KWH : 67.3
+ * - JML. KWH : 67,3
+ * - JLH KWH : 67,30
+ * - JUMLAH KWH : 67,30
+ * - KWH DITERIMA : 67,3
+ * - ENERGI (KWH) : 67,3
+ * - ENERGI : 67,30 KWH
+ * - KWH : 67,30
+ * - 67,30 kWh / 134,60 kWh / 33,65 kWh / 160,70 kWh / 71,90 kWh / 234,30 kWh
+ */
+export function extractKwhFromText(text: string, lines: string[]): string {
+  if (!text) return '';
+
+  // Strategy 1: Check lines with explicit kWh labels
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    // Skip general headers, slogans, footers, or stand meter lines (which have 240 kWh)
+    if (/STRUK|BUKTI|INFORMASI|METER|PEMBAYARAN\s*KWH/i.test(line) && !/JML|JUMLAH|JLH|ENERGI|DITERIMA/i.test(line)) {
+      continue;
+    }
+
+    // Match label for kWh
+    const labelMatch = line.match(/(?:JML[\s/.]*K[WV][HN]|JUMLAH[\s/.]*K[WV][HN]|JLH[\s/.]*K[WV][HN]|ENERGI(?:\s*\(?K[WV][HN]\)?)?|K[WV][HN]\s*DITERIMA|TOTAL[\s/.]*K[WV][HN]|VOL[\s/.]*K[WV][HN]|PEMBELIAN[\s/.]*K[WV][HN]|K[WV][HN]\s*TOTAL|\bK[WV][HN]\b)\s*[:.]?\s*(.*)/i);
+    if (labelMatch) {
+      let val = labelMatch[1].trim();
+
+      // If value is empty or just punctuation, look at the next line
+      if (!val || val === ':' || val === '-' || val === '.') {
+        if (i + 1 < lines.length && !/TOKEN|IDPEL|NAMA|TARIF|RP|ADMIN|TOTAL|METER|REF/i.test(lines[i + 1])) {
+          val = lines[i + 1].trim();
+        }
+      }
+
+      // 1. Look for decimal numbers (e.g. 67,30 or 67.30 or 134,6 or 33,65 or 67,3 or 67,28 or 160,7)
+      // Supports space around comma or dot like "67 , 30" or "67 . 3"
+      const decimalMatch = val.match(/(\d{1,4})\s*[,.]\s*(\d{1,3})/);
+      if (decimalMatch) {
+        return `${decimalMatch[1]},${decimalMatch[2]} kWh`;
+      }
+
+      // 2. Look for integer number if formatted without decimal
+      const intMatch = val.match(/\b(\d{2,4})\b/);
+      if (intMatch) {
+        const intVal = parseInt(intMatch[1], 10);
+        if (intVal >= 10 && intVal <= 3000 && intVal !== 2026 && intVal !== 2025) {
+          return `${intVal},0 kWh`;
+        }
+      }
+    }
+  }
+
+  // Strategy 2: Look for standalone pattern like "67,30 kWh" or "67.3 kWh" anywhere in text
+  const standaloneMatch = text.match(/\b(\d{1,4})\s*[,.]\s*(\d{1,3})\s*K[WV][HN]\b/i);
+  if (standaloneMatch) {
+    return `${standaloneMatch[1]},${standaloneMatch[2]} kWh`;
+  }
+
+  // Strategy 3: Scan lines near TARIF/DAYA or STROOM/TOKEN for decimal numbers
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (/TARIF|DAYA|STROOM|TOKEN|RP\s*BAYAR/i.test(line)) {
+      for (const offset of [-2, -1, 1, 2]) {
+        const adjIdx = i + offset;
+        if (adjIdx >= 0 && adjIdx < lines.length) {
+          const adjLine = lines[adjIdx];
+          if (/K[WV][HN]/i.test(adjLine) && !/METER/i.test(adjLine)) {
+            const m = adjLine.match(/(\d{1,4})\s*[,.]\s*(\d{1,3})/);
+            if (m) {
+              return `${m[1]},${m[2]} kWh`;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  return '';
 }
 
 /**
@@ -472,79 +629,17 @@ export function parseReceiptFromOcr(ocrText: string): Partial<ReceiptData> {
     }
   }
 
-  // 5. Tarif / Daya - Multi-Strategy Detection (phone gallery photos, thermal receipts, app screenshots)
-  let detectedTarifDaya = '';
-
-  // Strategy 1: Check lines for combined TARIF / DAYA label (on the same line or immediate next line)
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    const combinedMatch = line.match(/(?:TARIF[\s/|:;]*DAYA|DAYA[\s/|:;]*TARIF|TARIP[\s/|:;]*DAYA|TRF[\s/|:;]*DAYA|TAR!F[\s/|:;]*DAYA|TAFIF[\s/|:;]*DAYA|TARIF[\s/|:;]*DAVA|TARIF[\s/|:;]*DAY4)\s*[:.]?\s*(.*)/i);
-    if (combinedMatch) {
-      let val = combinedMatch[1].trim();
-      // If label line is empty, inspect next line
-      if (!val || val.length < 2) {
-        if (i + 1 < lines.length && !/IDPEL|NAMA|RP|TAG|ADMIN|TOTAL|STAND|BLN/i.test(lines[i + 1])) {
-          val = lines[i + 1].trim();
-        }
-      }
-      if (val) {
-        const cleaned = cleanTarifDaya(val);
-        if (cleaned && cleaned.includes('/')) {
-          detectedTarifDaya = cleaned;
-          break;
-        }
-      }
-    }
-  }
-
-  // Strategy 2: Check separate TARIF and DAYA lines (very common in m-Banking, Tokopedia, Shopee, BCA apps)
-  if (!detectedTarifDaya) {
-    let foundTarif = '';
-    let foundDaya = '';
-    for (const line of lines) {
-      if (!foundTarif) {
-        const tMatch = line.match(/(?:TARIF|TRF|TARIP|GOLONGAN)\s*[:.]?\s*([^\n\r]+)/i);
-        if (tMatch && !/DAYA/i.test(line)) {
-          foundTarif = extractTarif(tMatch[1]);
-        }
-      }
-      if (!foundDaya) {
-        const dMatch = line.match(/(?:DAYA|DAVA|DAY4|KAPASITAS)\s*[:.]?\s*([^\n\r]+)/i);
-        if (dMatch && !/TARIF/i.test(line)) {
-          foundDaya = extractDaya(dMatch[1]);
-        }
-      }
-    }
-    if (foundTarif && foundDaya) {
-      detectedTarifDaya = `${foundTarif} / ${foundDaya}`;
-    } else if (foundTarif || foundDaya) {
-      detectedTarifDaya = cleanTarifDaya(`${foundTarif} ${foundDaya}`);
-    }
-  }
-
-  // Strategy 3: Global pattern scan across text (e.g. "R1M/1300VA", "R1T/1300", "R1/900VA", "R1MT / 1.300 VA")
-  if (!detectedTarifDaya) {
-    const globalMatch = text.match(/\b([RBITMSP]\s*[-/]?\s*[1-3Il|!]\s*(?:MT|TM|M|T)?)\s*[/\\-|\s]\s*(\d{1,2}[.,]?\d{3}|[49]\d{2}|[49][Oo0]{2}|1[3Oo0]{3}|2[2Oo0]{3})\s*(?:VA|WATT|VOLT|W)?\b/i) ||
-                        text.match(/\b(\d{1,2}[.,]?\d{3}|[49]\d{2}|[49][Oo0]{2}|1[3Oo0]{3}|2[2Oo0]{3})\s*(?:VA)?\s*[/\\-|\s]\s*([RBITMSP]\s*[-/]?\s*[1-3Il|!]\s*(?:MT|TM|M|T)?)\b/i);
-    if (globalMatch) {
-      detectedTarifDaya = cleanTarifDaya(`${globalMatch[1]} / ${globalMatch[2]}`);
-    }
-  }
-
-  // Strategy 4: Fallback based on receipt context
-  if (!detectedTarifDaya) {
+  // 5. Tarif / Daya - Strictly match what is in the uploaded image
+  const scannedTarifDaya = extractTarifDayaFromText(text, lines);
+  if (scannedTarifDaya) {
+    parsed.tarifDaya = scannedTarifDaya;
+  } else if (isTokenScan) {
+    // If daya was mentioned somewhere in text, prioritize that daya
     const anyDaya = extractDaya(text);
-    const anyTarif = extractTarif(text);
-    if (anyDaya || anyTarif) {
-      detectedTarifDaya = cleanTarifDaya(`${anyTarif} ${anyDaya}`);
-    } else if (isTokenScan) {
-      detectedTarifDaya = 'R1M / 1300 VA';
-    } else {
-      detectedTarifDaya = 'R1 / 900 VA';
-    }
+    parsed.tarifDaya = anyDaya ? cleanTarifDaya(anyDaya) : 'R1 / 900 VA';
+  } else {
+    parsed.tarifDaya = 'R1 / 900 VA';
   }
-
-  parsed.tarifDaya = detectedTarifDaya;
 
   // 6. Bln / Thn (Periode)
   const blnThnMatch = text.match(/(?:BLN[\s/]*THN|BULAN[\s/]*TAHUN|PERIODE)\s*[:.]?\s*([A-Za-z0-9\s\/\-]+)/i);
@@ -587,16 +682,13 @@ export function parseReceiptFromOcr(ocrText: string): Partial<ReceiptData> {
     }
   }
 
-  // 11. Jumlah kWh (For Token Listrik: accurate calculation & extraction)
-  const kwhMatch = text.match(/(?:JML[\s/]*KWH|JUMLAH[\s/]*KWH|KWH)\s*[:.]?\s*([\d\.,]+(?:\s*KWH)?)/i) ||
-                   text.match(/\b(\d{1,4}[.,]\d{1,2})\s*KWH\b/i);
-  if (kwhMatch && kwhMatch[1]) {
-    let cleanKwh = kwhMatch[1].trim();
-    if (!/kwh/i.test(cleanKwh)) cleanKwh += ' kWh';
-    // Format decimal separator with comma (e.g. 67,3 kWh)
-    parsed.kwh = cleanKwh.replace(/\./g, ',');
-  } else if (isTokenScan && parsed.tagihan) {
-    parsed.kwh = calculateKwh(parsed.tagihan, parsed.tarifDaya || 'R1M / 1300 VA');
+  // 11. Jumlah kWh - Strictly prioritize the exact number from the uploaded image
+  const scannedKwh = extractKwhFromText(text, lines);
+  if (scannedKwh) {
+    parsed.kwh = scannedKwh;
+  } else if (isTokenScan && parsed.tagihan && parsed.tarifDaya) {
+    // Only calculate fallback if completely absent from photo
+    parsed.kwh = calculateKwh(parsed.tagihan, parsed.tarifDaya);
   }
 
   // 12. Total Bayar (With Mathematical Reconciliation)

@@ -79,16 +79,6 @@ export const ReceiptEditor: React.FC<ReceiptEditorProps> = ({
     });
   };
 
-  // Generate random 20-digit token
-  const handleGenerateRandomToken = () => {
-    const blocks: string[] = [];
-    for (let i = 0; i < 5; i++) {
-      blocks.push(Math.floor(1000 + Math.random() * 9000).toString());
-    }
-    const newToken = blocks.join('-');
-    handleFieldChange('stroomToken', newToken);
-  };
-
   // Format 20-digit token on input
   const handleTokenChange = (val: string) => {
     const digits = val.replace(/[^0-9]/g, '').slice(0, 20);
@@ -410,20 +400,10 @@ export const ReceiptEditor: React.FC<ReceiptEditorProps> = ({
           {/* Dedicated 20-Digit STROOM / TOKEN for Prepaid Token Listrik */}
           {isToken && (
             <div className="sm:col-span-2 bg-slate-900/90 border-2 border-amber-500/50 rounded-xl p-3.5 space-y-2 shadow-lg">
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-extrabold text-amber-300 uppercase tracking-wide flex items-center gap-1.5">
-                  <Sparkles className="w-4 h-4 text-amber-400" />
-                  <span>Kolom Stroom / Token Listrik (20 Digit)</span>
-                </label>
-                <button
-                  type="button"
-                  onClick={handleGenerateRandomToken}
-                  className="flex items-center gap-1 text-[11px] font-semibold text-cyan-400 hover:text-cyan-300 bg-cyan-500/10 hover:bg-cyan-500/20 px-2 py-0.5 rounded border border-cyan-500/30 transition active:scale-95"
-                >
-                  <RefreshCw className="w-3 h-3" />
-                  <span>Acak 20 Digit</span>
-                </button>
-              </div>
+              <label className="text-xs font-extrabold text-amber-300 uppercase tracking-wide flex items-center gap-1.5">
+                <Sparkles className="w-4 h-4 text-amber-400" />
+                <span>Kolom Stroom / Token Listrik (20 Digit)</span>
+              </label>
 
               <div className="relative">
                 <input

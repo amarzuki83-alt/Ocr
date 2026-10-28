@@ -1,6 +1,7 @@
 import React from 'react';
 import { ReceiptData, ExtraReceiptField } from '../types';
 import { isTokenReceipt, getStroomToken, formatToken20, getReceiptKwh, calculateKwh } from '../utils/escpos';
+import { cleanTarifDaya } from '../utils/ocrParser';
 import { 
   Building2, 
   User, 
@@ -322,43 +323,65 @@ export const ReceiptEditor: React.FC<ReceiptEditorProps> = ({
               type="text"
               value={data.tarifDaya}
               onChange={(e) => handleFieldChange('tarifDaya', e.target.value)}
+              onBlur={() => {
+                if (data.tarifDaya) {
+                  const cleaned = cleanTarifDaya(data.tarifDaya);
+                  if (cleaned && cleaned !== data.tarifDaya) {
+                    handleFieldChange('tarifDaya', cleaned);
+                  }
+                }
+              }}
               placeholder="Contoh: R1 / 900 VA atau R1M / 1300 VA"
               className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500 transition"
             />
-            {/* Quick Tariff Selector for Token Listrik */}
-            {isToken && (
-              <div className="flex items-center gap-1 text-[10px] flex-wrap mt-1.5">
-                <span className="text-slate-400">Pilih Tarif:</span>
+            {/* Quick Tariff Selector */}
+            <div className="flex items-center gap-1 text-[10px] flex-wrap mt-1.5">
+              <span className="text-slate-400">Pilih Cepat:</span>
+              <button
+                type="button"
+                onClick={() => handleSelectTariffPreset('R1 / 450 VA')}
+                className="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700"
+              >
+                450 VA
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSelectTariffPreset('R1 / 900 VA')}
+                className="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700"
+              >
+                900 VA (R1)
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSelectTariffPreset('R1M / 900 VA')}
+                className="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700"
+              >
+                900 VA (R1M)
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSelectTariffPreset(isToken ? 'R1M / 1300 VA' : 'R1 / 1300 VA')}
+                className="px-1.5 py-0.5 rounded bg-amber-600/30 text-amber-300 border border-amber-500/40 font-semibold"
+              >
+                1300 VA
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSelectTariffPreset('R1 / 2200 VA')}
+                className="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700"
+              >
+                2200 VA
+              </button>
+              {isToken && (
                 <button
                   type="button"
-                  onClick={() => handleSelectTariffPreset('R1 / 450 VA')}
-                  className="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700"
+                  onClick={() => handleSelectTariffPreset('R1T / 1300 VA')}
+                  className="px-1.5 py-0.5 rounded bg-amber-600/20 text-amber-200 border border-amber-500/30"
                 >
-                  450VA (Rp415)
+                  R1T/1300
                 </button>
-                <button
-                  type="button"
-                  onClick={() => handleSelectTariffPreset('R1 / 900 VA')}
-                  className="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700"
-                >
-                  900VA Sub (Rp605)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleSelectTariffPreset('R1M / 900 VA')}
-                  className="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700"
-                >
-                  900VA Non (Rp1.352)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleSelectTariffPreset('R1M / 1300 VA')}
-                  className="px-1.5 py-0.5 rounded bg-amber-600/30 text-amber-300 border border-amber-500/40 font-semibold"
-                >
-                  1300VA (Rp1.444,70)
-                </button>
-              </div>
-            )}
+              )}
+            </div>
           </div>
 
           {/* Dedicated Jumlah kWh input for Token Listrik */}

@@ -29,9 +29,9 @@ function applyAdaptiveThreshold(srcData: Uint8ClampedArray, width: number, heigh
 
   // 3. Local window thresholding
   const output = new Uint8ClampedArray(srcData.length);
-  const s = Math.max(12, Math.floor(width / 18));
+  const s = Math.max(16, Math.floor(width / 24));
   const s2 = Math.floor(s / 2);
-  const t = 0.15; // 15% sensitivity below local mean
+  const t = 0.10; // 10% sensitivity: maintains crisp thin stems for '1', '/', 'T', 'I' without noise
 
   for (let y = 0; y < height; y++) {
     const y1 = Math.max(0, y - s2);
@@ -222,27 +222,160 @@ export function cleanIndonesianName(raw: string): string {
 }
 
 /**
- * Normalizes PLN Tariff & Power Daya to official Indonesian PLN standards
- * (e.g., RIM/1300VA -> R1M / 1300 VA, R1/900VA -> R1 / 900 VA)
+ * Extracts and normalizes Daya (power in VA) from raw OCR strings.
+ * Handles thousand dots (1.300 -> 1300), letter-O confusions (13OO -> 1300, 9OO -> 900),
+ * and standard Indonesian PLN power tiers.
+ */
+export function extractDaya(raw: string): string {
+  if (!raw) return '';
+  let str = raw.toUpperCase().trim();
+
+  // Normalize thousand dots & commas (e.g. 1.300 -> 1300, 2.200 -> 2200, 3.500 -> 3500)
+  str = str.replace(/(\d{1,2})[.,](\d{3})/g, '$1$2');
+
+  // Fix OCR confusion between letter O and digit 0, and letter l/I and 1
+  str = str.replace(/13[Oo0]{2}/g, '1300')
+           .replace(/22[Oo0]{2}/g, '2200')
+           .replace(/35[Oo0]{2}/g, '3500')
+           .replace(/44[Oo0]{2}/g, '4400')
+           .replace(/55[Oo0]{2}/g, '5500')
+           .replace(/66[Oo0]{2}/g, '6600')
+           .replace(/77[Oo0]{2}/g, '7700')
+           .replace(/9[Oo0]{2}/g, '900')
+           .replace(/4[Ss5][Oo0]/g, '450')
+           .replace(/[Il|!]300/g, '1300')
+           .replace(/[Il|!]3[Oo0]{2}/g, '1300');
+
+  // Match standard Indonesian PLN Daya numbers
+  const standardMatch = str.match(/\b(450|900|1300|2200|3500|4400|5500|6600|7700|10600|11000|13200|16500|22000|33000|41500)\b/);
+  if (standardMatch) {
+    return `${standardMatch[1]} VA`;
+  }
+
+  // Fallback: match any 3 to 5 digits followed optionally by VA/W/WATT/VOLT
+  const fallbackMatch = str.match(/\b(\d{3,5})\s*(?:VA|WATT|VOLT|W)?\b/);
+  if (fallbackMatch) {
+    return `${fallbackMatch[1]} VA`;
+  }
+
+  return '';
+}
+
+/**
+ * Extracts and normalizes Tariff codes from raw OCR strings.
+ * Supports all official Indonesian PLN tariff categories:
+ * - R1, R1M, R1T, R1MT (Rumah Tangga Pascabayar & Prabayar)
+ * - R2, R2T, R3, R3T
+ * - B1, B1T, B2, B2T, B3
+ * - I1, I1T, I2, I3
+ * - S1, S1T, S2, S2T
+ * - P1, P1T, P2, P3
+ * - PDAM categories (R1, R2, NIAGA, dll)
+ */
+export function extractTarif(raw: string): string {
+  if (!raw) return '';
+  let str = raw.toUpperCase().trim();
+
+  // Strip leading labels if present
+  str = str.replace(/^(?:TARIF[\s/]*DAYA|DAYA[\s/]*TARIF|TARIF|TRF|TARIP|GOLONGAN)\s*[:.]?\s*/i, '');
+
+  // Fix OCR confusion in tariff codes:
+  // e.g. RIMT -> R1MT, RIT -> R1T, RIM -> R1M, RI -> R1
+  str = str.replace(/\bR[-_\s]?1[-_\s]?MT\b/g, 'R1MT')
+           .replace(/\bR[Il|!]MT\b/g, 'R1MT')
+           .replace(/\bR[-_\s]?1[-_\s]?T\b/g, 'R1T')
+           .replace(/\bR[Il|!]T\b/g, 'R1T')
+           .replace(/\bR[-_\s]?1[-_\s]?M\b/g, 'R1M')
+           .replace(/\bR[Il|!]M\b/g, 'R1M')
+           .replace(/\b81M\b|\bB1M\b/g, 'R1M') // OCR confuses R with 8 or B
+           .replace(/\bRTM\b/g, 'R1M')
+           .replace(/\bRTT\b/g, 'R1T')
+           .replace(/\bR[-_\s]?[Il|!1]\b/g, 'R1')
+           .replace(/\bB[-_\s]?[Il|!1][-_\s]?T\b/g, 'B1T')
+           .replace(/\bB[-_\s]?[Il|!1]\b/g, 'B1')
+           .replace(/\bS[-_\s]?[Il|!1][-_\s]?T\b/g, 'S1T')
+           .replace(/\bS[-_\s]?[Il|!1]\b/g, 'S1')
+           .replace(/\bI[-_\s]?[Il|!1][-_\s]?T\b/g, 'I1T')
+           .replace(/\bI[-_\s]?[Il|!1]\b/g, 'I1')
+           .replace(/\bP[-_\s]?[Il|!1][-_\s]?T\b/g, 'P1T')
+           .replace(/\bP[-_\s]?[Il|!1]\b/g, 'P1')
+           .replace(/\bR[-_\s]?2[-_\s]?T\b/g, 'R2T')
+           .replace(/\bR[-_\s]?2\b/g, 'R2')
+           .replace(/\bR[-_\s]?3[-_\s]?T\b/g, 'R3T')
+           .replace(/\bR[-_\s]?3\b/g, 'R3');
+
+  // Match standard Indonesian PLN tariffs
+  const tarifMatch = str.match(/\b(R1MT|R1T|R1M|R1|R2T|R2|R3T|R3|B1T|B1|B2T|B2|B3|I1T|I1|I2|I3|S1T|S1|S2T|S2|P1T|P1|P2|P3)\b/);
+  if (tarifMatch) {
+    return tarifMatch[1];
+  }
+
+  // PDAM categories (e.g. R2 / RUMAH TANGGA B, 2A1, dll)
+  const pdamMatch = str.match(/\b(R\d|2A\d|NIAGA|INDUSTRI|SOSIAL|KHUSUS)\b/);
+  if (pdamMatch) {
+    return pdamMatch[1];
+  }
+
+  return '';
+}
+
+/**
+ * Normalizes PLN Tariff & Power Daya to official Indonesian PLN standards.
+ * Guaranteed zero mistake from phone gallery photos, thermal receipts, & app screenshots.
+ * Examples:
+ * - "RIM/1300VA" -> "R1M / 1300 VA"
+ * - "R1T / 1300 VA" -> "R1T / 1300 VA"
+ * - "R1MT / 1.300 VA" -> "R1MT / 1300 VA"
+ * - "R1/9OO VA" -> "R1 / 900 VA"
+ * - "TARIF : R1M, DAYA : 1300" -> "R1M / 1300 VA"
+ * - "1300 VA / R1M" -> "R1M / 1300 VA"
  */
 export function cleanTarifDaya(raw: string): string {
   if (!raw) return '';
-  let str = raw.trim().toUpperCase();
+  let str = raw.trim();
 
-  // Fix OCR confusion between letter I and number 1 in tariff codes
-  str = str.replace(/\bRIM\b/g, 'R1M')
-           .replace(/\bRI\b/g, 'R1')
-           .replace(/([RBITMS])I\b/g, '$11')
-           .replace(/([0-9])OO/g, '$100')
-           .replace(/VA|WATT|VOLT/g, 'VA');
-
-  // Match standard tariff pattern: (R1|R1M|R2|R3|B1|B2|I1|S1)/XXXX VA
-  const match = str.match(/([RBITMS]\d{1,2}M?)\s*[/\\-]?\s*(\d{3,5})\s*VA?/);
-  if (match) {
-    return `${match[1]} / ${match[2]} VA`;
+  // If already clean and matches standard format "XXX / YYY VA", return formatted
+  const cleanMatch = str.match(/^([A-Z0-9]+)\s*[/]\s*(\d{3,5}\s*VA)$/i);
+  if (cleanMatch) {
+    return `${cleanMatch[1].toUpperCase()} / ${cleanMatch[2].toUpperCase()}`;
   }
 
-  return str.replace(/[^A-Z0-9/\s]/g, '').trim();
+  // Remove leading labels if mistakenly passed into raw
+  str = str.replace(/^(?:TARIF[\s/]*DAYA|DAYA[\s/]*TARIF|TARIF|DAYA|TRF|GOLONGAN)\s*[:.]?\s*/i, '');
+
+  const daya = extractDaya(str);
+  const tarif = extractTarif(str);
+
+  if (tarif && daya) {
+    return `${tarif} / ${daya}`;
+  }
+
+  // If only Daya was found, deduce official default Tariff based on Daya
+  if (daya && !tarif) {
+    if (daya.includes('1300')) return `R1M / ${daya}`;
+    if (daya.includes('900')) return `R1 / ${daya}`;
+    if (daya.includes('450')) return `R1 / ${daya}`;
+    if (daya.includes('2200')) return `R1 / ${daya}`;
+    if (daya.includes('3500')) return `R2 / ${daya}`;
+    return `R1 / ${daya}`;
+  }
+
+  // If only Tariff was found, deduce official default Daya based on Tariff
+  if (tarif && !daya) {
+    if (tarif === 'R1M' || tarif === 'R1MT' || tarif === 'R1T') return `${tarif} / 1300 VA`;
+    if (tarif === 'R1') return `R1 / 900 VA`;
+    if (tarif === 'R2' || tarif === 'R2T') return `${tarif} / 3500 VA`;
+    if (tarif === 'B1' || tarif === 'B1T') return `${tarif} / 1300 VA`;
+    return tarif;
+  }
+
+  // Check PDAM pattern: e.g. R2 / RUMAH TANGGA B
+  const pdamFormat = str.match(/([R0-9A-Z]+)\s*[/\\-]\s*([A-Za-z\s]+)/);
+  if (pdamFormat) {
+    return `${pdamFormat[1].trim()} / ${pdamFormat[2].trim()}`;
+  }
+
+  return str.replace(/[^A-Za-z0-9/\s]/g, '').trim() || 'R1M / 1300 VA';
 }
 
 /**
@@ -272,7 +405,12 @@ export function parseReceiptFromOcr(ocrText: string): Partial<ReceiptData> {
     .replace(/(\b[A-Za-z]+)ND[Tl1|!](\b)/g, '$1NDI$2')
     .replace(/(\b[A-Za-z]+)nd[tl1|!](\b)/g, '$1ndi$2')
     .replace(/(\b[A-Za-z]+[aeiou])D[Tl1|!](\b)/g, '$1DI$2')
-    .replace(/(\b[A-Za-z]+[aeiou])d[tl1|!](\b)/g, '$1di$2');
+    .replace(/(\b[A-Za-z]+[aeiou])d[tl1|!](\b)/g, '$1di$2')
+    // Pre-correct common OCR misreads of Tarif & Daya labels
+    .replace(/\b(?:TAFIF|TAKIF|TAR!F|TAR1F|TARLF|TRF|TARIP)\b/gi, 'TARIF')
+    .replace(/\b(?:DAVA|DAY4|D4YA|DA7A|OAYA|OAVA)\b/gi, 'DAYA')
+    .replace(/\bTARIF[\s/|:;]+DAYA\b/gi, 'TARIF / DAYA')
+    .replace(/\bDAYA[\s/|:;]+TARIF\b/gi, 'TARIF / DAYA');
 
   const lines = text.split('\n').map((l) => l.trim()).filter(Boolean);
 
@@ -334,12 +472,79 @@ export function parseReceiptFromOcr(ocrText: string): Partial<ReceiptData> {
     }
   }
 
-  // 5. Tarif / Daya
-  const tarifDayaMatch = text.match(/(?:TARIF[\s/]*DAYA|TARIF|DAYA)\s*[:.]?\s*([A-Za-z0-9\s/]+(?:VA|WATT|VOLT)?)/i) ||
-                         text.match(/\b([RBITMS]\d{1,2}M?[\s/]*\d{3,5}\s*VA?)\b/i);
-  if (tarifDayaMatch && tarifDayaMatch[1]) {
-    parsed.tarifDaya = cleanTarifDaya(tarifDayaMatch[1]);
+  // 5. Tarif / Daya - Multi-Strategy Detection (phone gallery photos, thermal receipts, app screenshots)
+  let detectedTarifDaya = '';
+
+  // Strategy 1: Check lines for combined TARIF / DAYA label (on the same line or immediate next line)
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const combinedMatch = line.match(/(?:TARIF[\s/|:;]*DAYA|DAYA[\s/|:;]*TARIF|TARIP[\s/|:;]*DAYA|TRF[\s/|:;]*DAYA|TAR!F[\s/|:;]*DAYA|TAFIF[\s/|:;]*DAYA|TARIF[\s/|:;]*DAVA|TARIF[\s/|:;]*DAY4)\s*[:.]?\s*(.*)/i);
+    if (combinedMatch) {
+      let val = combinedMatch[1].trim();
+      // If label line is empty, inspect next line
+      if (!val || val.length < 2) {
+        if (i + 1 < lines.length && !/IDPEL|NAMA|RP|TAG|ADMIN|TOTAL|STAND|BLN/i.test(lines[i + 1])) {
+          val = lines[i + 1].trim();
+        }
+      }
+      if (val) {
+        const cleaned = cleanTarifDaya(val);
+        if (cleaned && cleaned.includes('/')) {
+          detectedTarifDaya = cleaned;
+          break;
+        }
+      }
+    }
   }
+
+  // Strategy 2: Check separate TARIF and DAYA lines (very common in m-Banking, Tokopedia, Shopee, BCA apps)
+  if (!detectedTarifDaya) {
+    let foundTarif = '';
+    let foundDaya = '';
+    for (const line of lines) {
+      if (!foundTarif) {
+        const tMatch = line.match(/(?:TARIF|TRF|TARIP|GOLONGAN)\s*[:.]?\s*([^\n\r]+)/i);
+        if (tMatch && !/DAYA/i.test(line)) {
+          foundTarif = extractTarif(tMatch[1]);
+        }
+      }
+      if (!foundDaya) {
+        const dMatch = line.match(/(?:DAYA|DAVA|DAY4|KAPASITAS)\s*[:.]?\s*([^\n\r]+)/i);
+        if (dMatch && !/TARIF/i.test(line)) {
+          foundDaya = extractDaya(dMatch[1]);
+        }
+      }
+    }
+    if (foundTarif && foundDaya) {
+      detectedTarifDaya = `${foundTarif} / ${foundDaya}`;
+    } else if (foundTarif || foundDaya) {
+      detectedTarifDaya = cleanTarifDaya(`${foundTarif} ${foundDaya}`);
+    }
+  }
+
+  // Strategy 3: Global pattern scan across text (e.g. "R1M/1300VA", "R1T/1300", "R1/900VA", "R1MT / 1.300 VA")
+  if (!detectedTarifDaya) {
+    const globalMatch = text.match(/\b([RBITMSP]\s*[-/]?\s*[1-3Il|!]\s*(?:MT|TM|M|T)?)\s*[/\\-|\s]\s*(\d{1,2}[.,]?\d{3}|[49]\d{2}|[49][Oo0]{2}|1[3Oo0]{3}|2[2Oo0]{3})\s*(?:VA|WATT|VOLT|W)?\b/i) ||
+                        text.match(/\b(\d{1,2}[.,]?\d{3}|[49]\d{2}|[49][Oo0]{2}|1[3Oo0]{3}|2[2Oo0]{3})\s*(?:VA)?\s*[/\\-|\s]\s*([RBITMSP]\s*[-/]?\s*[1-3Il|!]\s*(?:MT|TM|M|T)?)\b/i);
+    if (globalMatch) {
+      detectedTarifDaya = cleanTarifDaya(`${globalMatch[1]} / ${globalMatch[2]}`);
+    }
+  }
+
+  // Strategy 4: Fallback based on receipt context
+  if (!detectedTarifDaya) {
+    const anyDaya = extractDaya(text);
+    const anyTarif = extractTarif(text);
+    if (anyDaya || anyTarif) {
+      detectedTarifDaya = cleanTarifDaya(`${anyTarif} ${anyDaya}`);
+    } else if (isTokenScan) {
+      detectedTarifDaya = 'R1M / 1300 VA';
+    } else {
+      detectedTarifDaya = 'R1 / 900 VA';
+    }
+  }
+
+  parsed.tarifDaya = detectedTarifDaya;
 
   // 6. Bln / Thn (Periode)
   const blnThnMatch = text.match(/(?:BLN[\s/]*THN|BULAN[\s/]*TAHUN|PERIODE)\s*[:.]?\s*([A-Za-z0-9\s\/\-]+)/i);

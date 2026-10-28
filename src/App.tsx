@@ -62,12 +62,15 @@ export default function App() {
 
   // Handle OCR Completion: merge detected fields with existing
   const handleOcrScanComplete = (parsed: Partial<ReceiptData>, rawText: string) => {
+    const isTokenScan = (parsed.headerTitle || '').includes('TOKEN') || Boolean(parsed.stroomToken);
     setReceiptData((prev) => ({
       ...prev,
       ...parsed,
+      blnThn: isTokenScan ? '' : (parsed.blnThn !== undefined ? parsed.blnThn : prev.blnThn),
+      standMeter: isTokenScan ? '' : (parsed.standMeter !== undefined ? parsed.standMeter : prev.standMeter),
       // Default to LOKET PPOB ATHAR DIGITAL unless user uploaded a specific custom merchant
       loket: parsed.loket || prev.loket || 'LOKET PPOB ATHAR DIGITAL',
-      headerTitle: parsed.headerTitle || 'STRUK PEMBAYARAN TAGIHAN LISTRIK',
+      headerTitle: parsed.headerTitle || (isTokenScan ? 'STRUK PEMBELIAN TOKEN LISTRIK' : 'STRUK PEMBAYARAN TAGIHAN LISTRIK'),
       footerDisclaimer: parsed.footerDisclaimer || 'PLN menyatakan struk ini sbg bukti pembayaran yg sah. Info hub 123',
     }));
     setActiveTab('editor');
@@ -92,6 +95,7 @@ export default function App() {
       tarifDaya: '',
       standMeter: '',
       blnThn: '',
+      stroomToken: '',
       tagihan: 0,
       adminBank: 3000,
       totalBayar: 3000,

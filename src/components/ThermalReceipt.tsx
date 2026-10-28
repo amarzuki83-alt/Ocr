@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { ReceiptData, PaperSize } from '../types';
-import { formatRupiah } from '../utils/escpos';
+import { formatRupiah, isTokenReceipt, getStroomToken, formatToken20 } from '../utils/escpos';
 import { generateReceiptCanvas, shareReceiptToWhatsApp } from '../utils/receiptCanvas';
 import { 
   Copy, 
@@ -70,6 +70,8 @@ export const ThermalReceipt: React.FC<ThermalReceiptProps> = ({
   };
 
   const is58 = paperSize === '58mm';
+  const isToken = isTokenReceipt(data);
+  const tokenValue = getStroomToken(data);
 
   return (
     <div className="flex flex-col items-center w-full">
@@ -219,14 +221,15 @@ export const ThermalReceipt: React.FC<ThermalReceiptProps> = ({
                 <span className="text-slate-900 font-semibold text-left">{data.tarifDaya}</span>
               </div>
             )}
-            {data.blnThn && (
+            {/* For Token Listrik: BLN/THN and STAND METER must be omitted */}
+            {!isToken && data.blnThn && (
               <div className={`grid ${is58 ? 'grid-cols-[100px_14px_1fr]' : 'grid-cols-[130px_16px_1fr]'} items-baseline`}>
                 <span className="text-slate-600 font-medium">BLN / THN</span>
                 <span className="text-slate-900 font-bold text-center">:</span>
                 <span className="text-slate-900 text-left">{data.blnThn}</span>
               </div>
             )}
-            {data.standMeter && (
+            {!isToken && data.standMeter && (
               <div className={`grid ${is58 ? 'grid-cols-[100px_14px_1fr]' : 'grid-cols-[130px_16px_1fr]'} items-baseline`}>
                 <span className="text-slate-600 font-medium">STAND METER</span>
                 <span className="text-slate-900 font-bold text-center">:</span>
@@ -234,14 +237,33 @@ export const ThermalReceipt: React.FC<ThermalReceiptProps> = ({
               </div>
             )}
 
-            {/* Extra Custom Fields */}
-            {data.extraFields && data.extraFields.map((field) => (
-              <div key={field.id} className={`grid ${is58 ? 'grid-cols-[100px_14px_1fr]' : 'grid-cols-[130px_16px_1fr]'} items-baseline bg-slate-50 px-1 py-0.5 rounded`}>
-                <span className="text-slate-700 font-semibold uppercase">{field.label}</span>
-                <span className="text-slate-900 font-bold text-center">:</span>
-                <span className="text-slate-950 font-bold text-left">{field.value}</span>
+            {/* STROOM / TOKEN Section: 20-Digit Token Enlarged & Prominent */}
+            {isToken && tokenValue && (
+              <div className="my-2.5 p-2.5 bg-slate-50 border-2 border-dashed border-slate-900 rounded-lg text-center shadow-xs">
+                <div className={`grid ${is58 ? 'grid-cols-[100px_14px_1fr]' : 'grid-cols-[130px_16px_1fr]'} items-center mb-1 text-left`}>
+                  <span className="text-slate-900 font-extrabold uppercase text-[11px] sm:text-xs tracking-wider">STROOM / TOKEN</span>
+                  <span className="text-slate-900 font-extrabold text-center">:</span>
+                  <span className="text-slate-500 text-[10px] italic">20 Digit Token PLN</span>
+                </div>
+                <div className="text-base sm:text-xl font-black font-mono tracking-widest text-slate-950 py-1.5 px-2 bg-white border border-slate-300 rounded shadow-inner select-all">
+                  {formatToken20(tokenValue)}
+                </div>
               </div>
-            ))}
+            )}
+
+            {/* Extra Custom Fields (e.g. JML KWH, PPJ) */}
+            {data.extraFields && data.extraFields.map((field) => {
+              if (isToken && (/TOKEN|STROOM/i.test(field.label) || /token/i.test(field.id))) {
+                return null;
+              }
+              return (
+                <div key={field.id} className={`grid ${is58 ? 'grid-cols-[100px_14px_1fr]' : 'grid-cols-[130px_16px_1fr]'} items-baseline bg-slate-50 px-1 py-0.5 rounded`}>
+                  <span className="text-slate-700 font-semibold uppercase">{field.label}</span>
+                  <span className="text-slate-900 font-bold text-center">:</span>
+                  <span className="text-slate-950 font-bold text-left">{field.value}</span>
+                </div>
+              );
+            })}
           </div>
 
           <div className="border-b border-dashed border-slate-300 my-2" />

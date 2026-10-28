@@ -1,5 +1,5 @@
 import { ReceiptData, PaperSize } from '../types';
-import { formatRupiah, formatTwoColumns } from './escpos';
+import { formatRupiah, formatTwoColumns, isTokenReceipt, getStroomToken, formatToken20 } from './escpos';
 
 /**
  * Draws a high-resolution, authentic thermal receipt onto an HTML5 Canvas
@@ -15,9 +15,15 @@ export function generateReceiptCanvas(data: ReceiptData, paperSize: PaperSize = 
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d')!;
 
+  const isToken = isTokenReceipt(data);
+  const tokenValue = getStroomToken(data);
+
   // Measure content height dynamically
   // Estimate height: header ~180px, body ~400px, footer ~200px
   let estimatedHeight = 650;
+  if (isToken && tokenValue) {
+    estimatedHeight += 95;
+  }
   if (data.extraFields && data.extraFields.length > 0) {
     estimatedHeight += data.extraFields.length * 32;
   }
@@ -88,7 +94,7 @@ export function generateReceiptCanvas(data: ReceiptData, paperSize: PaperSize = 
   drawDashedLine(ctx, paddingX, width - paddingX, y, 3, '#71717a', 1);
   y += 24;
 
-  // Customer details: IDPEL, NAMA, TARIF/DAYA, BLN/THN, STAND METER
+  // Customer details: IDPEL, NAMA, TARIF/DAYA
   if (data.idPel) {
     drawRowWithColon(ctx, 'IDPEL', data.idPel, xLabel, xColon, xValue, y, { boldValue: true, fontSize: 20 });
     y += 28;
@@ -101,19 +107,61 @@ export function generateReceiptCanvas(data: ReceiptData, paperSize: PaperSize = 
     drawRowWithColon(ctx, 'TARIF / DAYA', data.tarifDaya, xLabel, xColon, xValue, y);
     y += 26;
   }
-  if (data.blnThn) {
-    drawRowWithColon(ctx, 'BLN / THN', data.blnThn, xLabel, xColon, xValue, y);
-    y += 26;
-  }
-  if (data.standMeter) {
-    drawRowWithColon(ctx, 'STAND METER', data.standMeter, xLabel, xColon, xValue, y);
-    y += 26;
+
+  // For Token Listrik: BLN/THN and STAND METER are completely omitted
+  if (!isToken) {
+    if (data.blnThn) {
+      drawRowWithColon(ctx, 'BLN / THN', data.blnThn, xLabel, xColon, xValue, y);
+      y += 26;
+    }
+    if (data.standMeter) {
+      drawRowWithColon(ctx, 'STAND METER', data.standMeter, xLabel, xColon, xValue, y);
+      y += 26;
+    }
   }
 
-  // Extra fields
+  // STROOM / TOKEN Section: 20 Digit Enlarged & Prominent
+  if (isToken && tokenValue) {
+    y += 4;
+    drawDashedLine(ctx, paddingX, width - paddingX, y, 4, '#09090b', 2);
+    y += 22;
+
+    // Label with colon
+    drawRowWithColon(ctx, 'STROOM / TOKEN', '', xLabel, xColon, xValue, y, {
+      boldLabel: true,
+      fontSize: 20,
+      labelColor: '#09090b',
+    });
+    y += 26;
+
+    // Prominent enlarged 20-digit token box (high contrast, bold 25px font)
+    const tokenFormatted = formatToken20(tokenValue);
+    const boxH = 46;
+    const boxW = width - (paddingX * 2);
+
+    ctx.fillStyle = '#f8fafc';
+    ctx.fillRect(paddingX, y - 26, boxW, boxH);
+    ctx.strokeStyle = '#09090b';
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(paddingX, y - 26, boxW, boxH);
+
+    ctx.textAlign = 'center';
+    ctx.font = 'bold 25px "Courier Prime", "Courier New", monospace';
+    ctx.fillStyle = '#09090b';
+    ctx.fillText(tokenFormatted, width / 2, y + 4);
+    y += 30;
+
+    drawDashedLine(ctx, paddingX, width - paddingX, y, 4, '#09090b', 2);
+    y += 24;
+  }
+
+  // Extra fields (e.g. JML KWH, PPJ)
   if (data.extraFields && data.extraFields.length > 0) {
     for (const f of data.extraFields) {
       if (f.label && f.value) {
+        if (isToken && (/TOKEN|STROOM/i.test(f.label) || /token/i.test(f.id))) {
+          continue; // Already displayed above in enlarged box
+        }
         drawRowWithColon(ctx, f.label.toUpperCase(), f.value, xLabel, xColon, xValue, y, { boldValue: true });
         y += 26;
       }
@@ -309,18 +357,31 @@ export async function shareReceiptToWhatsApp(
       throw new Error('Gagal menghasilkan gambar struk PNG.');
     }
 
-    const file = new File([blob], fileName, { type: 'image/png' });
-
     // WhatsApp summary caption with two-column colon alignment
-    const captionText = [
-      `*STRUK PEMBAYARAN TAGIHAN LISTRIK*`,
+    const waIsToken = isTokenReceipt(data);
+    const waTokenValue = getStroomToken(data);
+
+    const captionLines: string[] = [
+      `*${(data.headerTitle || 'STRUK PEMBAYARAN TAGIHAN LISTRIK').toUpperCase()}*`,
       `*${data.loket || 'LOKET PPOB ATHAR DIGITAL'}*`,
       `---------------------------------`,
       `*IDPEL*       : ${data.idPel || '-'}`,
       `*NAMA*        : ${data.nama || '-'}`,
       `*TARIF/DAYA*  : ${data.tarifDaya || '-'}`,
-      `*BLN/THN*     : ${data.blnThn || '-'}`,
-      `*STAND METER* : ${data.standMeter || '-'}`,
+    ];
+
+    if (!waIsToken) {
+      if (data.blnThn) captionLines.push(`*BLN/THN*     : ${data.blnThn}`);
+      if (data.standMeter) captionLines.push(`*STAND METER* : ${data.standMeter}`);
+    }
+
+    if (waIsToken && waTokenValue) {
+      captionLines.push(`---------------------------------`);
+      captionLines.push(`*STROOM / TOKEN* :`);
+      captionLines.push(`*${formatToken20(waTokenValue)}*`);
+    }
+
+    captionLines.push(
       `---------------------------------`,
       `*RP TAG PLN*  : ${formatRupiah(data.tagihan)}`,
       `*ADMIN BANK*  : ${formatRupiah(data.adminBank)}`,
@@ -331,8 +392,11 @@ export async function shareReceiptToWhatsApp(
       `_${data.footerDisclaimer || 'PLN menyatakan struk ini sbg bukti pembayaran yg sah. Info hub 123'}_`,
       ``,
       `*Status: LUNAS / SAH*`,
-      `_Gambar struk PNG latar putih bersih resmi terlampir._`,
-    ].join('\n');
+      `_Gambar struk PNG latar putih bersih resmi terlampir._`
+    );
+
+    const captionText = captionLines.join('\n');
+    const file = new File([blob], fileName, { type: 'image/png' });
 
     // 1. Try Mobile Web Share API with file support (Chrome Android, Safari iOS, etc.)
     if (

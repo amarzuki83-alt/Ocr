@@ -14,6 +14,7 @@ export interface ReceiptData {
   tarifDaya: string;
   standMeter: string;
   blnThn: string;
+  stroomToken?: string;
   tagihan: number;
   adminBank: number;
   totalBayar: number;

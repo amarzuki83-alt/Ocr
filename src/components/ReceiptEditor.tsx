@@ -1,5 +1,6 @@
 import React from 'react';
 import { ReceiptData, ExtraReceiptField } from '../types';
+import { isTokenReceipt, getStroomToken, formatToken20 } from '../utils/escpos';
 import { 
   Building2, 
   User, 
@@ -13,7 +14,10 @@ import {
   Calculator, 
   Clock, 
   ShieldCheck,
-  FileText
+  FileText,
+  Radio,
+  Sparkles,
+  Info
 } from 'lucide-react';
 
 interface ReceiptEditorProps {
@@ -31,6 +35,62 @@ export const ReceiptEditor: React.FC<ReceiptEditorProps> = ({
   onToggleAutoCalculate,
   onReset,
 }) => {
+  const isToken = isTokenReceipt(data);
+  const currentToken = getStroomToken(data);
+
+  // Switch to Token Listrik (Prabayar)
+  const handleSelectTokenType = () => {
+    const defaultTokenAdmin = 5000; // Requirement: Admin bank token listrik jadikan di Rp 5000
+    const currentTagihan = data.tagihan || 100000;
+    onChange({
+      ...data,
+      headerTitle: 'STRUK PEMBELIAN TOKEN LISTRIK',
+      adminBank: defaultTokenAdmin,
+      blnThn: '', // Requirement: Hilangkan BLN/THN
+      standMeter: '', // Requirement: Hilangkan stand meter
+      stroomToken: data.stroomToken || '3829-1928-4402-9182-3819',
+      tagihan: currentTagihan,
+      totalBayar: autoCalculate ? currentTagihan + defaultTokenAdmin : (data.totalBayar || currentTagihan + defaultTokenAdmin),
+      extraFields: (data.extraFields || []).filter((f) => !/TOKEN|STROOM/i.test(f.label) && !/token/i.test(f.id)),
+    });
+  };
+
+  // Switch to Tagihan Listrik (Pascabayar)
+  const handleSelectPostpaidType = () => {
+    const defaultPostpaidAdmin = 3000;
+    const currentTagihan = data.tagihan || 324500;
+    onChange({
+      ...data,
+      headerTitle: 'STRUK PEMBAYARAN TAGIHAN LISTRIK',
+      adminBank: defaultPostpaidAdmin,
+      blnThn: data.blnThn || 'OKT 2026',
+      standMeter: data.standMeter || '014280 - 014520 (240 kWh)',
+      stroomToken: '',
+      tagihan: currentTagihan,
+      totalBayar: autoCalculate ? currentTagihan + defaultPostpaidAdmin : (data.totalBayar || currentTagihan + defaultPostpaidAdmin),
+    });
+  };
+
+  // Generate random 20-digit token
+  const handleGenerateRandomToken = () => {
+    const blocks: string[] = [];
+    for (let i = 0; i < 5; i++) {
+      blocks.push(Math.floor(1000 + Math.random() * 9000).toString());
+    }
+    const newToken = blocks.join('-');
+    handleFieldChange('stroomToken', newToken);
+  };
+
+  // Format 20-digit token on input
+  const handleTokenChange = (val: string) => {
+    const digits = val.replace(/[^0-9]/g, '').slice(0, 20);
+    let formatted = digits;
+    if (digits.length > 4) {
+      formatted = digits.match(/.{1,4}/g)?.join('-') || digits;
+    }
+    handleFieldChange('stroomToken', formatted);
+  };
+
   const handleFieldChange = (field: keyof ReceiptData, value: any) => {
     const updated = { ...data, [field]: value };
 
@@ -108,6 +168,39 @@ export const ReceiptEditor: React.FC<ReceiptEditorProps> = ({
           <RefreshCw className="w-3.5 h-3.5" />
           <span>Reset Form</span>
         </button>
+      </div>
+
+      {/* Mode / Quick Type Selector */}
+      <div className="bg-slate-900/90 p-3 rounded-xl border border-slate-700/80 flex items-center justify-between gap-3 flex-wrap">
+        <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-300">
+          <span>Pilih Format Struk:</span>
+        </div>
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            type="button"
+            onClick={handleSelectPostpaidType}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 active:scale-95 ${
+              !isToken
+                ? 'bg-cyan-600 text-white shadow-md'
+                : 'bg-slate-800 text-slate-400 hover:text-white border border-slate-700'
+            }`}
+          >
+            <Zap className="w-3.5 h-3.5 text-cyan-300" />
+            <span>Tagihan Listrik (Pascabayar)</span>
+          </button>
+          <button
+            type="button"
+            onClick={handleSelectTokenType}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 active:scale-95 ${
+              isToken
+                ? 'bg-amber-600 text-white shadow-md'
+                : 'bg-slate-800 text-slate-400 hover:text-white border border-slate-700'
+            }`}
+          >
+            <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+            <span>Token Listrik (Prabayar)</span>
+          </button>
+        </div>
       </div>
 
       {/* 1. Header & Identitas Loket */}
@@ -201,37 +294,80 @@ export const ReceiptEditor: React.FC<ReceiptEditorProps> = ({
               type="text"
               value={data.tarifDaya}
               onChange={(e) => handleFieldChange('tarifDaya', e.target.value)}
-              placeholder="Contoh: R1 / 900 VA"
+              placeholder="Contoh: R1 / 900 VA atau R1M / 1300 VA"
               className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500 transition"
             />
           </div>
 
+          {/* Dedicated 20-Digit STROOM / TOKEN for Prepaid Token Listrik */}
+          {isToken && (
+            <div className="sm:col-span-2 bg-slate-900/90 border-2 border-amber-500/50 rounded-xl p-3.5 space-y-2 shadow-lg">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-extrabold text-amber-300 uppercase tracking-wide flex items-center gap-1.5">
+                  <Sparkles className="w-4 h-4 text-amber-400" />
+                  <span>Kolom Stroom / Token Listrik (20 Digit)</span>
+                </label>
+                <button
+                  type="button"
+                  onClick={handleGenerateRandomToken}
+                  className="flex items-center gap-1 text-[11px] font-semibold text-cyan-400 hover:text-cyan-300 bg-cyan-500/10 hover:bg-cyan-500/20 px-2 py-0.5 rounded border border-cyan-500/30 transition active:scale-95"
+                >
+                  <RefreshCw className="w-3 h-3" />
+                  <span>Acak 20 Digit</span>
+                </button>
+              </div>
 
-          <div>
-            <label className="block text-xs font-medium text-slate-300 mb-1">
-              Bulan / Tahun (Periode)
-            </label>
-            <input
-              type="text"
-              value={data.blnThn}
-              onChange={(e) => handleFieldChange('blnThn', e.target.value)}
-              placeholder="Contoh: OKT 2026"
-              className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500 transition"
-            />
-          </div>
+              <div className="relative">
+                <input
+                  type="text"
+                  value={data.stroomToken || currentToken || ''}
+                  onChange={(e) => handleTokenChange(e.target.value)}
+                  placeholder="3829-1928-4402-9182-3819"
+                  maxLength={24}
+                  className="w-full bg-slate-950 border border-amber-500/60 rounded-lg px-3 py-2.5 text-base sm:text-lg font-black font-mono tracking-widest text-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-500 text-center"
+                />
+              </div>
 
-          <div>
-            <label className="block text-xs font-medium text-slate-300 mb-1">
-              Stand Meter (Awal - Akhir)
-            </label>
-            <input
-              type="text"
-              value={data.standMeter}
-              onChange={(e) => handleFieldChange('standMeter', e.target.value)}
-              placeholder="Contoh: 014280 - 014520 (240 kWh)"
-              className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500 transition"
-            />
-          </div>
+              <div className="flex items-start gap-1.5 text-[11px] text-slate-400 bg-slate-950/60 p-2 rounded-lg border border-slate-800">
+                <Info className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
+                <span>
+                  Nomor token 20 digit diperbesar pada struk cetak & gambar PNG. 
+                  Field <strong>BLN/THN</strong> dan <strong>Stand Meter</strong> otomatis dihilangkan sesuai permintaan.
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* BLN/THN & Stand Meter: Only displayed for Non-Token Receipts */}
+          {!isToken && (
+            <>
+              <div>
+                <label className="block text-xs font-medium text-slate-300 mb-1">
+                  Bulan / Tahun (Periode)
+                </label>
+                <input
+                  type="text"
+                  value={data.blnThn}
+                  onChange={(e) => handleFieldChange('blnThn', e.target.value)}
+                  placeholder="Contoh: OKT 2026"
+                  className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500 transition"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-slate-300 mb-1">
+                  Stand Meter (Awal - Akhir)
+                </label>
+                <input
+                  type="text"
+                  value={data.standMeter}
+                  onChange={(e) => handleFieldChange('standMeter', e.target.value)}
+                  placeholder="Contoh: 014280 - 014520 (240 kWh)"
+                  className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500 transition"
+                />
+              </div>
+            </>
+          )}
         </div>
       </div>
 
@@ -278,7 +414,7 @@ export const ReceiptEditor: React.FC<ReceiptEditorProps> = ({
           <div>
             <div className="flex items-center justify-between mb-1">
               <label className="block text-xs font-medium text-slate-300">
-                Admin Bank
+                Admin Bank {isToken && <span className="text-amber-400 font-bold">(Default Token: 5k)</span>}
               </label>
               <div className="flex gap-1 text-[10px]">
                 <button
@@ -298,7 +434,11 @@ export const ReceiptEditor: React.FC<ReceiptEditorProps> = ({
                 <button
                   type="button"
                   onClick={() => handleAdminPreset(5000)}
-                  className="px-1.5 py-0.5 rounded bg-slate-700 hover:bg-slate-600 text-slate-200"
+                  className={`px-1.5 py-0.5 rounded font-bold transition ${
+                    isToken
+                      ? 'bg-amber-600 text-white shadow-sm ring-1 ring-amber-400'
+                      : 'bg-slate-700 hover:bg-slate-600 text-slate-200'
+                  }`}
                 >
                   5k
                 </button>
@@ -310,8 +450,10 @@ export const ReceiptEditor: React.FC<ReceiptEditorProps> = ({
                 type="number"
                 value={data.adminBank || ''}
                 onChange={(e) => handleFieldChange('adminBank', Number(e.target.value))}
-                placeholder="3000"
-                className="w-full bg-slate-900 border border-slate-700 rounded-lg pl-9 pr-3 py-2 text-sm font-semibold text-white focus:outline-none focus:border-emerald-500 transition"
+                placeholder={isToken ? "5000" : "3000"}
+                className={`w-full bg-slate-900 border rounded-lg pl-9 pr-3 py-2 text-sm font-semibold text-white focus:outline-none transition ${
+                  isToken ? 'border-amber-500/70 focus:border-amber-400' : 'border-slate-700 focus:border-emerald-500'
+                }`}
               />
             </div>
           </div>

@@ -48,6 +48,51 @@ export function formatRupiah(amount: number | string): string {
 }
 
 /**
+ * Detects if the receipt is for PLN Token Listrik (Prabayar)
+ */
+export function isTokenReceipt(data: ReceiptData): boolean {
+  const header = (data.headerTitle || '').toUpperCase();
+  const sub = (data.subHeader || '').toUpperCase();
+  const hasTokenExtra = (data.extraFields || []).some((f) => 
+    /TOKEN|STROOM/i.test(f.label) || /token/i.test(f.id)
+  );
+  return Boolean(
+    (data.stroomToken && data.stroomToken.trim().length > 0) ||
+    header.includes('TOKEN') ||
+    header.includes('PRABAYAR') ||
+    header.includes('PREPAID') ||
+    sub.includes('TOKEN') ||
+    hasTokenExtra
+  );
+}
+
+/**
+ * Retrieves the 20-digit token string from dedicated field or extraFields
+ */
+export function getStroomToken(data: ReceiptData): string {
+  if (data.stroomToken && data.stroomToken.trim()) {
+    return data.stroomToken.trim();
+  }
+  const found = (data.extraFields || []).find((f) => 
+    /TOKEN|STROOM/i.test(f.label) || /token/i.test(f.id)
+  );
+  return found ? found.value.trim() : '';
+}
+
+/**
+ * Formats a 20-digit token into standard 5x4 blocks (XXXX-XXXX-XXXX-XXXX-XXXX)
+ */
+export function formatToken20(raw: string): string {
+  if (!raw) return '';
+  const digits = raw.replace(/[^0-9]/g, '');
+  if (digits.length === 20) {
+    return digits.match(/.{1,4}/g)!.join('-');
+  }
+  return raw;
+}
+
+
+/**
  * Format two columns with aligned colon separator for thermal printing and plain text
  * e.g., Left: "IDPEL", Right: "53201928301" -> "IDPEL       : 53201928301"
  */
@@ -100,13 +145,31 @@ export function generatePlainTextReceipt(data: ReceiptData, paperSize: PaperSize
   if (data.idPel) lines.push(formatTwoColumns('NO PELANGGAN', data.idPel, width));
   if (data.nama) lines.push(formatTwoColumns('NAMA', data.nama, width));
   if (data.tarifDaya) lines.push(formatTwoColumns('TARIF/DAYA', data.tarifDaya, width));
-  if (data.blnThn) lines.push(formatTwoColumns('BLN/THN', data.blnThn, width));
-  if (data.standMeter) lines.push(formatTwoColumns('STAND METER', data.standMeter, width));
 
-  // Extra fields (e.g. Stroom token, custom meter details)
+  const isToken = isTokenReceipt(data);
+  const tokenValue = getStroomToken(data);
+
+  // For Token Listrik: BLN/THN and STAND METER must be omitted
+  if (!isToken) {
+    if (data.blnThn) lines.push(formatTwoColumns('BLN/THN', data.blnThn, width));
+    if (data.standMeter) lines.push(formatTwoColumns('STAND METER', data.standMeter, width));
+  }
+
+  // STROOM / TOKEN Section for Token Listrik: ENLARGED & PROMINENT
+  if (isToken && tokenValue) {
+    lines.push(doubleDivider);
+    lines.push(center('STROOM / TOKEN :'));
+    lines.push(center(formatToken20(tokenValue)));
+    lines.push(doubleDivider);
+  }
+
+  // Extra fields (e.g. Jml kWh, PPJ, custom meter details)
   if (data.extraFields && data.extraFields.length > 0) {
     for (const f of data.extraFields) {
       if (f.label && f.value) {
+        if (isToken && (/TOKEN|STROOM/i.test(f.label) || /token/i.test(f.id))) {
+          continue;
+        }
         lines.push(formatTwoColumns(f.label.toUpperCase(), f.value, width));
       }
     }
@@ -204,6 +267,9 @@ export function buildEscPosBuffer(data: ReceiptData, paperSize: PaperSize = '58m
   addText(divider);
 
   // 4. Customer Info
+  const isToken = isTokenReceipt(data);
+  const tokenValue = getStroomToken(data);
+
   if (data.idPel) {
     addBytes(ESC_POS.BOLD_ON);
     addText(formatTwoColumns('IDPEL/NO PEL', data.idPel, width) + '\n');
@@ -211,13 +277,35 @@ export function buildEscPosBuffer(data: ReceiptData, paperSize: PaperSize = '58m
   }
   if (data.nama) addText(formatTwoColumns('NAMA', data.nama, width) + '\n');
   if (data.tarifDaya) addText(formatTwoColumns('TARIF/DAYA', data.tarifDaya, width) + '\n');
-  if (data.blnThn) addText(formatTwoColumns('BLN/THN', data.blnThn, width) + '\n');
-  if (data.standMeter) addText(formatTwoColumns('STAND METER', data.standMeter, width) + '\n');
+
+  // For Token Listrik: BLN/THN and STAND METER must be omitted
+  if (!isToken) {
+    if (data.blnThn) addText(formatTwoColumns('BLN/THN', data.blnThn, width) + '\n');
+    if (data.standMeter) addText(formatTwoColumns('STAND METER', data.standMeter, width) + '\n');
+  }
+
+  // STROOM / TOKEN: ENLARGED FONT (DOUBLE HEIGHT + DOUBLE WIDTH) FOR THERMAL PRINTER
+  if (isToken && tokenValue) {
+    addText(doubleDivider);
+    addBytes(ESC_POS.ALIGN_CENTER);
+    addBytes(ESC_POS.BOLD_ON);
+    addText('STROOM / TOKEN :\n');
+    addBytes(ESC_POS.DOUBLE_HEIGHT);
+    addBytes(ESC_POS.DOUBLE_WIDTH);
+    addText(formatToken20(tokenValue) + '\n');
+    addBytes(ESC_POS.NORMAL_SIZE);
+    addBytes(ESC_POS.BOLD_OFF);
+    addBytes(ESC_POS.ALIGN_LEFT);
+    addText(doubleDivider);
+  }
 
   // Extra fields
   if (data.extraFields && data.extraFields.length > 0) {
     for (const f of data.extraFields) {
       if (f.label && f.value) {
+        if (isToken && (/TOKEN|STROOM/i.test(f.label) || /token/i.test(f.id))) {
+          continue;
+        }
         addText(formatTwoColumns(f.label.toUpperCase(), f.value, width) + '\n');
       }
     }

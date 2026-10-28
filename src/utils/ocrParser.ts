@@ -284,8 +284,11 @@ export function parseReceiptFromOcr(ocrText: string): Partial<ReceiptData> {
   };
 
   // Header detection
-  if (/TOKEN\s*LISTRIK|PRABAYAR|PREPAID/i.test(text)) {
+  const isTokenScan = /TOKEN\s*LISTRIK|PRABAYAR|PREPAID|STROOM/i.test(text);
+  if (isTokenScan) {
     parsed.headerTitle = 'STRUK PEMBELIAN TOKEN LISTRIK';
+    parsed.blnThn = '';
+    parsed.standMeter = '';
   } else if (/PDAM|AIR\s*MINUM/i.test(text)) {
     parsed.headerTitle = 'STRUK PEMBAYARAN AIR PDAM';
   } else if (/BPJS/i.test(text)) {
@@ -360,12 +363,22 @@ export function parseReceiptFromOcr(ocrText: string): Partial<ReceiptData> {
     parsed.tagihan = parseCleanNumber(tagihanMatch[1]);
   }
 
-  // 9. Admin Bank
+  // 9. Admin Bank (Default 5000 for token listrik, 3000 for postpaid)
   const adminMatch = text.match(/(?:ADMIN\s*BANK|BIAYA\s*ADMIN|BIAYA\s*BANK|ADMIN)\s*[:.]?\s*RP?\.?\s*([\d\.,Oo]+)/i);
   if (adminMatch && adminMatch[1]) {
     parsed.adminBank = parseCleanNumber(adminMatch[1]);
   } else {
-    parsed.adminBank = 3000; // standard default
+    parsed.adminBank = isTokenScan ? 5000 : 3000;
+  }
+
+  // 10. STROOM / TOKEN (20 Digit for Prepaid)
+  const tokenMatch = text.match(/(?:STROOM[\s/]*TOKEN|TOKEN|STROOM)\s*[:.]?\s*([0-9\s-]{20,29})/i) ||
+                     text.match(/\b(\d{4}[\s-]\d{4}[\s-]\d{4}[\s-]\d{4}[\s-]\d{4})\b/);
+  if (tokenMatch && tokenMatch[1]) {
+    const rawDigits = tokenMatch[1].replace(/[^0-9]/g, '');
+    if (rawDigits.length === 20) {
+      parsed.stroomToken = rawDigits.match(/.{1,4}/g)!.join('-');
+    }
   }
 
   // 10. Total Bayar (With Mathematical Reconciliation)
@@ -442,17 +455,17 @@ export const SAMPLE_PRESETS: Record<string, ReceiptData> = {
     noMeter: '',
     nama: 'HENDRA WIJAYA',
     tarifDaya: 'R1M / 1300 VA',
-    standMeter: 'ANGSURAN: RP 0',
-    blnThn: 'TOKEN 100 RIBU',
+    standMeter: '',
+    blnThn: '',
+    stroomToken: '3829-1928-4402-9182-3819',
     tagihan: 100000,
-    adminBank: 2500,
-    totalBayar: 102500,
+    adminBank: 5000,
+    totalBayar: 105000,
     tanggal: '26/10/2026 19:12:04 WIB',
     noRef: 'TOKEN261026884192',
     footerDisclaimer: 'PLN menyatakan struk ini sbg bukti pembayaran yg sah. Info hub 123',
     footerGreeting: 'Simpan Struk Ini Sebagai Bukti Sah',
     extraFields: [
-      { id: 'token', label: 'STROOM/TOKEN', value: '3829-1928-4402-9182-3819' },
       { id: 'kwh', label: 'JML KWH', value: '68.2 kWh' },
       { id: 'ppj', label: 'PPJ 3%', value: 'Rp 2.912' },
     ],

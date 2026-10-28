@@ -386,9 +386,10 @@ export function parseReceiptFromOcr(ocrText: string): Partial<ReceiptData> {
   const kwhMatch = text.match(/(?:JML[\s/]*KWH|JUMLAH[\s/]*KWH|KWH)\s*[:.]?\s*([\d\.,]+(?:\s*KWH)?)/i) ||
                    text.match(/\b(\d{1,4}[.,]\d{1,2})\s*KWH\b/i);
   if (kwhMatch && kwhMatch[1]) {
-    let cleanKwh = kwhMatch[1].replace(/,/g, '.').trim();
+    let cleanKwh = kwhMatch[1].trim();
     if (!/kwh/i.test(cleanKwh)) cleanKwh += ' kWh';
-    parsed.kwh = cleanKwh;
+    // Format decimal separator with comma (e.g. 67,3 kWh)
+    parsed.kwh = cleanKwh.replace(/\./g, ',');
   } else if (isTokenScan && parsed.tagihan) {
     parsed.kwh = calculateKwh(parsed.tagihan, parsed.tarifDaya || 'R1M / 1300 VA');
   }
@@ -470,7 +471,7 @@ export const SAMPLE_PRESETS: Record<string, ReceiptData> = {
     standMeter: '',
     blnThn: '',
     stroomToken: '3829-1928-4402-9182-3819',
-    kwh: '69.2 kWh',
+    kwh: '67,3 kWh',
     tagihan: 100000,
     adminBank: 5000,
     totalBayar: 105000,

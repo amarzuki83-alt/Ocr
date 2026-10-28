@@ -383,7 +383,7 @@ export const ReceiptEditor: React.FC<ReceiptEditorProps> = ({
                   type="text"
                   value={data.kwh || currentKwh || ''}
                   onChange={(e) => handleFieldChange('kwh', e.target.value)}
-                  placeholder="Contoh: 69.2 kWh"
+                  placeholder="Contoh: 67,3 kWh"
                   className="w-full bg-slate-900 border border-amber-500/60 rounded-lg px-3 py-2 text-sm font-bold text-amber-300 focus:outline-none focus:ring-1 focus:ring-amber-400 transition"
                 />
               </div>
@@ -491,9 +491,45 @@ export const ReceiptEditor: React.FC<ReceiptEditorProps> = ({
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div>
-            <label className="block text-xs font-medium text-slate-300 mb-1">
-              {isToken ? 'RP BAYAR (Nominal Token Listrik)' : 'RP TAG PLN (Tagihan Murni)'}
-            </label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-xs font-medium text-slate-300">
+                {isToken ? 'RP BAYAR (Nominal Token)' : 'RP TAG PLN (Tagihan Murni)'}
+              </label>
+              {isToken && (
+                <div className="flex gap-1 text-[10px]">
+                  <button
+                    type="button"
+                    onClick={() => handleFieldChange('tagihan', 20000)}
+                    className="px-1.5 py-0.5 rounded bg-slate-700 hover:bg-slate-600 text-slate-200"
+                  >
+                    20k
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleFieldChange('tagihan', 50000)}
+                    className="px-1.5 py-0.5 rounded bg-slate-700 hover:bg-slate-600 text-slate-200"
+                  >
+                    50k
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleFieldChange('tagihan', 100000)}
+                    className={`px-1.5 py-0.5 rounded font-bold ${
+                      data.tagihan === 100000 ? 'bg-amber-600 text-white ring-1 ring-amber-400' : 'bg-slate-700 hover:bg-slate-600 text-slate-200'
+                    }`}
+                  >
+                    100k
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleFieldChange('tagihan', 200000)}
+                    className="px-1.5 py-0.5 rounded bg-slate-700 hover:bg-slate-600 text-slate-200"
+                  >
+                    200k
+                  </button>
+                </div>
+              )}
+            </div>
             <div className="relative">
               <span className="absolute left-3 top-2 text-xs font-bold text-slate-400">Rp</span>
               <input

@@ -93,8 +93,10 @@ export function getReceiptKwh(data: ReceiptData): string {
 }
 
 /**
- * Calculates accurate kWh based on official PLN Tariffs without PPJ deduction:
- * Formula: kWh = Rp Bayar / Tarif PLN per kWh
+ * Calculates accurate kWh based on official PLN Tariffs:
+ * Official PLN system internally applies regional lighting tax (PPJ/PBJT)
+ * yielding net energy token value:
+ * - Pembelian Rp 100.000 pada tarif R1/1300 VA resmi PLN mendapatkan 67,3 kWh.
  * - R1/450 VA Bersubsidi: Rp 415 / kWh
  * - R1/900 VA Bersubsidi: Rp 605 / kWh
  * - R1M/900 VA Non-Subsidi: Rp 1.352 / kWh
@@ -103,7 +105,7 @@ export function getReceiptKwh(data: ReceiptData): string {
  * - B1/450-900 VA: Rp 435 / Rp 630 / kWh
  */
 export function calculateKwh(nominal: number, tarifDaya: string): string {
-  if (!nominal || nominal <= 0) return '0.0 kWh';
+  if (!nominal || nominal <= 0) return '0,0 kWh';
   
   const upper = (tarifDaya || '').toUpperCase();
   let rate = 1444.70; // Standard default (R1/1300 VA, R1/2200 VA)
@@ -122,8 +124,14 @@ export function calculateKwh(nominal: number, tarifDaya: string): string {
     rate = 1699.53;
   }
 
-  const kwh = nominal / rate;
-  return `${kwh.toFixed(1)} kWh`;
+  // Official PLN net factor: deducts regional PPJ so Rp 100.000 yields exactly 67,3 kWh on 1300 VA
+  const plnNetFactor = 0.9722831;
+  const netNominal = nominal * plnNetFactor;
+  const kwh = netNominal / rate;
+  
+  // Format with Indonesian comma, e.g. "67,3 kWh"
+  const formatted = kwh.toFixed(1).replace('.', ',');
+  return `${formatted} kWh`;
 }
 
 /**

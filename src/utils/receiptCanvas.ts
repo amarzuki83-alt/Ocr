@@ -1,5 +1,5 @@
 import { ReceiptData, PaperSize } from '../types';
-import { formatRupiah, formatTwoColumns, isTokenReceipt, getStroomToken, formatToken20 } from './escpos';
+import { formatRupiah, formatTwoColumns, isTokenReceipt, getStroomToken, formatToken20, getReceiptKwh } from './escpos';
 
 /**
  * Draws a high-resolution, authentic thermal receipt onto an HTML5 Canvas
@@ -17,12 +17,16 @@ export function generateReceiptCanvas(data: ReceiptData, paperSize: PaperSize = 
 
   const isToken = isTokenReceipt(data);
   const tokenValue = getStroomToken(data);
+  const kwhValue = getReceiptKwh(data);
 
   // Measure content height dynamically
   // Estimate height: header ~180px, body ~400px, footer ~200px
   let estimatedHeight = 650;
   if (isToken && tokenValue) {
     estimatedHeight += 95;
+  }
+  if (isToken && kwhValue) {
+    estimatedHeight += 30;
   }
   if (data.extraFields && data.extraFields.length > 0) {
     estimatedHeight += data.extraFields.length * 32;
@@ -118,6 +122,10 @@ export function generateReceiptCanvas(data: ReceiptData, paperSize: PaperSize = 
       drawRowWithColon(ctx, 'STAND METER', data.standMeter, xLabel, xColon, xValue, y);
       y += 26;
     }
+  } else if (kwhValue) {
+    // JML KWH for Token Listrik
+    drawRowWithColon(ctx, 'JML KWH', kwhValue, xLabel, xColon, xValue, y, { boldValue: true });
+    y += 28;
   }
 
   // STROOM / TOKEN Section: 20 Digit Enlarged & Prominent
@@ -155,12 +163,13 @@ export function generateReceiptCanvas(data: ReceiptData, paperSize: PaperSize = 
     y += 24;
   }
 
-  // Extra fields (e.g. JML KWH, PPJ)
+  // Extra fields (e.g. custom items)
   if (data.extraFields && data.extraFields.length > 0) {
     for (const f of data.extraFields) {
       if (f.label && f.value) {
-        if (isToken && (/TOKEN|STROOM/i.test(f.label) || /token/i.test(f.id))) {
-          continue; // Already displayed above in enlarged box
+        // Hilangkan PPJ, TOKEN, dan KWH jika token
+        if (isToken && (/TOKEN|STROOM/i.test(f.label) || /token/i.test(f.id) || /PPJ/i.test(f.label) || /ppj/i.test(f.id) || /KWH/i.test(f.label) || /kwh/i.test(f.id))) {
+          continue;
         }
         drawRowWithColon(ctx, f.label.toUpperCase(), f.value, xLabel, xColon, xValue, y, { boldValue: true });
         y += 26;
@@ -173,8 +182,8 @@ export function generateReceiptCanvas(data: ReceiptData, paperSize: PaperSize = 
   drawDashedLine(ctx, paddingX, width - paddingX, y, 3, '#71717a', 1);
   y += 24;
 
-  // Financials: RP TAG PLN, ADMIN BANK
-  drawRowWithColon(ctx, 'RP TAG PLN', formatRupiah(data.tagihan), xLabel, xColon, xValue, y, { boldValue: true });
+  // Financials: For Token Listrik, "RP TAG PLN" is changed to "RP BAYAR"
+  drawRowWithColon(ctx, isToken ? 'RP BAYAR' : 'RP TAG PLN', formatRupiah(data.tagihan), xLabel, xColon, xValue, y, { boldValue: true });
   y += 28;
   drawRowWithColon(ctx, 'ADMIN BANK', formatRupiah(data.adminBank), xLabel, xColon, xValue, y, { boldValue: true });
   y += 28;
@@ -360,6 +369,7 @@ export async function shareReceiptToWhatsApp(
     // WhatsApp summary caption with two-column colon alignment
     const waIsToken = isTokenReceipt(data);
     const waTokenValue = getStroomToken(data);
+    const waKwhValue = getReceiptKwh(data);
 
     const captionLines: string[] = [
       `*${(data.headerTitle || 'STRUK PEMBAYARAN TAGIHAN LISTRIK').toUpperCase()}*`,
@@ -373,6 +383,8 @@ export async function shareReceiptToWhatsApp(
     if (!waIsToken) {
       if (data.blnThn) captionLines.push(`*BLN/THN*     : ${data.blnThn}`);
       if (data.standMeter) captionLines.push(`*STAND METER* : ${data.standMeter}`);
+    } else if (waKwhValue) {
+      captionLines.push(`*JML KWH*     : ${waKwhValue}`);
     }
 
     if (waIsToken && waTokenValue) {
@@ -383,7 +395,7 @@ export async function shareReceiptToWhatsApp(
 
     captionLines.push(
       `---------------------------------`,
-      `*RP TAG PLN*  : ${formatRupiah(data.tagihan)}`,
+      `*${waIsToken ? 'RP BAYAR' : 'RP TAG PLN'}*  : ${formatRupiah(data.tagihan)}`,
       `*ADMIN BANK*  : ${formatRupiah(data.adminBank)}`,
       `*TOTAL BAYAR* : ${formatRupiah(data.totalBayar)}`,
       `---------------------------------`,

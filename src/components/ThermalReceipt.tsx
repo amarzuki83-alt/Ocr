@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { ReceiptData, PaperSize } from '../types';
-import { formatRupiah, isTokenReceipt, getStroomToken, formatToken20 } from '../utils/escpos';
+import { formatRupiah, isTokenReceipt, getStroomToken, formatToken20, getReceiptKwh } from '../utils/escpos';
 import { generateReceiptCanvas, shareReceiptToWhatsApp } from '../utils/receiptCanvas';
 import { 
   Copy, 
@@ -72,6 +72,7 @@ export const ThermalReceipt: React.FC<ThermalReceiptProps> = ({
   const is58 = paperSize === '58mm';
   const isToken = isTokenReceipt(data);
   const tokenValue = getStroomToken(data);
+  const kwhValue = getReceiptKwh(data);
 
   return (
     <div className="flex flex-col items-center w-full">
@@ -237,6 +238,15 @@ export const ThermalReceipt: React.FC<ThermalReceiptProps> = ({
               </div>
             )}
 
+            {/* JML KWH for Token Listrik */}
+            {isToken && kwhValue && (
+              <div className={`grid ${is58 ? 'grid-cols-[100px_14px_1fr]' : 'grid-cols-[130px_16px_1fr]'} items-baseline`}>
+                <span className="text-slate-600 font-medium">JML KWH</span>
+                <span className="text-slate-900 font-bold text-center">:</span>
+                <span className="text-slate-950 font-bold text-left">{kwhValue}</span>
+              </div>
+            )}
+
             {/* STROOM / TOKEN Section: 20-Digit Token Enlarged & Prominent */}
             {isToken && tokenValue && (
               <div className="my-2.5 p-2.5 bg-slate-50 border-2 border-dashed border-slate-900 rounded-lg text-center shadow-xs">
@@ -251,9 +261,10 @@ export const ThermalReceipt: React.FC<ThermalReceiptProps> = ({
               </div>
             )}
 
-            {/* Extra Custom Fields (e.g. JML KWH, PPJ) */}
+            {/* Extra Custom Fields (e.g. Catatan Khusus) */}
             {data.extraFields && data.extraFields.map((field) => {
-              if (isToken && (/TOKEN|STROOM/i.test(field.label) || /token/i.test(field.id))) {
+              // Hilangkan PPJ, TOKEN, dan KWH jika token listrik (karena PPJ dihapus & Token/KWH sudah punya posisi khusus)
+              if (isToken && (/TOKEN|STROOM/i.test(field.label) || /token/i.test(field.id) || /PPJ/i.test(field.label) || /ppj/i.test(field.id) || /KWH/i.test(field.label) || /kwh/i.test(field.id))) {
                 return null;
               }
               return (
@@ -268,10 +279,10 @@ export const ThermalReceipt: React.FC<ThermalReceiptProps> = ({
 
           <div className="border-b border-dashed border-slate-300 my-2" />
 
-          {/* Financial Calculation Section: Format dua kolom dengan pemisah titik dua */}
+          {/* Financial Calculation Section: For Token Listrik, "RP TAG PLN" is changed to "RP BAYAR" */}
           <div className="space-y-1 text-[11px] sm:text-xs">
             <div className={`grid ${is58 ? 'grid-cols-[100px_14px_1fr]' : 'grid-cols-[130px_16px_1fr]'} items-baseline`}>
-              <span className="text-slate-600 font-medium">RP TAG PLN</span>
+              <span className="text-slate-600 font-medium">{isToken ? 'RP BAYAR' : 'RP TAG PLN'}</span>
               <span className="text-slate-900 font-bold text-center">:</span>
               <span className="text-slate-900 font-semibold text-left">{formatRupiah(data.tagihan)}</span>
             </div>

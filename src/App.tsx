@@ -63,16 +63,23 @@ export default function App() {
   // Handle OCR Completion: merge detected fields with existing
   const handleOcrScanComplete = (parsed: Partial<ReceiptData>, rawText: string) => {
     const isTokenScan = (parsed.headerTitle || '').includes('TOKEN') || Boolean(parsed.stroomToken);
-    setReceiptData((prev) => ({
-      ...prev,
-      ...parsed,
-      blnThn: isTokenScan ? '' : (parsed.blnThn !== undefined ? parsed.blnThn : prev.blnThn),
-      standMeter: isTokenScan ? '' : (parsed.standMeter !== undefined ? parsed.standMeter : prev.standMeter),
-      // Default to LOKET PPOB ATHAR DIGITAL unless user uploaded a specific custom merchant
-      loket: parsed.loket || prev.loket || 'LOKET PPOB ATHAR DIGITAL',
-      headerTitle: parsed.headerTitle || (isTokenScan ? 'STRUK PEMBELIAN TOKEN LISTRIK' : 'STRUK PEMBAYARAN TAGIHAN LISTRIK'),
-      footerDisclaimer: parsed.footerDisclaimer || 'PLN menyatakan struk ini sbg bukti pembayaran yg sah. Info hub 123',
-    }));
+    setReceiptData((prev) => {
+      const cleanExtra = (parsed.extraFields || prev.extraFields || []).filter((f) => 
+        !isTokenScan || (!/PPJ/i.test(f.label) && !/ppj/i.test(f.id) && !/TOKEN|STROOM/i.test(f.label) && !/token/i.test(f.id))
+      );
+      return {
+        ...prev,
+        ...parsed,
+        blnThn: isTokenScan ? '' : (parsed.blnThn !== undefined ? parsed.blnThn : prev.blnThn),
+        standMeter: isTokenScan ? '' : (parsed.standMeter !== undefined ? parsed.standMeter : prev.standMeter),
+        kwh: isTokenScan ? (parsed.kwh || prev.kwh || '') : prev.kwh,
+        // Default to LOKET PPOB ATHAR DIGITAL unless user uploaded a specific custom merchant
+        loket: parsed.loket || prev.loket || 'LOKET PPOB ATHAR DIGITAL',
+        headerTitle: parsed.headerTitle || (isTokenScan ? 'STRUK PEMBELIAN TOKEN LISTRIK' : 'STRUK PEMBAYARAN TAGIHAN LISTRIK'),
+        footerDisclaimer: parsed.footerDisclaimer || 'PLN menyatakan struk ini sbg bukti pembayaran yg sah. Info hub 123',
+        extraFields: cleanExtra,
+      };
+    });
     setActiveTab('editor');
     showToast('Teks struk berhasil dipindai dan dipetakan ke formulir!');
   };
@@ -96,6 +103,7 @@ export default function App() {
       standMeter: '',
       blnThn: '',
       stroomToken: '',
+      kwh: '',
       tagihan: 0,
       adminBank: 3000,
       totalBayar: 3000,

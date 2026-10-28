@@ -80,6 +80,53 @@ export function getStroomToken(data: ReceiptData): string {
 }
 
 /**
+ * Retrieves the kWh string from dedicated field or extraFields
+ */
+export function getReceiptKwh(data: ReceiptData): string {
+  if (data.kwh && data.kwh.trim()) {
+    return data.kwh.trim();
+  }
+  const found = (data.extraFields || []).find((f) => 
+    /KWH/i.test(f.label) || /kwh/i.test(f.id)
+  );
+  return found ? found.value.trim() : '';
+}
+
+/**
+ * Calculates accurate kWh based on official PLN Tariffs without PPJ deduction:
+ * Formula: kWh = Rp Bayar / Tarif PLN per kWh
+ * - R1/450 VA Bersubsidi: Rp 415 / kWh
+ * - R1/900 VA Bersubsidi: Rp 605 / kWh
+ * - R1M/900 VA Non-Subsidi: Rp 1.352 / kWh
+ * - R1/1300 VA & R1/2200 VA: Rp 1.444,70 / kWh
+ * - R2/3500-5500 VA & R3: Rp 1.699,53 / kWh
+ * - B1/450-900 VA: Rp 435 / Rp 630 / kWh
+ */
+export function calculateKwh(nominal: number, tarifDaya: string): string {
+  if (!nominal || nominal <= 0) return '0.0 kWh';
+  
+  const upper = (tarifDaya || '').toUpperCase();
+  let rate = 1444.70; // Standard default (R1/1300 VA, R1/2200 VA)
+
+  if (upper.includes('450')) {
+    rate = 415;
+  } else if (upper.includes('900')) {
+    if (upper.includes('R1M') || upper.includes('NON') || upper.includes('RTM') || upper.includes('M')) {
+      rate = 1352;
+    } else {
+      rate = 605;
+    }
+  } else if (upper.includes('1300') || upper.includes('2200')) {
+    rate = 1444.70;
+  } else if (upper.includes('3500') || upper.includes('4400') || upper.includes('5500') || upper.includes('6600')) {
+    rate = 1699.53;
+  }
+
+  const kwh = nominal / rate;
+  return `${kwh.toFixed(1)} kWh`;
+}
+
+/**
  * Formats a 20-digit token into standard 5x4 blocks (XXXX-XXXX-XXXX-XXXX-XXXX)
  */
 export function formatToken20(raw: string): string {
@@ -148,11 +195,14 @@ export function generatePlainTextReceipt(data: ReceiptData, paperSize: PaperSize
 
   const isToken = isTokenReceipt(data);
   const tokenValue = getStroomToken(data);
+  const kwhValue = getReceiptKwh(data);
 
   // For Token Listrik: BLN/THN and STAND METER must be omitted
   if (!isToken) {
     if (data.blnThn) lines.push(formatTwoColumns('BLN/THN', data.blnThn, width));
     if (data.standMeter) lines.push(formatTwoColumns('STAND METER', data.standMeter, width));
+  } else if (kwhValue) {
+    lines.push(formatTwoColumns('JML KWH', kwhValue, width));
   }
 
   // STROOM / TOKEN Section for Token Listrik: ENLARGED & PROMINENT
@@ -163,11 +213,12 @@ export function generatePlainTextReceipt(data: ReceiptData, paperSize: PaperSize
     lines.push(doubleDivider);
   }
 
-  // Extra fields (e.g. Jml kWh, PPJ, custom meter details)
+  // Extra fields (e.g. custom meter details)
   if (data.extraFields && data.extraFields.length > 0) {
     for (const f of data.extraFields) {
       if (f.label && f.value) {
-        if (isToken && (/TOKEN|STROOM/i.test(f.label) || /token/i.test(f.id))) {
+        // Hilangkan PPJ, TOKEN, dan KWH dari extra fields jika token
+        if (isToken && (/TOKEN|STROOM/i.test(f.label) || /token/i.test(f.id) || /PPJ/i.test(f.label) || /ppj/i.test(f.id) || /KWH/i.test(f.label) || /kwh/i.test(f.id))) {
           continue;
         }
         lines.push(formatTwoColumns(f.label.toUpperCase(), f.value, width));
@@ -177,8 +228,8 @@ export function generatePlainTextReceipt(data: ReceiptData, paperSize: PaperSize
 
   lines.push(divider);
 
-  // Financials
-  lines.push(formatTwoColumns('RP TAG PLN', formatRupiah(data.tagihan), width));
+  // Financials: For Token Listrik, "RP TAG PLN" is changed to "RP BAYAR"
+  lines.push(formatTwoColumns(isToken ? 'RP BAYAR' : 'RP TAG PLN', formatRupiah(data.tagihan), width));
   lines.push(formatTwoColumns('ADMIN BANK', formatRupiah(data.adminBank), width));
   lines.push(doubleDivider);
   lines.push(formatTwoColumns('TOTAL BAYAR', formatRupiah(data.totalBayar), width));
@@ -269,6 +320,7 @@ export function buildEscPosBuffer(data: ReceiptData, paperSize: PaperSize = '58m
   // 4. Customer Info
   const isToken = isTokenReceipt(data);
   const tokenValue = getStroomToken(data);
+  const kwhValue = getReceiptKwh(data);
 
   if (data.idPel) {
     addBytes(ESC_POS.BOLD_ON);
@@ -282,6 +334,8 @@ export function buildEscPosBuffer(data: ReceiptData, paperSize: PaperSize = '58m
   if (!isToken) {
     if (data.blnThn) addText(formatTwoColumns('BLN/THN', data.blnThn, width) + '\n');
     if (data.standMeter) addText(formatTwoColumns('STAND METER', data.standMeter, width) + '\n');
+  } else if (kwhValue) {
+    addText(formatTwoColumns('JML KWH', kwhValue, width) + '\n');
   }
 
   // STROOM / TOKEN: ENLARGED FONT (DOUBLE HEIGHT + DOUBLE WIDTH) FOR THERMAL PRINTER
@@ -299,11 +353,12 @@ export function buildEscPosBuffer(data: ReceiptData, paperSize: PaperSize = '58m
     addText(doubleDivider);
   }
 
-  // Extra fields
+  // Extra fields (e.g. custom meter details)
   if (data.extraFields && data.extraFields.length > 0) {
     for (const f of data.extraFields) {
       if (f.label && f.value) {
-        if (isToken && (/TOKEN|STROOM/i.test(f.label) || /token/i.test(f.id))) {
+        // Hilangkan PPJ, TOKEN, dan KWH dari extra fields jika token
+        if (isToken && (/TOKEN|STROOM/i.test(f.label) || /token/i.test(f.id) || /PPJ/i.test(f.label) || /ppj/i.test(f.id) || /KWH/i.test(f.label) || /kwh/i.test(f.id))) {
           continue;
         }
         addText(formatTwoColumns(f.label.toUpperCase(), f.value, width) + '\n');
@@ -313,8 +368,8 @@ export function buildEscPosBuffer(data: ReceiptData, paperSize: PaperSize = '58m
 
   addText(divider);
 
-  // 5. Billing Info
-  addText(formatTwoColumns('RP TAG PLN', formatRupiah(data.tagihan), width) + '\n');
+  // 5. Billing Info: For Token Listrik, "RP TAG PLN" is changed to "RP BAYAR"
+  addText(formatTwoColumns(isToken ? 'RP BAYAR' : 'RP TAG PLN', formatRupiah(data.tagihan), width) + '\n');
   addText(formatTwoColumns('ADMIN BANK', formatRupiah(data.adminBank), width) + '\n');
   addText(doubleDivider);
 

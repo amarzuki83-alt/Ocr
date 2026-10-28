@@ -1,6 +1,6 @@
 import React from 'react';
 import { ReceiptData, ExtraReceiptField } from '../types';
-import { isTokenReceipt, getStroomToken, formatToken20 } from '../utils/escpos';
+import { isTokenReceipt, getStroomToken, formatToken20, getReceiptKwh, calculateKwh } from '../utils/escpos';
 import { 
   Building2, 
   User, 
@@ -17,7 +17,8 @@ import {
   FileText,
   Radio,
   Sparkles,
-  Info
+  Info,
+  Gauge
 } from 'lucide-react';
 
 interface ReceiptEditorProps {
@@ -37,21 +38,27 @@ export const ReceiptEditor: React.FC<ReceiptEditorProps> = ({
 }) => {
   const isToken = isTokenReceipt(data);
   const currentToken = getStroomToken(data);
+  const currentKwh = getReceiptKwh(data);
 
   // Switch to Token Listrik (Prabayar)
   const handleSelectTokenType = () => {
     const defaultTokenAdmin = 5000; // Requirement: Admin bank token listrik jadikan di Rp 5000
     const currentTagihan = data.tagihan || 100000;
+    const initialKwh = data.kwh || calculateKwh(currentTagihan, data.tarifDaya || 'R1M / 1300 VA');
     onChange({
       ...data,
       headerTitle: 'STRUK PEMBELIAN TOKEN LISTRIK',
       adminBank: defaultTokenAdmin,
       blnThn: '', // Requirement: Hilangkan BLN/THN
       standMeter: '', // Requirement: Hilangkan stand meter
+      kwh: initialKwh,
       stroomToken: data.stroomToken || '3829-1928-4402-9182-3819',
       tagihan: currentTagihan,
       totalBayar: autoCalculate ? currentTagihan + defaultTokenAdmin : (data.totalBayar || currentTagihan + defaultTokenAdmin),
-      extraFields: (data.extraFields || []).filter((f) => !/TOKEN|STROOM/i.test(f.label) && !/token/i.test(f.id)),
+      // Requirement: Hilangkan PPJ 3%, dan bersihkan token/kwh dari extraFields karena sudah punya kontrol dedicated
+      extraFields: (data.extraFields || []).filter(
+        (f) => !/TOKEN|STROOM/i.test(f.label) && !/token/i.test(f.id) && !/PPJ/i.test(f.label) && !/ppj/i.test(f.id) && !/KWH/i.test(f.label) && !/kwh/i.test(f.id)
+      ),
     });
   };
 
@@ -91,6 +98,23 @@ export const ReceiptEditor: React.FC<ReceiptEditorProps> = ({
     handleFieldChange('stroomToken', formatted);
   };
 
+  const handleRecalculateKwh = (customTagihan?: number, customTarif?: string) => {
+    const nominal = customTagihan !== undefined ? customTagihan : data.tagihan || 100000;
+    const tarif = customTarif !== undefined ? customTarif : data.tarifDaya || 'R1M / 1300 VA';
+    const computed = calculateKwh(nominal, tarif);
+    handleFieldChange('kwh', computed);
+  };
+
+  const handleSelectTariffPreset = (tarif: string) => {
+    const nominal = data.tagihan || 100000;
+    const newKwh = calculateKwh(nominal, tarif);
+    onChange({
+      ...data,
+      tarifDaya: tarif,
+      kwh: newKwh,
+    });
+  };
+
   const handleFieldChange = (field: keyof ReceiptData, value: any) => {
     const updated = { ...data, [field]: value };
 
@@ -99,6 +123,10 @@ export const ReceiptEditor: React.FC<ReceiptEditorProps> = ({
       const tag = field === 'tagihan' ? Number(value) || 0 : data.tagihan || 0;
       const adm = field === 'adminBank' ? Number(value) || 0 : data.adminBank || 0;
       updated.totalBayar = tag + adm;
+      // Auto re-estimate kWh when nominal tagihan changes in token mode
+      if (isToken && field === 'tagihan') {
+        updated.kwh = calculateKwh(tag, updated.tarifDaya || 'R1M / 1300 VA');
+      }
     }
 
     onChange(updated);
@@ -297,7 +325,73 @@ export const ReceiptEditor: React.FC<ReceiptEditorProps> = ({
               placeholder="Contoh: R1 / 900 VA atau R1M / 1300 VA"
               className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500 transition"
             />
+            {/* Quick Tariff Selector for Token Listrik */}
+            {isToken && (
+              <div className="flex items-center gap-1 text-[10px] flex-wrap mt-1.5">
+                <span className="text-slate-400">Pilih Tarif:</span>
+                <button
+                  type="button"
+                  onClick={() => handleSelectTariffPreset('R1 / 450 VA')}
+                  className="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700"
+                >
+                  450VA (Rp415)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSelectTariffPreset('R1 / 900 VA')}
+                  className="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700"
+                >
+                  900VA Sub (Rp605)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSelectTariffPreset('R1M / 900 VA')}
+                  className="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700"
+                >
+                  900VA Non (Rp1.352)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSelectTariffPreset('R1M / 1300 VA')}
+                  className="px-1.5 py-0.5 rounded bg-amber-600/30 text-amber-300 border border-amber-500/40 font-semibold"
+                >
+                  1300VA (Rp1.444,70)
+                </button>
+              </div>
+            )}
           </div>
+
+          {/* Dedicated Jumlah kWh input for Token Listrik */}
+          {isToken && (
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-xs font-semibold text-amber-300">
+                  Jumlah kWh (Kilowatt-Hour)
+                </label>
+                <button
+                  type="button"
+                  onClick={() => handleRecalculateKwh()}
+                  title="Hitung ulang kWh berdasarkan Rp Bayar & Tarif PLN"
+                  className="flex items-center gap-1 text-[11px] text-cyan-400 hover:text-cyan-300 font-semibold active:scale-95 transition"
+                >
+                  <RefreshCw className="w-3 h-3" />
+                  <span>Hitung Otomatis</span>
+                </button>
+              </div>
+              <div className="relative">
+                <input
+                  type="text"
+                  value={data.kwh || currentKwh || ''}
+                  onChange={(e) => handleFieldChange('kwh', e.target.value)}
+                  placeholder="Contoh: 69.2 kWh"
+                  className="w-full bg-slate-900 border border-amber-500/60 rounded-lg px-3 py-2 text-sm font-bold text-amber-300 focus:outline-none focus:ring-1 focus:ring-amber-400 transition"
+                />
+              </div>
+              <p className="text-[10px] text-slate-400 mt-1">
+                Ketik langsung sesuai angka kWh di struk resmi, atau klik tombol Hitung Otomatis.
+              </p>
+            </div>
+          )}
 
           {/* Dedicated 20-Digit STROOM / TOKEN for Prepaid Token Listrik */}
           {isToken && (
@@ -331,8 +425,9 @@ export const ReceiptEditor: React.FC<ReceiptEditorProps> = ({
               <div className="flex items-start gap-1.5 text-[11px] text-slate-400 bg-slate-950/60 p-2 rounded-lg border border-slate-800">
                 <Info className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
                 <span>
-                  Nomor token 20 digit diperbesar pada struk cetak & gambar PNG. 
-                  Field <strong>BLN/THN</strong> dan <strong>Stand Meter</strong> otomatis dihilangkan sesuai permintaan.
+                  Kolom <strong>PPJ 3%</strong> telah dihilangkan. 
+                  Field <strong>BLN/THN</strong> dan <strong>Stand Meter</strong> ditiadakan. 
+                  Nomor token 20 digit diperbesar, dan label tagihan menjadi <strong>RP BAYAR</strong>.
                 </span>
               </div>
             </div>
@@ -397,7 +492,7 @@ export const ReceiptEditor: React.FC<ReceiptEditorProps> = ({
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div>
             <label className="block text-xs font-medium text-slate-300 mb-1">
-              RP TAG PLN (Tagihan Murni)
+              {isToken ? 'RP BAYAR (Nominal Token Listrik)' : 'RP TAG PLN (Tagihan Murni)'}
             </label>
             <div className="relative">
               <span className="absolute left-3 top-2 text-xs font-bold text-slate-400">Rp</span>
@@ -405,7 +500,7 @@ export const ReceiptEditor: React.FC<ReceiptEditorProps> = ({
                 type="number"
                 value={data.tagihan || ''}
                 onChange={(e) => handleFieldChange('tagihan', Number(e.target.value))}
-                placeholder="324500"
+                placeholder={isToken ? "100000" : "324500"}
                 className="w-full bg-slate-900 border border-slate-700 rounded-lg pl-9 pr-3 py-2 text-sm font-semibold text-white focus:outline-none focus:border-emerald-500 transition"
               />
             </div>

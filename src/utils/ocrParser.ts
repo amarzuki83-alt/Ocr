@@ -1,4 +1,5 @@
 import { ReceiptData } from '../types';
+import { calculateKwh } from './escpos';
 
 /**
  * Bradley-Roth Adaptive Local Thresholding
@@ -357,8 +358,8 @@ export function parseReceiptFromOcr(ocrText: string): Partial<ReceiptData> {
       .substring(0, 24);
   }
 
-  // 8. Rp Tag PLN (Tagihan Murni)
-  const tagihanMatch = text.match(/(?:RP\s*TAG\s*PLN|RP\s*TAGIHAN|TAGIHAN\s*PLN|JUMLAH\s*TAGIHAN|TAGIHAN)\s*[:.]?\s*RP?\.?\s*([\d\.,Oo]+)/i);
+  // 8. Rp Tag PLN / Rp Bayar (Tagihan Murni / Nominal Token)
+  const tagihanMatch = text.match(/(?:RP\s*BAYAR|RP\s*TAG\s*PLN|RP\s*TAGIHAN|TAGIHAN\s*PLN|JUMLAH\s*TAGIHAN|TAGIHAN)\s*[:.]?\s*RP?\.?\s*([\d\.,Oo]+)/i);
   if (tagihanMatch && tagihanMatch[1]) {
     parsed.tagihan = parseCleanNumber(tagihanMatch[1]);
   }
@@ -381,7 +382,18 @@ export function parseReceiptFromOcr(ocrText: string): Partial<ReceiptData> {
     }
   }
 
-  // 10. Total Bayar (With Mathematical Reconciliation)
+  // 11. Jumlah kWh (For Token Listrik: accurate calculation & extraction)
+  const kwhMatch = text.match(/(?:JML[\s/]*KWH|JUMLAH[\s/]*KWH|KWH)\s*[:.]?\s*([\d\.,]+(?:\s*KWH)?)/i) ||
+                   text.match(/\b(\d{1,4}[.,]\d{1,2})\s*KWH\b/i);
+  if (kwhMatch && kwhMatch[1]) {
+    let cleanKwh = kwhMatch[1].replace(/,/g, '.').trim();
+    if (!/kwh/i.test(cleanKwh)) cleanKwh += ' kWh';
+    parsed.kwh = cleanKwh;
+  } else if (isTokenScan && parsed.tagihan) {
+    parsed.kwh = calculateKwh(parsed.tagihan, parsed.tarifDaya || 'R1M / 1300 VA');
+  }
+
+  // 12. Total Bayar (With Mathematical Reconciliation)
   const totalMatch = text.match(/(?:TOTAL\s*BAYAR|TOTAL\s*TAGIHAN|TOTAL)\s*[:.]?\s*RP?\.?\s*([\d\.,Oo]+)/i);
   if (totalMatch && totalMatch[1]) {
     parsed.totalBayar = parseCleanNumber(totalMatch[1]);
@@ -398,7 +410,7 @@ export function parseReceiptFromOcr(ocrText: string): Partial<ReceiptData> {
     parsed.tagihan = Math.max(0, parsed.totalBayar - parsed.adminBank);
   }
 
-  // 11. Tanggal & Waktu
+  // 13. Tanggal & Waktu
   const tanggalMatch = text.match(/(?:TGL|TANGGAL|WAKTU|DATE)\s*[:.]?\s*([0-9]{1,2}[\/\-\.][0-9]{1,2}[\/\-\.][0-9]{2,4}(?:\s+[0-9]{1,2}:[0-9]{1,2}(?::[0-9]{1,2})?)?)/i) ||
                        text.match(/\b([0-9]{1,2}[\/\-][0-9]{1,2}[\/\-][0-9]{2,4}\s+[0-9]{1,2}:[0-9]{1,2}(?::[0-9]{1,2})?)\b/);
   if (tanggalMatch && tanggalMatch[1]) {
@@ -413,7 +425,7 @@ export function parseReceiptFromOcr(ocrText: string): Partial<ReceiptData> {
     parsed.tanggal = `${d}/${m}/${y} ${hr}:${min} WIB`;
   }
 
-  // 12. No Referensi
+  // 14. No Referensi
   const refMatch = text.match(/(?:NO\s*REF|REF|STRUK|NO\s*STRUK|TRX\s*ID)\s*[:.]?\s*([A-Za-z0-9\-]+)/i);
   if (refMatch && refMatch[1]) {
     parsed.noRef = refMatch[1].trim().substring(0, 24);
@@ -458,6 +470,7 @@ export const SAMPLE_PRESETS: Record<string, ReceiptData> = {
     standMeter: '',
     blnThn: '',
     stroomToken: '3829-1928-4402-9182-3819',
+    kwh: '69.2 kWh',
     tagihan: 100000,
     adminBank: 5000,
     totalBayar: 105000,
@@ -465,10 +478,7 @@ export const SAMPLE_PRESETS: Record<string, ReceiptData> = {
     noRef: 'TOKEN261026884192',
     footerDisclaimer: 'PLN menyatakan struk ini sbg bukti pembayaran yg sah. Info hub 123',
     footerGreeting: 'Simpan Struk Ini Sebagai Bukti Sah',
-    extraFields: [
-      { id: 'kwh', label: 'JML KWH', value: '68.2 kWh' },
-      { id: 'ppj', label: 'PPJ 3%', value: 'Rp 2.912' },
-    ],
+    extraFields: [],
   },
   pdam: {
     loket: 'LOKET PPOB ATHAR DIGITAL',

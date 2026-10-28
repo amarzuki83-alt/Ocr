@@ -15,6 +15,7 @@ export interface ReceiptData {
   standMeter: string;
   blnThn: string;
   stroomToken?: string;
+  kwh?: string;
   tagihan: number;
   adminBank: number;
   totalBayar: number;

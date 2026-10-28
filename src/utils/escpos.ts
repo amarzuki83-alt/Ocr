@@ -197,13 +197,16 @@ export function generatePlainTextReceipt(data: ReceiptData, paperSize: PaperSize
   lines.push(divider);
 
   // Customer info
-  if (data.idPel) lines.push(formatTwoColumns('NO PELANGGAN', data.idPel, width));
-  if (data.nama) lines.push(formatTwoColumns('NAMA', data.nama, width));
-  if (data.tarifDaya) lines.push(formatTwoColumns('TARIF/DAYA', data.tarifDaya, width));
-
   const isToken = isTokenReceipt(data);
   const tokenValue = getStroomToken(data);
   const kwhValue = getReceiptKwh(data);
+
+  if (isToken || data.noMeter) {
+    lines.push(formatTwoColumns('NO METER', data.noMeter || '-', width));
+  }
+  if (data.idPel) lines.push(formatTwoColumns(isToken ? 'IDPEL' : 'NO PELANGGAN', data.idPel, width));
+  if (data.nama) lines.push(formatTwoColumns('NAMA', data.nama, width));
+  if (data.tarifDaya) lines.push(formatTwoColumns('TARIF/DAYA', data.tarifDaya, width));
 
   // For Token Listrik: BLN/THN and STAND METER must be omitted
   if (!isToken) {
@@ -330,9 +333,14 @@ export function buildEscPosBuffer(data: ReceiptData, paperSize: PaperSize = '58m
   const tokenValue = getStroomToken(data);
   const kwhValue = getReceiptKwh(data);
 
+  if (isToken || data.noMeter) {
+    addBytes(ESC_POS.BOLD_ON);
+    addText(formatTwoColumns('NO METER', data.noMeter || '-', width) + '\n');
+    addBytes(ESC_POS.BOLD_OFF);
+  }
   if (data.idPel) {
     addBytes(ESC_POS.BOLD_ON);
-    addText(formatTwoColumns('IDPEL/NO PEL', data.idPel, width) + '\n');
+    addText(formatTwoColumns(isToken ? 'IDPEL' : 'IDPEL/NO PEL', data.idPel, width) + '\n');
     addBytes(ESC_POS.BOLD_OFF);
   }
   if (data.nama) addText(formatTwoColumns('NAMA', data.nama, width) + '\n');

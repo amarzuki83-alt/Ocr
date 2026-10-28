@@ -635,7 +635,13 @@ export function parseReceiptFromOcr(ocrText: string): Partial<ReceiptData> {
     }
   }
 
-  // 2. ID Pelanggan / IDPEL (PLN is 11-12 digits)
+  // 2a. No Meter (Nomor Meter Prabayar PLN 11-12 digit)
+  const noMeterMatch = text.match(/(?:NO[\s/.]*METER|NOMOR[\s/.]*METER|NO[\s/.]*MTR|METER[\s/.]*NO)\s*[:.]?\s*([0-9OIlSBZ\s-]{8,16})/i);
+  if (noMeterMatch && noMeterMatch[1]) {
+    parsed.noMeter = cleanDigitSequence(noMeterMatch[1]);
+  }
+
+  // 2b. ID Pelanggan / IDPEL (PLN is 11-12 digits)
   const idPelMatch = text.match(/(?:IDPEL|ID\s*PEL|NO\s*PEL|ID\s*PELANGGAN|NO\s*PELANGGAN|KONTRAK)\s*[:.]?\s*([0-9OIlSBZ\s-]{8,16})/i) ||
                      text.match(/\b(5[0-9OIlSBZ]{10,11})\b/i);
   if (idPelMatch && idPelMatch[1]) {
@@ -794,9 +800,9 @@ export const SAMPLE_PRESETS: Record<string, ReceiptData> = {
     loket: 'LOKET PPOB ATHAR DIGITAL',
     headerTitle: 'STRUK PEMBELIAN TOKEN LISTRIK',
     subHeader: '',
-    idPel: '14238910452',
-    noMeter: '',
-    nama: 'HENDRA WIJAYA',
+    idPel: '537210984521',
+    noMeter: '14238910452',
+    nama: 'YAFI.AH',
     tarifDaya: 'R1M / 1300 VA',
     standMeter: '',
     blnThn: '',

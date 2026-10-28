@@ -200,6 +200,15 @@ export const ThermalReceipt: React.FC<ThermalReceiptProps> = ({
 
           {/* Customer & Bill Details: Format dua kolom dengan pemisah titik dua */}
           <div className="space-y-1 text-[11px] sm:text-xs">
+            {/* Kolom NO METER (Wajib untuk Token Listrik / bila tersedia) */}
+            {(isToken || data.noMeter) && (
+              <div className={`grid ${is58 ? 'grid-cols-[100px_14px_1fr]' : 'grid-cols-[130px_16px_1fr]'} items-baseline`}>
+                <span className="text-slate-700 font-semibold">NO METER</span>
+                <span className="text-slate-900 font-bold text-center">:</span>
+                <span className="text-slate-950 font-bold tracking-wider text-left">{data.noMeter || '-'}</span>
+              </div>
+            )}
+
             {data.idPel && (
               <div className={`grid ${is58 ? 'grid-cols-[100px_14px_1fr]' : 'grid-cols-[130px_16px_1fr]'} items-baseline`}>
                 <span className="text-slate-700 font-semibold">IDPEL</span>

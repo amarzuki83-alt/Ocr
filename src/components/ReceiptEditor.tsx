@@ -50,6 +50,7 @@ export const ReceiptEditor: React.FC<ReceiptEditorProps> = ({
       ...data,
       headerTitle: 'STRUK PEMBELIAN TOKEN LISTRIK',
       adminBank: defaultTokenAdmin,
+      noMeter: data.noMeter || '14238910452',
       blnThn: '', // Requirement: Hilangkan BLN/THN
       standMeter: '', // Requirement: Hilangkan stand meter
       kwh: initialKwh,
@@ -277,6 +278,21 @@ export const ReceiptEditor: React.FC<ReceiptEditorProps> = ({
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label className="block text-xs font-medium text-slate-300 mb-1 flex items-center justify-between">
+              <span>No Meter {isToken ? <span className="text-amber-400 font-bold">(Token Listrik)</span> : <span className="text-slate-500 font-normal">(Opsional)</span>}</span>
+            </label>
+            <input
+              type="text"
+              value={data.noMeter || ''}
+              onChange={(e) => handleFieldChange('noMeter', e.target.value)}
+              placeholder="Contoh: 14238910452"
+              className={`w-full bg-slate-900 border rounded-lg px-3 py-2 text-sm font-mono focus:outline-none transition ${
+                isToken ? 'border-amber-500/50 text-amber-300 focus:border-amber-400' : 'border-slate-700 text-cyan-300 focus:border-cyan-500'
+              }`}
+            />
+          </div>
+
           <div>
             <label className="block text-xs font-medium text-slate-300 mb-1">
               No Pelanggan (IDPEL) <span className="text-rose-400">*</span>

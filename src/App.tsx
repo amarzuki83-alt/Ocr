@@ -95,9 +95,16 @@ export default function App() {
       const cleanExtra = (parsed.extraFields || prev.extraFields || []).filter((f) => 
         !isTokenScan || (!/PPJ/i.test(f.label) && !/ppj/i.test(f.id) && !/TOKEN|STROOM/i.test(f.label) && !/token/i.test(f.id))
       );
+      // Requirement: Pada struk token listrik admin bank 5000 jadikan otomatis tanpa perlu klik lagi
+      const adminBank = isTokenScan ? 5000 : (parsed.adminBank !== undefined ? parsed.adminBank : (prev.adminBank || 3000));
+      const tagihan = parsed.tagihan !== undefined ? parsed.tagihan : (prev.tagihan || 0);
+      const totalBayar = tagihan > 0 ? tagihan + adminBank : (parsed.totalBayar || prev.totalBayar || adminBank);
+
       return {
         ...prev,
         ...parsed,
+        adminBank,
+        totalBayar,
         blnThn: isTokenScan ? '' : (parsed.blnThn !== undefined ? parsed.blnThn : prev.blnThn),
         standMeter: isTokenScan ? '' : (parsed.standMeter !== undefined ? parsed.standMeter : prev.standMeter),
         tarifDaya: parsed.tarifDaya || prev.tarifDaya,

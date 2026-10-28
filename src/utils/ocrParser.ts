@@ -703,12 +703,16 @@ export function parseReceiptFromOcr(ocrText: string): Partial<ReceiptData> {
     parsed.tagihan = parseCleanNumber(tagihanMatch[1]);
   }
 
-  // 9. Admin Bank (Default 5000 for token listrik, 3000 for postpaid)
-  const adminMatch = text.match(/(?:ADMIN\s*BANK|BIAYA\s*ADMIN|BIAYA\s*BANK|ADMIN)\s*[:.]?\s*RP?\.?\s*([\d\.,Oo]+)/i);
-  if (adminMatch && adminMatch[1]) {
-    parsed.adminBank = parseCleanNumber(adminMatch[1]);
+  // 9. Admin Bank (For token listrik, always automatically 5000 without requiring click)
+  if (isTokenScan) {
+    parsed.adminBank = 5000;
   } else {
-    parsed.adminBank = isTokenScan ? 5000 : 3000;
+    const adminMatch = text.match(/(?:ADMIN\s*BANK|BIAYA\s*ADMIN|BIAYA\s*BANK|ADMIN)\s*[:.]?\s*RP?\.?\s*([\d\.,Oo]+)/i);
+    if (adminMatch && adminMatch[1]) {
+      parsed.adminBank = parseCleanNumber(adminMatch[1]);
+    } else {
+      parsed.adminBank = 3000;
+    }
   }
 
   // 10. STROOM / TOKEN (20 Digit for Prepaid)
@@ -737,7 +741,10 @@ export function parseReceiptFromOcr(ocrText: string): Partial<ReceiptData> {
   }
 
   // Mathematical verification: Total = Tagihan + Admin
-  if (parsed.tagihan && parsed.adminBank) {
+  if (isTokenScan && parsed.tagihan) {
+    parsed.adminBank = 5000;
+    parsed.totalBayar = parsed.tagihan + 5000;
+  } else if (parsed.tagihan && parsed.adminBank) {
     const calculatedTotal = parsed.tagihan + parsed.adminBank;
     // If total was missing or misread by 1 digit, reconcile to mathematical truth
     if (!parsed.totalBayar || Math.abs(parsed.totalBayar - calculatedTotal) < 100) {

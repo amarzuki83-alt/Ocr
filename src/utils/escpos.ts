@@ -240,10 +240,12 @@ export function generatePlainTextReceipt(data: ReceiptData, paperSize: PaperSize
   lines.push(divider);
 
   // Financials: For Token Listrik, "RP TAG PLN" is changed to "RP BAYAR"
+  const adminFee = isToken ? (data.adminBank || 5000) : (data.adminBank || 0);
+  const total = data.totalBayar || ((data.tagihan || 0) + adminFee);
   lines.push(formatTwoColumns(isToken ? 'RP BAYAR' : 'RP TAG PLN', formatRupiah(data.tagihan), width));
-  lines.push(formatTwoColumns('ADMIN BANK', formatRupiah(data.adminBank), width));
+  lines.push(formatTwoColumns('ADMIN BANK', formatRupiah(adminFee), width));
   lines.push(doubleDivider);
-  lines.push(formatTwoColumns('TOTAL BAYAR', formatRupiah(data.totalBayar), width));
+  lines.push(formatTwoColumns('TOTAL BAYAR', formatRupiah(total), width));
   lines.push(doubleDivider);
 
   // Footer
@@ -385,13 +387,15 @@ export function buildEscPosBuffer(data: ReceiptData, paperSize: PaperSize = '58m
   addText(divider);
 
   // 5. Billing Info: For Token Listrik, "RP TAG PLN" is changed to "RP BAYAR"
+  const escposAdminFee = isToken ? (data.adminBank || 5000) : (data.adminBank || 0);
+  const escposTotal = data.totalBayar || ((data.tagihan || 0) + escposAdminFee);
   addText(formatTwoColumns(isToken ? 'RP BAYAR' : 'RP TAG PLN', formatRupiah(data.tagihan), width) + '\n');
-  addText(formatTwoColumns('ADMIN BANK', formatRupiah(data.adminBank), width) + '\n');
+  addText(formatTwoColumns('ADMIN BANK', formatRupiah(escposAdminFee), width) + '\n');
   addText(doubleDivider);
 
   // Total Bayar (Bold, Larger)
   addBytes(ESC_POS.BOLD_ON);
-  addText(formatTwoColumns('TOTAL BAYAR', formatRupiah(data.totalBayar), width) + '\n');
+  addText(formatTwoColumns('TOTAL BAYAR', formatRupiah(escposTotal), width) + '\n');
   addBytes(ESC_POS.BOLD_OFF);
   addText(doubleDivider);
 

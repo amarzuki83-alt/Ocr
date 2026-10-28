@@ -298,7 +298,7 @@ export const ThermalReceipt: React.FC<ThermalReceiptProps> = ({
             <div className={`grid ${is58 ? 'grid-cols-[100px_14px_1fr]' : 'grid-cols-[130px_16px_1fr]'} items-baseline`}>
               <span className="text-slate-600 font-medium">ADMIN BANK</span>
               <span className="text-slate-900 font-bold text-center">:</span>
-              <span className="text-slate-900 font-semibold text-left">{formatRupiah(data.adminBank)}</span>
+              <span className="text-slate-900 font-semibold text-left">{formatRupiah(isToken ? (data.adminBank || 5000) : data.adminBank)}</span>
             </div>
 
             <div className="border-b-2 border-dashed border-slate-800 my-1.5" />
@@ -308,7 +308,7 @@ export const ThermalReceipt: React.FC<ThermalReceiptProps> = ({
               <span className="text-slate-950 font-extrabold uppercase">TOTAL BAYAR</span>
               <span className="text-slate-950 font-extrabold text-center">:</span>
               <span className="text-slate-950 text-sm sm:text-base font-extrabold tracking-tight text-left">
-                {formatRupiah(data.totalBayar)}
+                {formatRupiah(data.totalBayar || ((data.tagihan || 0) + (isToken ? (data.adminBank || 5000) : (data.adminBank || 0))))}
               </span>
             </div>
 

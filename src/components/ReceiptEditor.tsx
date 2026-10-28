@@ -111,8 +111,11 @@ export const ReceiptEditor: React.FC<ReceiptEditorProps> = ({
     // Auto calculate total if enabled and tagihan/admin changed
     if (autoCalculate && (field === 'tagihan' || field === 'adminBank')) {
       const tag = field === 'tagihan' ? Number(value) || 0 : data.tagihan || 0;
-      const adm = field === 'adminBank' ? Number(value) || 0 : data.adminBank || 0;
-      updated.totalBayar = tag + adm;
+      const adm = field === 'adminBank' ? Number(value) || 0 : (isToken ? (data.adminBank || 5000) : (data.adminBank || 0));
+      if (isToken && !data.adminBank && field !== 'adminBank') {
+        updated.adminBank = 5000;
+      }
+      updated.totalBayar = tag + (updated.adminBank || adm);
       // Auto re-estimate kWh when nominal tagihan changes ONLY if kwh is currently empty
       if (isToken && field === 'tagihan' && !data.kwh) {
         updated.kwh = calculateKwh(tag, updated.tarifDaya || 'R1 / 900 VA');
@@ -563,12 +566,12 @@ export const ReceiptEditor: React.FC<ReceiptEditorProps> = ({
                     type="button"
                     onClick={() => handleAdminPreset(5000)}
                     className={`px-2 py-0.5 rounded font-bold transition ${
-                      data.adminBank === 5000
+                      data.adminBank === 5000 || !data.adminBank
                         ? 'bg-amber-600 text-white shadow-sm ring-1 ring-amber-400'
                         : 'bg-slate-700 hover:bg-slate-600 text-slate-200'
                     }`}
                   >
-                    5.000 (Default)
+                    5.000 (Otomatis)
                   </button>
                   <button
                     type="button"

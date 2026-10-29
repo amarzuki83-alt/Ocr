@@ -214,7 +214,6 @@ export function generatePlainTextReceipt(data: ReceiptData, paperSize: PaperSize
   // Core metadata
   if (data.tanggal) lines.push(formatTwoColumns('TANGGAL', data.tanggal, width));
   if (data.noRef) lines.push(formatTwoColumns('NO REF', data.noRef, width));
-  lines.push(divider);
 
   // Customer info
   const isBpjs = isBpjsReceipt(data);
@@ -264,8 +263,6 @@ export function generatePlainTextReceipt(data: ReceiptData, paperSize: PaperSize
       }
     }
   }
-
-  lines.push(divider);
 
   // Financials: For Token Listrik, "RP TAG PLN" is changed to "RP BAYAR", for BPJS "RP TAGIHAN"
   const adminFee = data.adminBank !== undefined && data.adminBank > 0 ? data.adminBank : 5000;
@@ -344,10 +341,12 @@ export function buildEscPosBuffer(data: ReceiptData, paperSize: PaperSize = '58m
   addBytes(ESC_POS.NORMAL_SIZE);
   addBytes(ESC_POS.BOLD_OFF);
 
-  // Alamat di bawah nama loket
+  // Alamat di bawah nama loket (Bold / Lebih tebal)
   const alamatVal = data.alamat || 'Jl. Raya Bapuhbandung Glagah';
   if (alamatVal) {
+    addBytes(ESC_POS.BOLD_ON);
     addText(alamatVal + '\n');
+    addBytes(ESC_POS.BOLD_OFF);
   }
 
   // Baris 2: Judul Struk
@@ -365,7 +364,6 @@ export function buildEscPosBuffer(data: ReceiptData, paperSize: PaperSize = '58m
   addBytes(ESC_POS.ALIGN_LEFT);
   if (data.tanggal) addText(formatTwoColumns('TANGGAL', data.tanggal, width) + '\n');
   if (data.noRef) addText(formatTwoColumns('NO REF', data.noRef, width) + '\n');
-  addText(divider);
 
   // 4. Customer Info
   const isBpjs = isBpjsReceipt(data);
@@ -430,8 +428,6 @@ export function buildEscPosBuffer(data: ReceiptData, paperSize: PaperSize = '58m
       }
     }
   }
-
-  addText(divider);
 
   // 5. Billing Info: For Token Listrik, "RP TAG PLN" is changed to "RP BAYAR", for BPJS "RP TAGIHAN"
   const escposAdminFee = data.adminBank !== undefined && data.adminBank > 0 ? data.adminBank : 5000;

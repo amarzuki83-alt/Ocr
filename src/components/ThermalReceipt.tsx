@@ -169,7 +169,7 @@ export const ThermalReceipt: React.FC<ThermalReceiptProps> = ({
               {data.loket || 'LOKET PPOB ATHAR DIGITAL'}
             </h2>
             {(data.alamat || 'Jl. Raya Bapuhbandung Glagah') && (
-              <p className="text-[10px] sm:text-[11px] font-medium text-slate-700 tracking-normal mt-0.5">
+              <p className="text-[10.5px] sm:text-xs font-bold text-slate-950 tracking-normal mt-0.5">
                 {data.alamat || 'Jl. Raya Bapuhbandung Glagah'}
               </p>
             )}
@@ -202,8 +202,6 @@ export const ThermalReceipt: React.FC<ThermalReceiptProps> = ({
               </div>
             )}
           </div>
-
-          <div className="border-b border-dashed border-slate-300 my-2" />
 
           {/* Customer & Bill Details: Format dua kolom dengan pemisah titik dua */}
           <div className="space-y-1 text-[11px] sm:text-xs">
@@ -323,8 +321,6 @@ export const ThermalReceipt: React.FC<ThermalReceiptProps> = ({
               );
             })}
           </div>
-
-          <div className="border-b border-dashed border-slate-300 my-2" />
 
           {/* Financial Calculation Section: For Token Listrik, "RP TAG PLN" is changed to "RP BAYAR", for BPJS "RP TAGIHAN" */}
           <div className="space-y-1 text-[11px] sm:text-xs">

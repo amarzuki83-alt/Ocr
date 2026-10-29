@@ -22,7 +22,7 @@ export function generateReceiptCanvas(data: ReceiptData, paperSize: PaperSize = 
   const kwhValue = getReceiptKwh(data);
 
   // Measure content height dynamically
-  let estimatedHeight = is58 ? 604 : 664;
+  let estimatedHeight = is58 ? 560 : 620;
   if (isToken && tokenValue) {
     estimatedHeight += 90;
   }
@@ -59,15 +59,15 @@ export function generateReceiptCanvas(data: ReceiptData, paperSize: PaperSize = 
   ctx.fillText((data.loket || 'LOKET PPOB ATHAR DIGITAL').toUpperCase(), width / 2, y);
   y += 24;
 
-  // Alamat di bawah nama loket
+  // Alamat di bawah nama loket (Font lebih tebal / bold)
   const alamatVal = data.alamat ?? 'Jl. Raya Bapuhbandung Glagah';
   if (alamatVal) {
     ctx.font = is58
-      ? '13px "Courier Prime", "Courier New", monospace'
-      : '15px "Courier Prime", "Courier New", monospace';
-    ctx.fillStyle = '#3f3f46';
+      ? 'bold 14px "Courier Prime", "Courier New", monospace'
+      : 'bold 16px "Courier Prime", "Courier New", monospace';
+    ctx.fillStyle = '#09090b';
     ctx.fillText(alamatVal, width / 2, y);
-    y += 20;
+    y += 22;
   }
 
   // Header Baris 2: Judul Struk (Semi-bold, Centered)
@@ -112,11 +112,7 @@ export function generateReceiptCanvas(data: ReceiptData, paperSize: PaperSize = 
     drawRowWithColon(ctx, 'NO REF', data.noRef, xLabel, xColon, xValue, y, { fontSize: is58 ? 15 : 17 });
     y += 24;
   }
-
-  // Divider
-  y += 3;
-  drawDashedLine(ctx, paddingX, width - paddingX, y, 3, '#71717a', 1);
-  y += 22;
+  y += 4;
 
   // Customer details
   if (isBpjs) {
@@ -216,10 +212,7 @@ export function generateReceiptCanvas(data: ReceiptData, paperSize: PaperSize = 
     }
   }
 
-  // Divider
-  y += 3;
-  drawDashedLine(ctx, paddingX, width - paddingX, y, 3, '#71717a', 1);
-  y += 22;
+  y += 6;
 
   // Financials: For Token Listrik, "RP TAG PLN" is changed to "RP BAYAR", for BPJS "RP TAGIHAN"
   const tagihanLabel = isToken ? 'RP BAYAR' : isBpjs ? 'RP TAGIHAN' : 'RP TAG PLN';
@@ -424,7 +417,7 @@ export async function shareReceiptToWhatsApp(
     const captionLines: string[] = [
       `*${(data.headerTitle || (waIsBpjs ? 'STRUK PEMBAYARAN IURAN BPJS' : 'STRUK PEMBAYARAN TAGIHAN LISTRIK')).toUpperCase()}*`,
       `*${data.loket || 'LOKET PPOB ATHAR DIGITAL'}*`,
-      `${data.alamat || 'Jl. Raya Bapuhbandung Glagah'}`,
+      `*${data.alamat || 'Jl. Raya Bapuhbandung Glagah'}*`,
       `---------------------------------`,
     ];
 

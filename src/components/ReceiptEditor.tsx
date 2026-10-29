@@ -676,40 +676,6 @@ export const ReceiptEditor: React.FC<ReceiptEditorProps> = ({
                   </button>
                 </div>
               )}
-              {isBpjs && (
-                <div className="flex gap-1 text-[10px]">
-                  <button
-                    type="button"
-                    onClick={() => handleFieldChange('tagihan', 50000)}
-                    className="px-1.5 py-0.5 rounded bg-slate-700 hover:bg-slate-600 text-slate-200"
-                  >
-                    50k
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleFieldChange('tagihan', 100000)}
-                    className="px-1.5 py-0.5 rounded bg-slate-700 hover:bg-slate-600 text-slate-200"
-                  >
-                    100k
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleFieldChange('tagihan', 150000)}
-                    className={`px-1.5 py-0.5 rounded font-bold ${
-                      data.tagihan === 150000 ? 'bg-emerald-600 text-white ring-1 ring-emerald-400' : 'bg-slate-700 hover:bg-slate-600 text-slate-200'
-                    }`}
-                  >
-                    150k
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleFieldChange('tagihan', 200000)}
-                    className="px-1.5 py-0.5 rounded bg-slate-700 hover:bg-slate-600 text-slate-200"
-                  >
-                    200k
-                  </button>
-                </div>
-              )}
             </div>
             <div className="relative">
               <span className="absolute left-3 top-2 text-xs font-bold text-slate-400">Rp</span>

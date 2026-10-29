@@ -735,10 +735,27 @@ export function parseReceiptFromOcr(ocrText: string): Partial<ReceiptData> {
     }
   }
 
-  // 8. Rp Tag PLN / Rp Bayar (Tagihan Murni / Nominal Token)
-  const tagihanMatch = text.match(/(?:RP\s*BAYAR|RP\s*TAG\s*PLN|RP\s*TAGIHAN|TAGIHAN\s*PLN|JUMLAH\s*TAGIHAN|TAGIHAN)\s*[:.]?\s*RP?\.?\s*([\d\.,Oo]+)/i);
+  // 8. Rp Tag PLN / Rp Bayar / Rp Tagihan (Tagihan Murni / Nominal Token / Iuran BPJS)
+  const tagihanMatch = text.match(/(?:RP\s*TAGIHAN|TAGIHAN\s*BPJS|JUMLAH\s*TAGIHAN|TOTAL\s*PREMI|JUMLAH\s*PREMI|PREMI|JUMLAH\s*IURAN|RP\s*IURAN|IURAN|RP\s*BAYAR|RP\s*TAG\s*PLN|TAGIHAN\s*PLN|TAGIHAN|SUBTOTAL|NOMINAL|JML\s*BAYAR)\s*[:.]?\s*RP?\.?\s*([\d\.,Oo]+)/i);
   if (tagihanMatch && tagihanMatch[1]) {
     parsed.tagihan = parseCleanNumber(tagihanMatch[1]);
+  }
+
+  // Fallback for BPJS: scan lines for tagihan/iuran amount if not captured yet
+  if (isBpjsScan && (!parsed.tagihan || parsed.tagihan === 0)) {
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      if (/TAGIHAN|PREMI|IURAN|BAYAR|NOMINAL/i.test(line) && !/ADMIN|TOTAL/i.test(line)) {
+        const numMatch = line.match(/(?:RP?\.?\s*)?([\d\.,Oo]{4,12})/i);
+        if (numMatch) {
+          const val = parseCleanNumber(numMatch[1]);
+          if (val >= 10000) {
+            parsed.tagihan = val;
+            break;
+          }
+        }
+      }
+    }
   }
 
   // 9. Admin Bank (Automatically 5000 for token & postpaid electricity receipts)

@@ -48,6 +48,24 @@ export function formatRupiah(amount: number | string): string {
 }
 
 /**
+ * Detects if the receipt is for BPJS Kesehatan / Ketenagakerjaan
+ */
+export function isBpjsReceipt(data: ReceiptData): boolean {
+  const header = (data.headerTitle || '').toUpperCase();
+  const sub = (data.subHeader || '').toUpperCase();
+  const hasBpjsExtra = (data.extraFields || []).some((f) => 
+    /BPJS|POLIS|PESERTA/i.test(f.label) || /bpjs|polis|peserta/i.test(f.id)
+  );
+  return Boolean(
+    header.includes('BPJS') ||
+    sub.includes('BPJS') ||
+    Boolean(data.noPolis) ||
+    Boolean(data.jmlPeserta) ||
+    hasBpjsExtra
+  );
+}
+
+/**
  * Detects if the receipt is for PLN Token Listrik (Prabayar)
  */
 export function isTokenReceipt(data: ReceiptData): boolean {
@@ -197,31 +215,39 @@ export function generatePlainTextReceipt(data: ReceiptData, paperSize: PaperSize
   lines.push(divider);
 
   // Customer info
+  const isBpjs = isBpjsReceipt(data);
   const isToken = isTokenReceipt(data);
   const tokenValue = getStroomToken(data);
   const kwhValue = getReceiptKwh(data);
 
-  if (isToken || data.noMeter) {
-    lines.push(formatTwoColumns('NO METER', data.noMeter || '-', width));
-  }
-  if (data.idPel) lines.push(formatTwoColumns(isToken ? 'IDPEL' : 'NO PELANGGAN', data.idPel, width));
-  if (data.nama) lines.push(formatTwoColumns('NAMA', data.nama, width));
-  if (data.tarifDaya) lines.push(formatTwoColumns('TARIF/DAYA', data.tarifDaya, width));
+  if (isBpjs) {
+    lines.push(formatTwoColumns('NO POLIS', data.noPolis || data.idPel || '-', width));
+    if (data.nama) lines.push(formatTwoColumns('NAMA', data.nama, width));
+    lines.push(formatTwoColumns('JML PESERTA', data.jmlPeserta || '1 ORANG', width));
+    lines.push(formatTwoColumns('PERIODE', data.periode || data.blnThn || '-', width));
+  } else {
+    if (isToken || data.noMeter) {
+      lines.push(formatTwoColumns('NO METER', data.noMeter || '-', width));
+    }
+    if (data.idPel) lines.push(formatTwoColumns(isToken ? 'IDPEL' : 'NO PELANGGAN', data.idPel, width));
+    if (data.nama) lines.push(formatTwoColumns('NAMA', data.nama, width));
+    if (data.tarifDaya) lines.push(formatTwoColumns('TARIF/DAYA', data.tarifDaya, width));
 
-  // For Token Listrik: BLN/THN and STAND METER must be omitted
-  if (!isToken) {
-    if (data.blnThn) lines.push(formatTwoColumns('BLN/THN', data.blnThn, width));
-    if (data.standMeter) lines.push(formatTwoColumns('STAND METER', data.standMeter, width));
-  } else if (kwhValue) {
-    lines.push(formatTwoColumns('JML KWH', kwhValue, width));
-  }
+    // For Token Listrik: BLN/THN and STAND METER must be omitted
+    if (!isToken) {
+      if (data.blnThn) lines.push(formatTwoColumns('BLN/THN', data.blnThn, width));
+      if (data.standMeter) lines.push(formatTwoColumns('STAND METER', data.standMeter, width));
+    } else if (kwhValue) {
+      lines.push(formatTwoColumns('JML KWH', kwhValue, width));
+    }
 
-  // STROOM / TOKEN Section for Token Listrik: ENLARGED & PROMINENT
-  if (isToken && tokenValue) {
-    lines.push(doubleDivider);
-    lines.push(center('STROOM / TOKEN :'));
-    lines.push(center(formatToken20(tokenValue)));
-    lines.push(doubleDivider);
+    // STROOM / TOKEN Section for Token Listrik: ENLARGED & PROMINENT
+    if (isToken && tokenValue) {
+      lines.push(doubleDivider);
+      lines.push(center('STROOM / TOKEN :'));
+      lines.push(center(formatToken20(tokenValue)));
+      lines.push(doubleDivider);
+    }
   }
 
   // Extra fields (e.g. custom meter details)
@@ -239,10 +265,11 @@ export function generatePlainTextReceipt(data: ReceiptData, paperSize: PaperSize
 
   lines.push(divider);
 
-  // Financials: For Token Listrik, "RP TAG PLN" is changed to "RP BAYAR"
+  // Financials: For Token Listrik, "RP TAG PLN" is changed to "RP BAYAR", for BPJS "RP TAGIHAN"
   const adminFee = data.adminBank !== undefined && data.adminBank > 0 ? data.adminBank : 5000;
   const total = data.totalBayar || ((data.tagihan || 0) + adminFee);
-  lines.push(formatTwoColumns(isToken ? 'RP BAYAR' : 'RP TAG PLN', formatRupiah(data.tagihan), width));
+  const tagihanLabel = isToken ? 'RP BAYAR' : isBpjs ? 'RP TAGIHAN' : 'RP TAG PLN';
+  lines.push(formatTwoColumns(tagihanLabel, formatRupiah(data.tagihan), width));
   lines.push(formatTwoColumns('ADMIN BANK', formatRupiah(adminFee), width));
   lines.push(doubleDivider);
   lines.push(formatTwoColumns('TOTAL BAYAR', formatRupiah(total), width));
@@ -331,44 +358,54 @@ export function buildEscPosBuffer(data: ReceiptData, paperSize: PaperSize = '58m
   addText(divider);
 
   // 4. Customer Info
+  const isBpjs = isBpjsReceipt(data);
   const isToken = isTokenReceipt(data);
   const tokenValue = getStroomToken(data);
   const kwhValue = getReceiptKwh(data);
 
-  if (isToken || data.noMeter) {
+  if (isBpjs) {
     addBytes(ESC_POS.BOLD_ON);
-    addText(formatTwoColumns('NO METER', data.noMeter || '-', width) + '\n');
+    addText(formatTwoColumns('NO POLIS', data.noPolis || data.idPel || '-', width) + '\n');
     addBytes(ESC_POS.BOLD_OFF);
-  }
-  if (data.idPel) {
-    addBytes(ESC_POS.BOLD_ON);
-    addText(formatTwoColumns(isToken ? 'IDPEL' : 'IDPEL/NO PEL', data.idPel, width) + '\n');
-    addBytes(ESC_POS.BOLD_OFF);
-  }
-  if (data.nama) addText(formatTwoColumns('NAMA', data.nama, width) + '\n');
-  if (data.tarifDaya) addText(formatTwoColumns('TARIF/DAYA', data.tarifDaya, width) + '\n');
+    if (data.nama) addText(formatTwoColumns('NAMA', data.nama, width) + '\n');
+    addText(formatTwoColumns('JML PESERTA', data.jmlPeserta || '1 ORANG', width) + '\n');
+    addText(formatTwoColumns('PERIODE', data.periode || data.blnThn || '-', width) + '\n');
+  } else {
+    if (isToken || data.noMeter) {
+      addBytes(ESC_POS.BOLD_ON);
+      addText(formatTwoColumns('NO METER', data.noMeter || '-', width) + '\n');
+      addBytes(ESC_POS.BOLD_OFF);
+    }
+    if (data.idPel) {
+      addBytes(ESC_POS.BOLD_ON);
+      addText(formatTwoColumns(isToken ? 'IDPEL' : 'IDPEL/NO PEL', data.idPel, width) + '\n');
+      addBytes(ESC_POS.BOLD_OFF);
+    }
+    if (data.nama) addText(formatTwoColumns('NAMA', data.nama, width) + '\n');
+    if (data.tarifDaya) addText(formatTwoColumns('TARIF/DAYA', data.tarifDaya, width) + '\n');
 
-  // For Token Listrik: BLN/THN and STAND METER must be omitted
-  if (!isToken) {
-    if (data.blnThn) addText(formatTwoColumns('BLN/THN', data.blnThn, width) + '\n');
-    if (data.standMeter) addText(formatTwoColumns('STAND METER', data.standMeter, width) + '\n');
-  } else if (kwhValue) {
-    addText(formatTwoColumns('JML KWH', kwhValue, width) + '\n');
-  }
+    // For Token Listrik: BLN/THN and STAND METER must be omitted
+    if (!isToken) {
+      if (data.blnThn) addText(formatTwoColumns('BLN/THN', data.blnThn, width) + '\n');
+      if (data.standMeter) addText(formatTwoColumns('STAND METER', data.standMeter, width) + '\n');
+    } else if (kwhValue) {
+      addText(formatTwoColumns('JML KWH', kwhValue, width) + '\n');
+    }
 
-  // STROOM / TOKEN: ENLARGED FONT (DOUBLE HEIGHT + DOUBLE WIDTH) FOR THERMAL PRINTER
-  if (isToken && tokenValue) {
-    addText(doubleDivider);
-    addBytes(ESC_POS.ALIGN_CENTER);
-    addBytes(ESC_POS.BOLD_ON);
-    addText('STROOM / TOKEN :\n');
-    addBytes(ESC_POS.DOUBLE_HEIGHT);
-    addBytes(ESC_POS.DOUBLE_WIDTH);
-    addText(formatToken20(tokenValue) + '\n');
-    addBytes(ESC_POS.NORMAL_SIZE);
-    addBytes(ESC_POS.BOLD_OFF);
-    addBytes(ESC_POS.ALIGN_LEFT);
-    addText(doubleDivider);
+    // STROOM / TOKEN: ENLARGED FONT (DOUBLE HEIGHT + DOUBLE WIDTH) FOR THERMAL PRINTER
+    if (isToken && tokenValue) {
+      addText(doubleDivider);
+      addBytes(ESC_POS.ALIGN_CENTER);
+      addBytes(ESC_POS.BOLD_ON);
+      addText('STROOM / TOKEN :\n');
+      addBytes(ESC_POS.DOUBLE_HEIGHT);
+      addBytes(ESC_POS.DOUBLE_WIDTH);
+      addText(formatToken20(tokenValue) + '\n');
+      addBytes(ESC_POS.NORMAL_SIZE);
+      addBytes(ESC_POS.BOLD_OFF);
+      addBytes(ESC_POS.ALIGN_LEFT);
+      addText(doubleDivider);
+    }
   }
 
   // Extra fields (e.g. custom meter details)
@@ -386,10 +423,11 @@ export function buildEscPosBuffer(data: ReceiptData, paperSize: PaperSize = '58m
 
   addText(divider);
 
-  // 5. Billing Info: For Token Listrik, "RP TAG PLN" is changed to "RP BAYAR"
+  // 5. Billing Info: For Token Listrik, "RP TAG PLN" is changed to "RP BAYAR", for BPJS "RP TAGIHAN"
   const escposAdminFee = data.adminBank !== undefined && data.adminBank > 0 ? data.adminBank : 5000;
   const escposTotal = data.totalBayar || ((data.tagihan || 0) + escposAdminFee);
-  addText(formatTwoColumns(isToken ? 'RP BAYAR' : 'RP TAG PLN', formatRupiah(data.tagihan), width) + '\n');
+  const escposTagihanLabel = isToken ? 'RP BAYAR' : isBpjs ? 'RP TAGIHAN' : 'RP TAG PLN';
+  addText(formatTwoColumns(escposTagihanLabel, formatRupiah(data.tagihan), width) + '\n');
   addText(formatTwoColumns('ADMIN BANK', formatRupiah(escposAdminFee), width) + '\n');
   addText(doubleDivider);
 

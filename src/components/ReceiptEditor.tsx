@@ -1,6 +1,6 @@
 import React from 'react';
 import { ReceiptData, ExtraReceiptField } from '../types';
-import { isTokenReceipt, getStroomToken, formatToken20, getReceiptKwh, calculateKwh } from '../utils/escpos';
+import { isTokenReceipt, isBpjsReceipt, getStroomToken, formatToken20, getReceiptKwh, calculateKwh } from '../utils/escpos';
 import { cleanTarifDaya } from '../utils/ocrParser';
 import { 
   Building2, 
@@ -38,6 +38,7 @@ export const ReceiptEditor: React.FC<ReceiptEditorProps> = ({
   onReset,
 }) => {
   const isToken = isTokenReceipt(data);
+  const isBpjs = isBpjsReceipt(data);
   const currentToken = getStroomToken(data);
   const currentKwh = getReceiptKwh(data);
 
@@ -77,6 +78,33 @@ export const ReceiptEditor: React.FC<ReceiptEditorProps> = ({
       stroomToken: '',
       tagihan: currentTagihan,
       totalBayar: autoCalculate ? currentTagihan + defaultPostpaidAdmin : (data.totalBayar || currentTagihan + defaultPostpaidAdmin),
+    });
+  };
+
+  // Switch to Struk Iuran BPJS
+  const handleSelectBpjsType = () => {
+    const defaultBpjsAdmin = 5000; // Requirement: admin Rp 5000
+    const currentTagihan = data.tagihan || 150000;
+    onChange({
+      ...data,
+      headerTitle: 'STRUK PEMBAYARAN IURAN BPJS',
+      adminBank: defaultBpjsAdmin,
+      noPolis: data.noPolis || data.idPel || '0001284920194',
+      idPel: data.idPel || data.noPolis || '0001284920194',
+      noMeter: '',
+      nama: data.nama || 'AHMAD ZAINUDDIN',
+      jmlPeserta: data.jmlPeserta || '3 ORANG',
+      periode: data.periode || '1 BULAN (OKT 2026)',
+      blnThn: 'OKT 2026',
+      standMeter: '',
+      tarifDaya: '',
+      stroomToken: '',
+      kwh: '',
+      tagihan: currentTagihan,
+      totalBayar: autoCalculate ? currentTagihan + defaultBpjsAdmin : (data.totalBayar || currentTagihan + defaultBpjsAdmin),
+      footerDisclaimer: 'BPJS menyatakan struk ini sbg bukti pembayaran yg sah.',
+      footerGreeting: 'Terima Kasih Atas Pembayaran Anda',
+      extraFields: [],
     });
   };
 
@@ -201,7 +229,7 @@ export const ReceiptEditor: React.FC<ReceiptEditorProps> = ({
             type="button"
             onClick={handleSelectPostpaidType}
             className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 active:scale-95 ${
-              !isToken
+              !isToken && !isBpjs
                 ? 'bg-cyan-600 text-white shadow-md'
                 : 'bg-slate-800 text-slate-400 hover:text-white border border-slate-700'
             }`}
@@ -220,6 +248,18 @@ export const ReceiptEditor: React.FC<ReceiptEditorProps> = ({
           >
             <Sparkles className="w-3.5 h-3.5 text-amber-300" />
             <span>Token Listrik (Prabayar)</span>
+          </button>
+          <button
+            type="button"
+            onClick={handleSelectBpjsType}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 active:scale-95 ${
+              isBpjs
+                ? 'bg-emerald-600 text-white shadow-md'
+                : 'bg-slate-800 text-slate-400 hover:text-white border border-slate-700'
+            }`}
+          >
+            <ShieldCheck className="w-3.5 h-3.5 text-emerald-300" />
+            <span>Iuran BPJS</span>
           </button>
         </div>
       </div>
@@ -273,210 +313,304 @@ export const ReceiptEditor: React.FC<ReceiptEditorProps> = ({
         </div>
       </div>
 
-      {/* 2. Informasi Pelanggan & Daya */}
+      {/* 2. Informasi Pelanggan & Daya / BPJS */}
       <div className="space-y-3 pt-2 border-t border-slate-700/60">
         <div className="flex items-center gap-2 text-xs font-bold text-amber-400 uppercase tracking-wider">
           <User className="w-3.5 h-3.5" />
-          <span>Informasi Pelanggan & Stand Meter</span>
+          <span>{isBpjs ? 'Informasi Kepesertaan BPJS' : 'Informasi Pelanggan & Stand Meter'}</span>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div>
-            <label className="block text-xs font-medium text-slate-300 mb-1 flex items-center justify-between">
-              <span>No Meter {isToken ? <span className="text-amber-400 font-bold">(Token Listrik)</span> : <span className="text-slate-500 font-normal">(Opsional)</span>}</span>
-            </label>
-            <input
-              type="text"
-              value={data.noMeter || ''}
-              onChange={(e) => handleFieldChange('noMeter', e.target.value)}
-              placeholder="Contoh: 14238910452"
-              className={`w-full bg-slate-900 border rounded-lg px-3 py-2 text-sm font-mono focus:outline-none transition ${
-                isToken ? 'border-amber-500/50 text-amber-300 focus:border-amber-400' : 'border-slate-700 text-cyan-300 focus:border-cyan-500'
-              }`}
-            />
-          </div>
+        {isBpjs ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-emerald-300 mb-1">
+                Nomor Polis / Nomor Peserta <span className="text-rose-400">*</span>
+              </label>
+              <input
+                type="text"
+                value={data.noPolis || data.idPel || ''}
+                onChange={(e) => {
+                  handleFieldChange('noPolis', e.target.value);
+                  handleFieldChange('idPel', e.target.value);
+                }}
+                placeholder="Contoh: 0001284920194"
+                className="w-full bg-slate-900 border border-emerald-500/60 rounded-lg px-3 py-2 text-sm font-mono text-emerald-300 focus:outline-none focus:border-emerald-400 transition"
+              />
+            </div>
 
-          <div>
-            <label className="block text-xs font-medium text-slate-300 mb-1">
-              No Pelanggan (IDPEL) <span className="text-rose-400">*</span>
-            </label>
-            <input
-              type="text"
-              value={data.idPel}
-              onChange={(e) => handleFieldChange('idPel', e.target.value)}
-              placeholder="Contoh: 537210984521"
-              className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm font-mono text-cyan-300 focus:outline-none focus:border-cyan-500 transition"
-            />
-          </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-300 mb-1">
+                Nama Peserta <span className="text-rose-400">*</span>
+              </label>
+              <input
+                type="text"
+                value={data.nama}
+                onChange={(e) => handleFieldChange('nama', e.target.value)}
+                placeholder="Contoh: AHMAD ZAINUDDIN"
+                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm font-bold text-white focus:outline-none focus:border-emerald-500 transition"
+              />
+            </div>
 
-          <div>
-            <label className="block text-xs font-medium text-slate-300 mb-1">
-              Nama Pelanggan <span className="text-rose-400">*</span>
-            </label>
-            <input
-              type="text"
-              value={data.nama}
-              onChange={(e) => handleFieldChange('nama', e.target.value)}
-              placeholder="Contoh: BAPAK SUTRISNO"
-              className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm font-bold text-white focus:outline-none focus:border-cyan-500 transition"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-medium text-slate-300 mb-1">
-              Tarif / Daya
-            </label>
-            <input
-              type="text"
-              value={data.tarifDaya}
-              onChange={(e) => handleFieldChange('tarifDaya', e.target.value)}
-              onBlur={() => {
-                if (data.tarifDaya) {
-                  const cleaned = cleanTarifDaya(data.tarifDaya);
-                  if (cleaned && cleaned !== data.tarifDaya) {
-                    handleFieldChange('tarifDaya', cleaned);
-                  }
-                }
-              }}
-              placeholder="Contoh: R1 / 900 VA atau R1M / 1300 VA"
-              className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500 transition"
-            />
-            {/* Quick Tariff Selector: Only for non-token receipts, hidden on token listrik */}
-            {!isToken && (
-              <div className="flex items-center gap-1 text-[10px] flex-wrap mt-1.5">
-                <span className="text-slate-400">Pilih Cepat:</span>
-                <button
-                  type="button"
-                  onClick={() => handleSelectTariffPreset('R1 / 450 VA')}
-                  className="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700"
-                >
-                  450 VA
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleSelectTariffPreset('R1 / 900 VA')}
-                  className="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700"
-                >
-                  900 VA (R1)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleSelectTariffPreset('R1M / 900 VA')}
-                  className="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700"
-                >
-                  900 VA (R1M)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleSelectTariffPreset('R1 / 1300 VA')}
-                  className="px-1.5 py-0.5 rounded bg-cyan-600/30 text-cyan-300 border border-cyan-500/40 font-semibold"
-                >
-                  1300 VA
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleSelectTariffPreset('R1 / 2200 VA')}
-                  className="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700"
-                >
-                  2200 VA
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* Dedicated Jumlah kWh input for Token Listrik */}
-          {isToken && (
             <div>
               <div className="flex items-center justify-between mb-1">
-                <label className="block text-xs font-semibold text-amber-300">
-                  Jumlah kWh (Kilowatt-Hour)
+                <label className="block text-xs font-semibold text-slate-300">
+                  Jumlah Peserta
                 </label>
-                <button
-                  type="button"
-                  onClick={() => handleRecalculateKwh()}
-                  title="Hitung ulang kWh berdasarkan Rp Bayar & Tarif PLN"
-                  className="flex items-center gap-1 text-[11px] text-cyan-400 hover:text-cyan-300 font-semibold active:scale-95 transition"
-                >
-                  <RefreshCw className="w-3 h-3" />
-                  <span>Hitung Otomatis</span>
-                </button>
+                <div className="flex items-center gap-1 text-[10px]">
+                  <button
+                    type="button"
+                    onClick={() => handleFieldChange('jmlPeserta', '1 ORANG')}
+                    className={`px-1.5 py-0.5 rounded transition ${data.jmlPeserta === '1 ORANG' ? 'bg-emerald-600 text-white font-bold' : 'bg-slate-800 text-slate-300 hover:text-white'}`}
+                  >
+                    1 Org
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleFieldChange('jmlPeserta', '2 ORANG')}
+                    className={`px-1.5 py-0.5 rounded transition ${data.jmlPeserta === '2 ORANG' ? 'bg-emerald-600 text-white font-bold' : 'bg-slate-800 text-slate-300 hover:text-white'}`}
+                  >
+                    2 Org
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleFieldChange('jmlPeserta', '3 ORANG')}
+                    className={`px-1.5 py-0.5 rounded transition ${data.jmlPeserta === '3 ORANG' ? 'bg-emerald-600 text-white font-bold' : 'bg-slate-800 text-slate-300 hover:text-white'}`}
+                  >
+                    3 Org
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleFieldChange('jmlPeserta', '4 ORANG')}
+                    className={`px-1.5 py-0.5 rounded transition ${data.jmlPeserta === '4 ORANG' ? 'bg-emerald-600 text-white font-bold' : 'bg-slate-800 text-slate-300 hover:text-white'}`}
+                  >
+                    4 Org
+                  </button>
+                </div>
               </div>
-              <div className="relative">
-                <input
-                  type="text"
-                  value={data.kwh || currentKwh || ''}
-                  onChange={(e) => handleFieldChange('kwh', e.target.value)}
-                  placeholder="Contoh: 67,3 kWh"
-                  className="w-full bg-slate-900 border border-amber-500/60 rounded-lg px-3 py-2 text-sm font-bold text-amber-300 focus:outline-none focus:ring-1 focus:ring-amber-400 transition"
-                />
-              </div>
-              <p className="text-[10px] text-slate-400 mt-1">
-                Ketik langsung sesuai angka kWh di struk resmi, atau klik tombol Hitung Otomatis.
-              </p>
+              <input
+                type="text"
+                value={data.jmlPeserta || ''}
+                onChange={(e) => handleFieldChange('jmlPeserta', e.target.value)}
+                placeholder="Contoh: 3 ORANG"
+                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500 transition"
+              />
             </div>
-          )}
 
-          {/* Dedicated 20-Digit STROOM / TOKEN for Prepaid Token Listrik */}
-          {isToken && (
-            <div className="sm:col-span-2 bg-slate-900/90 border-2 border-amber-500/50 rounded-xl p-3.5 space-y-2 shadow-lg">
-              <label className="text-xs font-extrabold text-amber-300 uppercase tracking-wide flex items-center gap-1.5">
-                <Sparkles className="w-4 h-4 text-amber-400" />
-                <span>Kolom Stroom / Token Listrik (20 Digit)</span>
+            <div>
+              <label className="block text-xs font-semibold text-slate-300 mb-1">
+                Periode Pembayaran
               </label>
-
-              <div className="relative">
-                <input
-                  type="text"
-                  value={data.stroomToken || currentToken || ''}
-                  onChange={(e) => handleTokenChange(e.target.value)}
-                  placeholder="3829-1928-4402-9182-3819"
-                  maxLength={24}
-                  className="w-full bg-slate-950 border border-amber-500/60 rounded-lg px-3 py-2.5 text-base sm:text-lg font-black font-mono tracking-widest text-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-500 text-center"
-                />
-              </div>
-
-              <div className="flex items-start gap-1.5 text-[11px] text-slate-400 bg-slate-950/60 p-2 rounded-lg border border-slate-800">
-                <Info className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
-                <span>
-                  Kolom <strong>PPJ 3%</strong> telah dihilangkan. 
-                  Field <strong>BLN/THN</strong> dan <strong>Stand Meter</strong> ditiadakan. 
-                  Nomor token 20 digit diperbesar, dan label tagihan menjadi <strong>RP BAYAR</strong>.
-                </span>
-              </div>
+              <input
+                type="text"
+                value={data.periode || data.blnThn || ''}
+                onChange={(e) => {
+                  handleFieldChange('periode', e.target.value);
+                  handleFieldChange('blnThn', e.target.value);
+                }}
+                placeholder="Contoh: 1 BULAN (OKT 2026)"
+                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500 transition"
+              />
             </div>
-          )}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-slate-300 mb-1 flex items-center justify-between">
+                <span>No Meter {isToken ? <span className="text-amber-400 font-bold">(Token Listrik)</span> : <span className="text-slate-500 font-normal">(Opsional)</span>}</span>
+              </label>
+              <input
+                type="text"
+                value={data.noMeter || ''}
+                onChange={(e) => handleFieldChange('noMeter', e.target.value)}
+                placeholder="Contoh: 14238910452"
+                className={`w-full bg-slate-900 border rounded-lg px-3 py-2 text-sm font-mono focus:outline-none transition ${
+                  isToken ? 'border-amber-500/50 text-amber-300 focus:border-amber-400' : 'border-slate-700 text-cyan-300 focus:border-cyan-500'
+                }`}
+              />
+            </div>
 
-          {/* BLN/THN & Stand Meter: Only displayed for Non-Token Receipts */}
-          {!isToken && (
-            <>
-              <div>
-                <label className="block text-xs font-medium text-slate-300 mb-1">
-                  Bulan / Tahun (Periode)
-                </label>
-                <input
-                  type="text"
-                  value={data.blnThn}
-                  onChange={(e) => handleFieldChange('blnThn', e.target.value)}
-                  placeholder="Contoh: OKT 2026"
-                  className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500 transition"
-                />
-              </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-300 mb-1">
+                No Pelanggan (IDPEL) <span className="text-rose-400">*</span>
+              </label>
+              <input
+                type="text"
+                value={data.idPel}
+                onChange={(e) => handleFieldChange('idPel', e.target.value)}
+                placeholder="Contoh: 537210984521"
+                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm font-mono text-cyan-300 focus:outline-none focus:border-cyan-500 transition"
+              />
+            </div>
 
+            <div>
+              <label className="block text-xs font-medium text-slate-300 mb-1">
+                Nama Pelanggan <span className="text-rose-400">*</span>
+              </label>
+              <input
+                type="text"
+                value={data.nama}
+                onChange={(e) => handleFieldChange('nama', e.target.value)}
+                placeholder="Contoh: BAPAK SUTRISNO"
+                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm font-bold text-white focus:outline-none focus:border-cyan-500 transition"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-slate-300 mb-1">
+                Tarif / Daya
+              </label>
+              <input
+                type="text"
+                value={data.tarifDaya}
+                onChange={(e) => handleFieldChange('tarifDaya', e.target.value)}
+                onBlur={() => {
+                  if (data.tarifDaya) {
+                    const cleaned = cleanTarifDaya(data.tarifDaya);
+                    if (cleaned && cleaned !== data.tarifDaya) {
+                      handleFieldChange('tarifDaya', cleaned);
+                    }
+                  }
+                }}
+                placeholder="Contoh: R1 / 900 VA atau R1M / 1300 VA"
+                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500 transition"
+              />
+              {/* Quick Tariff Selector: Only for non-token receipts, hidden on token listrik */}
+              {!isToken && (
+                <div className="flex items-center gap-1 text-[10px] flex-wrap mt-1.5">
+                  <span className="text-slate-400">Pilih Cepat:</span>
+                  <button
+                    type="button"
+                    onClick={() => handleSelectTariffPreset('R1 / 450 VA')}
+                    className="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700"
+                  >
+                    450 VA
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleSelectTariffPreset('R1 / 900 VA')}
+                    className="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700"
+                  >
+                    900 VA (R1)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleSelectTariffPreset('R1M / 900 VA')}
+                    className="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700"
+                  >
+                    900 VA (R1M)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleSelectTariffPreset('R1 / 1300 VA')}
+                    className="px-1.5 py-0.5 rounded bg-cyan-600/30 text-cyan-300 border border-cyan-500/40 font-semibold"
+                  >
+                    1300 VA
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleSelectTariffPreset('R1 / 2200 VA')}
+                    className="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700"
+                  >
+                    2200 VA
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Dedicated Jumlah kWh input for Token Listrik */}
+            {isToken && (
               <div>
-                <label className="block text-xs font-medium text-slate-300 mb-1">
-                  Stand Meter (Awal - Akhir)
-                </label>
-                <input
-                  type="text"
-                  value={data.standMeter}
-                  onChange={(e) => handleFieldChange('standMeter', e.target.value)}
-                  placeholder="Contoh: 014280 - 014520 (240 kWh)"
-                  className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500 transition"
-                />
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-semibold text-amber-300">
+                    Jumlah kWh (Kilowatt-Hour)
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => handleRecalculateKwh()}
+                    title="Hitung ulang kWh berdasarkan Rp Bayar & Tarif PLN"
+                    className="flex items-center gap-1 text-[11px] text-cyan-400 hover:text-cyan-300 font-semibold active:scale-95 transition"
+                  >
+                    <RefreshCw className="w-3 h-3" />
+                    <span>Hitung Otomatis</span>
+                  </button>
+                </div>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={data.kwh || currentKwh || ''}
+                    onChange={(e) => handleFieldChange('kwh', e.target.value)}
+                    placeholder="Contoh: 67,3 kWh"
+                    className="w-full bg-slate-900 border border-amber-500/60 rounded-lg px-3 py-2 text-sm font-bold text-amber-300 focus:outline-none focus:ring-1 focus:ring-amber-400 transition"
+                  />
+                </div>
+                <p className="text-[10px] text-slate-400 mt-1">
+                  Ketik langsung sesuai angka kWh di struk resmi, atau klik tombol Hitung Otomatis.
+                </p>
               </div>
-            </>
-          )}
-        </div>
+            )}
+
+            {/* Dedicated 20-Digit STROOM / TOKEN for Prepaid Token Listrik */}
+            {isToken && (
+              <div className="sm:col-span-2 bg-slate-900/90 border-2 border-amber-500/50 rounded-xl p-3.5 space-y-2 shadow-lg">
+                <label className="text-xs font-extrabold text-amber-300 uppercase tracking-wide flex items-center gap-1.5">
+                  <Sparkles className="w-4 h-4 text-amber-400" />
+                  <span>Kolom Stroom / Token Listrik (20 Digit)</span>
+                </label>
+
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={data.stroomToken || currentToken || ''}
+                    onChange={(e) => handleTokenChange(e.target.value)}
+                    placeholder="3829-1928-4402-9182-3819"
+                    maxLength={24}
+                    className="w-full bg-slate-950 border border-amber-500/60 rounded-lg px-3 py-2.5 text-base sm:text-lg font-black font-mono tracking-widest text-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-500 text-center"
+                  />
+                </div>
+
+                <div className="flex items-start gap-1.5 text-[11px] text-slate-400 bg-slate-950/60 p-2 rounded-lg border border-slate-800">
+                  <Info className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
+                  <span>
+                    Kolom <strong>PPJ 3%</strong> telah dihilangkan. 
+                    Field <strong>BLN/THN</strong> dan <strong>Stand Meter</strong> ditiadakan. 
+                    Nomor token 20 digit diperbesar, dan label tagihan menjadi <strong>RP BAYAR</strong>.
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* BLN/THN & Stand Meter: Only displayed for Non-Token Receipts */}
+            {!isToken && (
+              <>
+                <div>
+                  <label className="block text-xs font-medium text-slate-300 mb-1">
+                    Bulan / Tahun (Periode)
+                  </label>
+                  <input
+                    type="text"
+                    value={data.blnThn}
+                    onChange={(e) => handleFieldChange('blnThn', e.target.value)}
+                    placeholder="Contoh: OKT 2026"
+                    className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500 transition"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-slate-300 mb-1">
+                    Stand Meter (Awal - Akhir)
+                  </label>
+                  <input
+                    type="text"
+                    value={data.standMeter}
+                    onChange={(e) => handleFieldChange('standMeter', e.target.value)}
+                    placeholder="Contoh: 014280 - 014520 (240 kWh)"
+                    className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500 transition"
+                  />
+                </div>
+              </>
+            )}
+          </div>
+        )}
       </div>
 
       {/* 3. Keuangan & Tagihan */}
@@ -506,7 +640,7 @@ export const ReceiptEditor: React.FC<ReceiptEditorProps> = ({
           <div>
             <div className="flex items-center justify-between mb-1">
               <label className="block text-xs font-medium text-slate-300">
-                {isToken ? 'RP BAYAR (Nominal Token)' : 'RP TAG PLN (Tagihan Murni)'}
+                {isToken ? 'RP BAYAR (Nominal Token)' : isBpjs ? 'RP TAGIHAN (Iuran BPJS)' : 'RP TAG PLN (Tagihan Murni)'}
               </label>
               {isToken && (
                 <div className="flex gap-1 text-[10px]">
@@ -542,6 +676,40 @@ export const ReceiptEditor: React.FC<ReceiptEditorProps> = ({
                   </button>
                 </div>
               )}
+              {isBpjs && (
+                <div className="flex gap-1 text-[10px]">
+                  <button
+                    type="button"
+                    onClick={() => handleFieldChange('tagihan', 50000)}
+                    className="px-1.5 py-0.5 rounded bg-slate-700 hover:bg-slate-600 text-slate-200"
+                  >
+                    50k
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleFieldChange('tagihan', 100000)}
+                    className="px-1.5 py-0.5 rounded bg-slate-700 hover:bg-slate-600 text-slate-200"
+                  >
+                    100k
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleFieldChange('tagihan', 150000)}
+                    className={`px-1.5 py-0.5 rounded font-bold ${
+                      data.tagihan === 150000 ? 'bg-emerald-600 text-white ring-1 ring-emerald-400' : 'bg-slate-700 hover:bg-slate-600 text-slate-200'
+                    }`}
+                  >
+                    150k
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleFieldChange('tagihan', 200000)}
+                    className="px-1.5 py-0.5 rounded bg-slate-700 hover:bg-slate-600 text-slate-200"
+                  >
+                    200k
+                  </button>
+                </div>
+              )}
             </div>
             <div className="relative">
               <span className="absolute left-3 top-2 text-xs font-bold text-slate-400">Rp</span>
@@ -549,7 +717,7 @@ export const ReceiptEditor: React.FC<ReceiptEditorProps> = ({
                 type="number"
                 value={data.tagihan || ''}
                 onChange={(e) => handleFieldChange('tagihan', Number(e.target.value))}
-                placeholder={isToken ? "100000" : "324500"}
+                placeholder={isToken ? "100000" : isBpjs ? "150000" : "324500"}
                 className="w-full bg-slate-900 border border-slate-700 rounded-lg pl-9 pr-3 py-2 text-sm font-semibold text-white focus:outline-none focus:border-emerald-500 transition"
               />
             </div>
@@ -560,14 +728,14 @@ export const ReceiptEditor: React.FC<ReceiptEditorProps> = ({
               <label className="block text-xs font-medium text-slate-300">
                 Admin Bank <span className="text-emerald-400 font-bold">(Otomatis: 5.000)</span>
               </label>
-              {isToken ? (
+              {isToken || isBpjs ? (
                 <div className="flex gap-1.5 text-[10px]">
                   <button
                     type="button"
                     onClick={() => handleAdminPreset(5000)}
                     className={`px-2 py-0.5 rounded font-bold transition ${
                       data.adminBank === 5000 || !data.adminBank
-                        ? 'bg-amber-600 text-white shadow-sm ring-1 ring-amber-400'
+                        ? (isBpjs ? 'bg-emerald-600 text-white shadow-sm ring-1 ring-emerald-400' : 'bg-amber-600 text-white shadow-sm ring-1 ring-amber-400')
                         : 'bg-slate-700 hover:bg-slate-600 text-slate-200'
                     }`}
                   >
@@ -578,7 +746,7 @@ export const ReceiptEditor: React.FC<ReceiptEditorProps> = ({
                     onClick={() => handleAdminPreset(10000)}
                     className={`px-2 py-0.5 rounded font-bold transition ${
                       data.adminBank === 10000
-                        ? 'bg-amber-600 text-white shadow-sm ring-1 ring-amber-400'
+                        ? (isBpjs ? 'bg-emerald-600 text-white shadow-sm ring-1 ring-emerald-400' : 'bg-amber-600 text-white shadow-sm ring-1 ring-amber-400')
                         : 'bg-slate-700 hover:bg-slate-600 text-slate-200'
                     }`}
                   >

@@ -91,11 +91,12 @@ export default function App() {
   // Handle OCR Completion: merge detected fields with existing
   const handleOcrScanComplete = (parsed: Partial<ReceiptData>, rawText: string) => {
     const isTokenScan = (parsed.headerTitle || '').includes('TOKEN') || Boolean(parsed.stroomToken);
+    const isBpjsScan = (parsed.headerTitle || '').includes('BPJS') || Boolean(parsed.noPolis) || Boolean(parsed.jmlPeserta);
     setReceiptData((prev) => {
       const cleanExtra = (parsed.extraFields || prev.extraFields || []).filter((f) => 
         !isTokenScan || (!/PPJ/i.test(f.label) && !/ppj/i.test(f.id) && !/TOKEN|STROOM/i.test(f.label) && !/token/i.test(f.id))
       );
-      // Requirement: Admin bank 5000 otomatis untuk struk token maupun pascabayar tanpa perlu klik lagi
+      // Requirement: Admin bank 5000 otomatis untuk struk token, pascabayar, maupun BPJS tanpa perlu klik lagi
       const adminBank = 5000;
       const tagihan = parsed.tagihan !== undefined ? parsed.tagihan : (prev.tagihan || 0);
       const totalBayar = tagihan > 0 ? tagihan + adminBank : (parsed.totalBayar || prev.totalBayar || adminBank);
@@ -105,14 +106,17 @@ export default function App() {
         ...parsed,
         adminBank,
         totalBayar,
-        blnThn: isTokenScan ? '' : (parsed.blnThn !== undefined ? parsed.blnThn : prev.blnThn),
-        standMeter: isTokenScan ? '' : (parsed.standMeter !== undefined ? parsed.standMeter : prev.standMeter),
-        tarifDaya: parsed.tarifDaya || prev.tarifDaya,
+        blnThn: (isTokenScan || isBpjsScan) ? (parsed.blnThn || '') : (parsed.blnThn !== undefined ? parsed.blnThn : prev.blnThn),
+        standMeter: (isTokenScan || isBpjsScan) ? '' : (parsed.standMeter !== undefined ? parsed.standMeter : prev.standMeter),
+        tarifDaya: isBpjsScan ? '' : (parsed.tarifDaya || prev.tarifDaya),
+        noPolis: parsed.noPolis || prev.noPolis || '',
+        jmlPeserta: parsed.jmlPeserta || prev.jmlPeserta || '',
+        periode: parsed.periode || prev.periode || '',
         kwh: isTokenScan ? (parsed.kwh !== undefined ? parsed.kwh : (prev.kwh || '')) : (parsed.kwh || prev.kwh || ''),
         // Default to LOKET PPOB ATHAR DIGITAL unless user uploaded a specific custom merchant
         loket: parsed.loket || prev.loket || 'LOKET PPOB ATHAR DIGITAL',
-        headerTitle: parsed.headerTitle || (isTokenScan ? 'STRUK PEMBELIAN TOKEN LISTRIK' : 'STRUK PEMBAYARAN TAGIHAN LISTRIK'),
-        footerDisclaimer: parsed.footerDisclaimer || 'PLN menyatakan struk ini sbg bukti pembayaran yg sah. Info hub 123',
+        headerTitle: parsed.headerTitle || (isBpjsScan ? 'STRUK PEMBAYARAN IURAN BPJS' : isTokenScan ? 'STRUK PEMBELIAN TOKEN LISTRIK' : 'STRUK PEMBAYARAN TAGIHAN LISTRIK'),
+        footerDisclaimer: parsed.footerDisclaimer || (isBpjsScan ? 'BPJS menyatakan struk ini sbg bukti pembayaran yg sah.' : 'PLN menyatakan struk ini sbg bukti pembayaran yg sah. Info hub 123'),
         extraFields: cleanExtra,
       };
     });

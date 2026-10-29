@@ -1,5 +1,5 @@
 import { ReceiptData, PaperSize } from '../types';
-import { formatRupiah, formatTwoColumns, isTokenReceipt, getStroomToken, formatToken20, getReceiptKwh } from './escpos';
+import { formatRupiah, formatTwoColumns, isTokenReceipt, isBpjsReceipt, getStroomToken, formatToken20, getReceiptKwh } from './escpos';
 
 /**
  * Draws a high-resolution, authentic thermal receipt onto an HTML5 Canvas
@@ -16,6 +16,7 @@ export function generateReceiptCanvas(data: ReceiptData, paperSize: PaperSize = 
   const ctx = canvas.getContext('2d')!;
 
   const isToken = isTokenReceipt(data);
+  const isBpjs = isBpjsReceipt(data);
   const tokenValue = getStroomToken(data);
   const kwhValue = getReceiptKwh(data);
 
@@ -98,69 +99,87 @@ export function generateReceiptCanvas(data: ReceiptData, paperSize: PaperSize = 
   drawDashedLine(ctx, paddingX, width - paddingX, y, 3, '#71717a', 1);
   y += 24;
 
-  // Customer details: IDPEL, NAMA, TARIF/DAYA
-  if (data.idPel) {
-    drawRowWithColon(ctx, 'IDPEL', data.idPel, xLabel, xColon, xValue, y, { boldValue: true, fontSize: 20 });
+  // Customer details
+  if (isBpjs) {
+    drawRowWithColon(ctx, 'NO POLIS', data.noPolis || data.idPel || '-', xLabel, xColon, xValue, y, { boldValue: true, fontSize: 20 });
     y += 28;
-  }
-  if (data.nama) {
-    drawRowWithColon(ctx, 'NAMA', data.nama.toUpperCase(), xLabel, xColon, xValue, y, { boldValue: true, fontSize: 20 });
-    y += 28;
-  }
-  if (data.tarifDaya) {
-    drawRowWithColon(ctx, 'TARIF / DAYA', data.tarifDaya, xLabel, xColon, xValue, y);
+    if (data.nama) {
+      drawRowWithColon(ctx, 'NAMA', data.nama.toUpperCase(), xLabel, xColon, xValue, y, { boldValue: true, fontSize: 20 });
+      y += 28;
+    }
+    drawRowWithColon(ctx, 'JML PESERTA', data.jmlPeserta || '1 ORANG', xLabel, xColon, xValue, y);
     y += 26;
-  }
-
-  // For Token Listrik: BLN/THN and STAND METER are completely omitted
-  if (!isToken) {
-    if (data.blnThn) {
-      drawRowWithColon(ctx, 'BLN / THN', data.blnThn, xLabel, xColon, xValue, y);
+    drawRowWithColon(ctx, 'PERIODE', data.periode || data.blnThn || '-', xLabel, xColon, xValue, y);
+    y += 26;
+  } else {
+    // Customer details: NO METER, IDPEL, NAMA, TARIF/DAYA
+    if (isToken || data.noMeter) {
+      drawRowWithColon(ctx, 'NO METER', data.noMeter || '-', xLabel, xColon, xValue, y, { boldValue: true, fontSize: 20 });
+      y += 28;
+    }
+    if (data.idPel) {
+      drawRowWithColon(ctx, isToken ? 'IDPEL' : 'IDPEL/NO PEL', data.idPel, xLabel, xColon, xValue, y, { boldValue: true, fontSize: 20 });
+      y += 28;
+    }
+    if (data.nama) {
+      drawRowWithColon(ctx, 'NAMA', data.nama.toUpperCase(), xLabel, xColon, xValue, y, { boldValue: true, fontSize: 20 });
+      y += 28;
+    }
+    if (data.tarifDaya) {
+      drawRowWithColon(ctx, 'TARIF / DAYA', data.tarifDaya, xLabel, xColon, xValue, y);
       y += 26;
     }
-    if (data.standMeter) {
-      drawRowWithColon(ctx, 'STAND METER', data.standMeter, xLabel, xColon, xValue, y);
-      y += 26;
+
+    // For Token Listrik: BLN/THN and STAND METER are completely omitted
+    if (!isToken) {
+      if (data.blnThn) {
+        drawRowWithColon(ctx, 'BLN / THN', data.blnThn, xLabel, xColon, xValue, y);
+        y += 26;
+      }
+      if (data.standMeter) {
+        drawRowWithColon(ctx, 'STAND METER', data.standMeter, xLabel, xColon, xValue, y);
+        y += 26;
+      }
+    } else if (kwhValue) {
+      // JML KWH for Token Listrik
+      drawRowWithColon(ctx, 'JML KWH', kwhValue, xLabel, xColon, xValue, y, { boldValue: true });
+      y += 28;
     }
-  } else if (kwhValue) {
-    // JML KWH for Token Listrik
-    drawRowWithColon(ctx, 'JML KWH', kwhValue, xLabel, xColon, xValue, y, { boldValue: true });
-    y += 28;
-  }
 
-  // STROOM / TOKEN Section: 20 Digit Enlarged & Prominent
-  if (isToken && tokenValue) {
-    y += 4;
-    drawDashedLine(ctx, paddingX, width - paddingX, y, 4, '#09090b', 2);
-    y += 22;
+    // STROOM / TOKEN Section: 20 Digit Enlarged & Prominent
+    if (isToken && tokenValue) {
+      y += 4;
+      drawDashedLine(ctx, paddingX, width - paddingX, y, 4, '#09090b', 2);
+      y += 22;
 
-    // Label with colon
-    drawRowWithColon(ctx, 'STROOM / TOKEN', '', xLabel, xColon, xValue, y, {
-      boldLabel: true,
-      fontSize: 20,
-      labelColor: '#09090b',
-    });
-    y += 26;
+      // Label with colon
+      drawRowWithColon(ctx, 'STROOM / TOKEN', '', xLabel, xColon, xValue, y, {
+        boldLabel: true,
+        fontSize: 20,
+        labelColor: '#09090b',
+      });
+      y += 26;
 
-    // Prominent enlarged 20-digit token box (high contrast, bold 25px font)
-    const tokenFormatted = formatToken20(tokenValue);
-    const boxH = 46;
-    const boxW = width - (paddingX * 2);
+      // Prominent enlarged 20-digit token box (high contrast, bold 25px font)
+      const tokenFormatted = formatToken20(tokenValue);
+      const boxH = 46;
+      const boxW = width - (paddingX * 2);
 
-    ctx.fillStyle = '#f8fafc';
-    ctx.fillRect(paddingX, y - 26, boxW, boxH);
-    ctx.strokeStyle = '#09090b';
-    ctx.lineWidth = 1.5;
-    ctx.strokeRect(paddingX, y - 26, boxW, boxH);
+      ctx.fillStyle = '#f8fafc';
+      ctx.fillRect(paddingX, y - 26, boxW, boxH);
+      ctx.strokeStyle = '#09090b';
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(paddingX, y - 26, boxW, boxH);
 
-    ctx.textAlign = 'center';
-    ctx.font = 'bold 25px "Courier Prime", "Courier New", monospace';
-    ctx.fillStyle = '#09090b';
-    ctx.fillText(tokenFormatted, width / 2, y + 4);
-    y += 30;
+      ctx.textAlign = 'center';
+      ctx.font = 'bold 25px "Courier Prime", "Courier New", monospace';
+      ctx.fillStyle = '#09090b';
+      ctx.fillText(tokenFormatted, width / 2, y + 4);
+      y += 30;
 
-    drawDashedLine(ctx, paddingX, width - paddingX, y, 4, '#09090b', 2);
-    y += 24;
+      drawDashedLine(ctx, paddingX, width - paddingX, y, 4, '#09090b', 2);
+      y += 24;
+    }
   }
 
   // Extra fields (e.g. custom items)
@@ -182,10 +201,14 @@ export function generateReceiptCanvas(data: ReceiptData, paperSize: PaperSize = 
   drawDashedLine(ctx, paddingX, width - paddingX, y, 3, '#71717a', 1);
   y += 24;
 
-  // Financials: For Token Listrik, "RP TAG PLN" is changed to "RP BAYAR"
-  drawRowWithColon(ctx, isToken ? 'RP BAYAR' : 'RP TAG PLN', formatRupiah(data.tagihan), xLabel, xColon, xValue, y, { boldValue: true });
+  // Financials: For Token Listrik, "RP TAG PLN" is changed to "RP BAYAR", for BPJS "RP TAGIHAN"
+  const tagihanLabel = isToken ? 'RP BAYAR' : isBpjs ? 'RP TAGIHAN' : 'RP TAG PLN';
+  const adminBankVal = data.adminBank !== undefined && data.adminBank > 0 ? data.adminBank : 5000;
+  const totalBayarVal = data.totalBayar || ((data.tagihan || 0) + adminBankVal);
+
+  drawRowWithColon(ctx, tagihanLabel, formatRupiah(data.tagihan), xLabel, xColon, xValue, y, { boldValue: true });
   y += 28;
-  drawRowWithColon(ctx, 'ADMIN BANK', formatRupiah(data.adminBank), xLabel, xColon, xValue, y, { boldValue: true });
+  drawRowWithColon(ctx, 'ADMIN BANK', formatRupiah(adminBankVal), xLabel, xColon, xValue, y, { boldValue: true });
   y += 28;
 
   // Double line for total
@@ -193,7 +216,7 @@ export function generateReceiptCanvas(data: ReceiptData, paperSize: PaperSize = 
   y += 26;
 
   // TOTAL BAYAR (Bold, Prominent with aligned colon)
-  drawRowWithColon(ctx, 'TOTAL BAYAR', formatRupiah(data.totalBayar), xLabel, xColon, xValue, y, {
+  drawRowWithColon(ctx, 'TOTAL BAYAR', formatRupiah(totalBayarVal), xLabel, xColon, xValue, y, {
     boldLabel: true,
     boldValue: true,
     fontSize: 24,

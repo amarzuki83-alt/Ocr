@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { ReceiptData, PaperSize } from '../types';
-import { formatRupiah, isTokenReceipt, getStroomToken, formatToken20, getReceiptKwh } from '../utils/escpos';
+import { formatRupiah, isTokenReceipt, isBpjsReceipt, getStroomToken, formatToken20, getReceiptKwh } from '../utils/escpos';
 import { generateReceiptCanvas, shareReceiptToWhatsApp } from '../utils/receiptCanvas';
 import { 
   Copy, 
@@ -71,6 +71,7 @@ export const ThermalReceipt: React.FC<ThermalReceiptProps> = ({
 
   const is58 = paperSize === '58mm';
   const isToken = isTokenReceipt(data);
+  const isBpjs = isBpjsReceipt(data);
   const tokenValue = getStroomToken(data);
   const kwhValue = getReceiptKwh(data);
 
@@ -200,74 +201,106 @@ export const ThermalReceipt: React.FC<ThermalReceiptProps> = ({
 
           {/* Customer & Bill Details: Format dua kolom dengan pemisah titik dua */}
           <div className="space-y-1 text-[11px] sm:text-xs">
-            {/* Kolom NO METER (Wajib untuk Token Listrik / bila tersedia) */}
-            {(isToken || data.noMeter) && (
-              <div className={`grid ${is58 ? 'grid-cols-[100px_14px_1fr]' : 'grid-cols-[130px_16px_1fr]'} items-baseline`}>
-                <span className="text-slate-700 font-semibold">NO METER</span>
-                <span className="text-slate-900 font-bold text-center">:</span>
-                <span className="text-slate-950 font-bold tracking-wider text-left">{data.noMeter || '-'}</span>
-              </div>
-            )}
-
-            {data.idPel && (
-              <div className={`grid ${is58 ? 'grid-cols-[100px_14px_1fr]' : 'grid-cols-[130px_16px_1fr]'} items-baseline`}>
-                <span className="text-slate-700 font-semibold">IDPEL</span>
-                <span className="text-slate-900 font-bold text-center">:</span>
-                <span className="text-slate-950 font-bold tracking-wider text-left">{data.idPel}</span>
-              </div>
-            )}
-
-            {data.nama && (
-              <div className={`grid ${is58 ? 'grid-cols-[100px_14px_1fr]' : 'grid-cols-[130px_16px_1fr]'} items-baseline`}>
-                <span className="text-slate-700 font-semibold">NAMA</span>
-                <span className="text-slate-900 font-bold text-center">:</span>
-                <span className="text-slate-950 font-bold uppercase text-left truncate">{data.nama}</span>
-              </div>
-            )}
-            {data.tarifDaya && (
-              <div className={`grid ${is58 ? 'grid-cols-[100px_14px_1fr]' : 'grid-cols-[130px_16px_1fr]'} items-baseline`}>
-                <span className="text-slate-600 font-medium">TARIF / DAYA</span>
-                <span className="text-slate-900 font-bold text-center">:</span>
-                <span className="text-slate-900 font-semibold text-left">{data.tarifDaya}</span>
-              </div>
-            )}
-            {/* For Token Listrik: BLN/THN and STAND METER must be omitted */}
-            {!isToken && data.blnThn && (
-              <div className={`grid ${is58 ? 'grid-cols-[100px_14px_1fr]' : 'grid-cols-[130px_16px_1fr]'} items-baseline`}>
-                <span className="text-slate-600 font-medium">BLN / THN</span>
-                <span className="text-slate-900 font-bold text-center">:</span>
-                <span className="text-slate-900 text-left">{data.blnThn}</span>
-              </div>
-            )}
-            {!isToken && data.standMeter && (
-              <div className={`grid ${is58 ? 'grid-cols-[100px_14px_1fr]' : 'grid-cols-[130px_16px_1fr]'} items-baseline`}>
-                <span className="text-slate-600 font-medium">STAND METER</span>
-                <span className="text-slate-900 font-bold text-center">:</span>
-                <span className="text-slate-900 text-left">{data.standMeter}</span>
-              </div>
-            )}
-
-            {/* JML KWH for Token Listrik */}
-            {isToken && kwhValue && (
-              <div className={`grid ${is58 ? 'grid-cols-[100px_14px_1fr]' : 'grid-cols-[130px_16px_1fr]'} items-baseline`}>
-                <span className="text-slate-600 font-medium">JML KWH</span>
-                <span className="text-slate-900 font-bold text-center">:</span>
-                <span className="text-slate-950 font-bold text-left">{kwhValue}</span>
-              </div>
-            )}
-
-            {/* STROOM / TOKEN Section: 20-Digit Token Enlarged & Prominent */}
-            {isToken && tokenValue && (
-              <div className="my-2.5 p-2.5 bg-slate-50 border-2 border-dashed border-slate-900 rounded-lg text-center shadow-xs">
-                <div className={`grid ${is58 ? 'grid-cols-[100px_14px_1fr]' : 'grid-cols-[130px_16px_1fr]'} items-center mb-1 text-left`}>
-                  <span className="text-slate-900 font-extrabold uppercase text-[11px] sm:text-xs tracking-wider">STROOM / TOKEN</span>
-                  <span className="text-slate-900 font-extrabold text-center">:</span>
-                  <span className="text-slate-500 text-[10px] italic">20 Digit Token PLN</span>
+            {isBpjs ? (
+              <>
+                <div className={`grid ${is58 ? 'grid-cols-[100px_14px_1fr]' : 'grid-cols-[130px_16px_1fr]'} items-baseline`}>
+                  <span className="text-slate-700 font-semibold">NO POLIS</span>
+                  <span className="text-slate-900 font-bold text-center">:</span>
+                  <span className="text-slate-950 font-bold tracking-wider text-left">{data.noPolis || data.idPel || '-'}</span>
                 </div>
-                <div className="text-base sm:text-xl font-black font-mono tracking-widest text-slate-950 py-1.5 px-2 bg-white border border-slate-300 rounded shadow-inner select-all">
-                  {formatToken20(tokenValue)}
+
+                {data.nama && (
+                  <div className={`grid ${is58 ? 'grid-cols-[100px_14px_1fr]' : 'grid-cols-[130px_16px_1fr]'} items-baseline`}>
+                    <span className="text-slate-700 font-semibold">NAMA</span>
+                    <span className="text-slate-900 font-bold text-center">:</span>
+                    <span className="text-slate-950 font-bold uppercase text-left truncate">{data.nama}</span>
+                  </div>
+                )}
+
+                <div className={`grid ${is58 ? 'grid-cols-[100px_14px_1fr]' : 'grid-cols-[130px_16px_1fr]'} items-baseline`}>
+                  <span className="text-slate-600 font-medium">JML PESERTA</span>
+                  <span className="text-slate-900 font-bold text-center">:</span>
+                  <span className="text-slate-900 font-semibold text-left">{data.jmlPeserta || '1 ORANG'}</span>
                 </div>
-              </div>
+
+                <div className={`grid ${is58 ? 'grid-cols-[100px_14px_1fr]' : 'grid-cols-[130px_16px_1fr]'} items-baseline`}>
+                  <span className="text-slate-600 font-medium">PERIODE</span>
+                  <span className="text-slate-900 font-bold text-center">:</span>
+                  <span className="text-slate-900 text-left">{data.periode || data.blnThn || '-'}</span>
+                </div>
+              </>
+            ) : (
+              <>
+                {/* Kolom NO METER (Wajib untuk Token Listrik / bila tersedia) */}
+                {(isToken || data.noMeter) && (
+                  <div className={`grid ${is58 ? 'grid-cols-[100px_14px_1fr]' : 'grid-cols-[130px_16px_1fr]'} items-baseline`}>
+                    <span className="text-slate-700 font-semibold">NO METER</span>
+                    <span className="text-slate-900 font-bold text-center">:</span>
+                    <span className="text-slate-950 font-bold tracking-wider text-left">{data.noMeter || '-'}</span>
+                  </div>
+                )}
+
+                {data.idPel && (
+                  <div className={`grid ${is58 ? 'grid-cols-[100px_14px_1fr]' : 'grid-cols-[130px_16px_1fr]'} items-baseline`}>
+                    <span className="text-slate-700 font-semibold">{isToken ? 'IDPEL' : 'NO PELANGGAN'}</span>
+                    <span className="text-slate-900 font-bold text-center">:</span>
+                    <span className="text-slate-950 font-bold tracking-wider text-left">{data.idPel}</span>
+                  </div>
+                )}
+
+                {data.nama && (
+                  <div className={`grid ${is58 ? 'grid-cols-[100px_14px_1fr]' : 'grid-cols-[130px_16px_1fr]'} items-baseline`}>
+                    <span className="text-slate-700 font-semibold">NAMA</span>
+                    <span className="text-slate-900 font-bold text-center">:</span>
+                    <span className="text-slate-950 font-bold uppercase text-left truncate">{data.nama}</span>
+                  </div>
+                )}
+                {data.tarifDaya && (
+                  <div className={`grid ${is58 ? 'grid-cols-[100px_14px_1fr]' : 'grid-cols-[130px_16px_1fr]'} items-baseline`}>
+                    <span className="text-slate-600 font-medium">TARIF / DAYA</span>
+                    <span className="text-slate-900 font-bold text-center">:</span>
+                    <span className="text-slate-900 font-semibold text-left">{data.tarifDaya}</span>
+                  </div>
+                )}
+                {/* For Token Listrik: BLN/THN and STAND METER must be omitted */}
+                {!isToken && data.blnThn && (
+                  <div className={`grid ${is58 ? 'grid-cols-[100px_14px_1fr]' : 'grid-cols-[130px_16px_1fr]'} items-baseline`}>
+                    <span className="text-slate-600 font-medium">BLN / THN</span>
+                    <span className="text-slate-900 font-bold text-center">:</span>
+                    <span className="text-slate-900 text-left">{data.blnThn}</span>
+                  </div>
+                )}
+                {!isToken && data.standMeter && (
+                  <div className={`grid ${is58 ? 'grid-cols-[100px_14px_1fr]' : 'grid-cols-[130px_16px_1fr]'} items-baseline`}>
+                    <span className="text-slate-600 font-medium">STAND METER</span>
+                    <span className="text-slate-900 font-bold text-center">:</span>
+                    <span className="text-slate-900 text-left">{data.standMeter}</span>
+                  </div>
+                )}
+
+                {/* JML KWH for Token Listrik */}
+                {isToken && kwhValue && (
+                  <div className={`grid ${is58 ? 'grid-cols-[100px_14px_1fr]' : 'grid-cols-[130px_16px_1fr]'} items-baseline`}>
+                    <span className="text-slate-600 font-medium">JML KWH</span>
+                    <span className="text-slate-900 font-bold text-center">:</span>
+                    <span className="text-slate-950 font-bold text-left">{kwhValue}</span>
+                  </div>
+                )}
+
+                {/* STROOM / TOKEN Section: 20-Digit Token Enlarged & Prominent */}
+                {isToken && tokenValue && (
+                  <div className="my-2.5 p-2.5 bg-slate-50 border-2 border-dashed border-slate-900 rounded-lg text-center shadow-xs">
+                    <div className={`grid ${is58 ? 'grid-cols-[100px_14px_1fr]' : 'grid-cols-[130px_16px_1fr]'} items-center mb-1 text-left`}>
+                      <span className="text-slate-900 font-extrabold uppercase text-[11px] sm:text-xs tracking-wider">STROOM / TOKEN</span>
+                      <span className="text-slate-900 font-extrabold text-center">:</span>
+                      <span className="text-slate-500 text-[10px] italic">20 Digit Token PLN</span>
+                    </div>
+                    <div className="text-base sm:text-xl font-black font-mono tracking-widest text-slate-950 py-1.5 px-2 bg-white border border-slate-300 rounded shadow-inner select-all">
+                      {formatToken20(tokenValue)}
+                    </div>
+                  </div>
+                )}
+              </>
             )}
 
             {/* Extra Custom Fields (e.g. Catatan Khusus) */}
@@ -288,10 +321,10 @@ export const ThermalReceipt: React.FC<ThermalReceiptProps> = ({
 
           <div className="border-b border-dashed border-slate-300 my-2" />
 
-          {/* Financial Calculation Section: For Token Listrik, "RP TAG PLN" is changed to "RP BAYAR" */}
+          {/* Financial Calculation Section: For Token Listrik, "RP TAG PLN" is changed to "RP BAYAR", for BPJS "RP TAGIHAN" */}
           <div className="space-y-1 text-[11px] sm:text-xs">
             <div className={`grid ${is58 ? 'grid-cols-[100px_14px_1fr]' : 'grid-cols-[130px_16px_1fr]'} items-baseline`}>
-              <span className="text-slate-600 font-medium">{isToken ? 'RP BAYAR' : 'RP TAG PLN'}</span>
+              <span className="text-slate-600 font-medium">{isToken ? 'RP BAYAR' : isBpjs ? 'RP TAGIHAN' : 'RP TAG PLN'}</span>
               <span className="text-slate-900 font-bold text-center">:</span>
               <span className="text-slate-900 font-semibold text-left">{formatRupiah(data.tagihan)}</span>
             </div>

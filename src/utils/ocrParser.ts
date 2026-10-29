@@ -614,14 +614,15 @@ export function parseReceiptFromOcr(ocrText: string): Partial<ReceiptData> {
 
   // Header detection
   const isTokenScan = /TOKEN\s*LISTRIK|PRABAYAR|PREPAID|STROOM/i.test(text);
+  const isBpjsScan = /BPJS|KESEHATAN|KETENAGAKERJAAN/i.test(text);
   if (isTokenScan) {
     parsed.headerTitle = 'STRUK PEMBELIAN TOKEN LISTRIK';
     parsed.blnThn = '';
     parsed.standMeter = '';
-  } else if (/PDAM|AIR\s*MINUM/i.test(text)) {
-    parsed.headerTitle = 'STRUK PEMBAYARAN AIR PDAM';
-  } else if (/BPJS/i.test(text)) {
+  } else if (isBpjsScan) {
     parsed.headerTitle = 'STRUK PEMBAYARAN IURAN BPJS';
+    parsed.footerDisclaimer = 'BPJS menyatakan struk ini sbg bukti pembayaran yg sah.';
+    parsed.footerGreeting = 'Terima Kasih Atas Pembayaran Anda';
   } else {
     parsed.headerTitle = 'STRUK PEMBAYARAN TAGIHAN LISTRIK';
   }
@@ -630,7 +631,7 @@ export function parseReceiptFromOcr(ocrText: string): Partial<ReceiptData> {
   const loketMatch = text.match(/(?:LOKET|KASIR|AGEN|MERCHANT|MITRA)\s*[:.]?\s*([A-Za-z0-9\s\-_\.]+)/i);
   if (loketMatch && loketMatch[1]) {
     const val = loketMatch[1].trim().split('\n')[0].substring(0, 30);
-    if (!/PEMBAYARAN|LISTRIK|PLN/i.test(val)) {
+    if (!/PEMBAYARAN|LISTRIK|PLN|BPJS/i.test(val)) {
       parsed.loket = val;
     }
   }
@@ -646,6 +647,16 @@ export function parseReceiptFromOcr(ocrText: string): Partial<ReceiptData> {
                      text.match(/\b(5[0-9OIlSBZ]{10,11})\b/i);
   if (idPelMatch && idPelMatch[1]) {
     parsed.idPel = cleanDigitSequence(idPelMatch[1]);
+  }
+
+  // 2c. Nomor Polis / Peserta (BPJS)
+  const noPolisMatch = text.match(/(?:NO[\s/.]*POLIS|NOMOR[\s/.]*POLIS|NO[\s/.]*PESERTA|NOMOR[\s/.]*PESERTA|NO[\s/.]*KARTU|NO[\s/.]*VA|VA)\s*[:.]?\s*([0-9OIlSBZ\s-]{8,20})/i) ||
+                       (isBpjsScan ? text.match(/\b(000[0-9OIlSBZ]{10,13})\b/i) : null);
+  if (noPolisMatch && noPolisMatch[1]) {
+    parsed.noPolis = cleanDigitSequence(noPolisMatch[1]);
+    if (!parsed.idPel) {
+      parsed.idPel = parsed.noPolis;
+    }
   }
 
   // 3. Nama Pelanggan (guaranteed Afandi, zero typos)
@@ -669,15 +680,28 @@ export function parseReceiptFromOcr(ocrText: string): Partial<ReceiptData> {
   }
 
   // 5. Tarif / Daya - Strictly match what is in the uploaded image
-  const scannedTarifDaya = extractTarifDayaFromText(text, lines);
-  if (scannedTarifDaya) {
-    parsed.tarifDaya = scannedTarifDaya;
-  } else if (isTokenScan) {
-    // If daya was mentioned somewhere in text, prioritize that daya
-    const anyDaya = extractDaya(text);
-    parsed.tarifDaya = anyDaya ? cleanTarifDaya(anyDaya) : 'R1 / 900 VA';
+  if (isBpjsScan) {
+    parsed.tarifDaya = '';
   } else {
-    parsed.tarifDaya = 'R1 / 900 VA';
+    const scannedTarifDaya = extractTarifDayaFromText(text, lines);
+    if (scannedTarifDaya) {
+      parsed.tarifDaya = scannedTarifDaya;
+    } else if (isTokenScan) {
+      // If daya was mentioned somewhere in text, prioritize that daya
+      const anyDaya = extractDaya(text);
+      parsed.tarifDaya = anyDaya ? cleanTarifDaya(anyDaya) : 'R1 / 900 VA';
+    } else {
+      parsed.tarifDaya = 'R1 / 900 VA';
+    }
+  }
+
+  // 5b. Jml Peserta (BPJS)
+  const jmlPesertaMatch = text.match(/(?:JML[\s/.]*PESERTA|JUMLAH[\s/.]*PESERTA|PESERTA|JML\s*ANGGOTA)\s*[:.]?\s*([0-9]+\s*(?:ORANG|JIWA|ORG)?)/i);
+  if (jmlPesertaMatch && jmlPesertaMatch[1]) {
+    const rawVal = jmlPesertaMatch[1].trim();
+    parsed.jmlPeserta = /\b(ORANG|JIWA|ORG)\b/i.test(rawVal) ? rawVal.toUpperCase() : `${rawVal} ORANG`;
+  } else if (isBpjsScan) {
+    parsed.jmlPeserta = '1 ORANG';
   }
 
   // 6. Bln / Thn (Periode)
@@ -686,15 +710,29 @@ export function parseReceiptFromOcr(ocrText: string): Partial<ReceiptData> {
     parsed.blnThn = cleanBlnThn(blnThnMatch[1].trim().split('\n')[0].substring(0, 15));
   }
 
+  // 6b. Periode Khusus BPJS
+  const periodeMatch = text.match(/(?:PERIODE|MASA\s*IURAN)\s*[:.]?\s*([A-Za-z0-9\s\/\-\(\)]+)/i);
+  if (periodeMatch && periodeMatch[1]) {
+    parsed.periode = periodeMatch[1].trim().split('\n')[0].substring(0, 24);
+  } else if (parsed.blnThn) {
+    parsed.periode = `1 BULAN (${parsed.blnThn})`;
+  } else if (isBpjsScan) {
+    parsed.periode = '1 BULAN';
+  }
+
   // 7. Stand Meter
-  const standMatch = text.match(/(?:STAND\s*METER|STAND|METER)\s*[:.]?\s*([0-9\s\-–OIl]+)/i);
-  if (standMatch && standMatch[1]) {
-    parsed.standMeter = standMatch[1]
-      .replace(/[Oo]/g, '0')
-      .replace(/[Il|]/g, '1')
-      .trim()
-      .split('\n')[0]
-      .substring(0, 24);
+  if (isBpjsScan) {
+    parsed.standMeter = '';
+  } else {
+    const standMatch = text.match(/(?:STAND\s*METER|STAND|METER)\s*[:.]?\s*([0-9\s\-–OIl]+)/i);
+    if (standMatch && standMatch[1]) {
+      parsed.standMeter = standMatch[1]
+        .replace(/[Oo]/g, '0')
+        .replace(/[Il|]/g, '1')
+        .trim()
+        .split('\n')[0]
+        .substring(0, 24);
+    }
   }
 
   // 8. Rp Tag PLN / Rp Bayar (Tagihan Murni / Nominal Token)
@@ -810,26 +848,26 @@ export const SAMPLE_PRESETS: Record<string, ReceiptData> = {
     footerGreeting: 'Simpan Struk Ini Sebagai Bukti Sah',
     extraFields: [],
   },
-  pdam: {
+  bpjs: {
     loket: 'LOKET PPOB ATHAR DIGITAL',
-    headerTitle: 'STRUK PEMBAYARAN AIR PDAM',
+    headerTitle: 'STRUK PEMBAYARAN IURAN BPJS',
     subHeader: '',
-    idPel: '0812948192',
+    idPel: '0001284920194',
+    noPolis: '0001284920194',
     noMeter: '',
-    nama: 'HJ. SITI FATIMAH',
-    tarifDaya: 'R2 / RUMAH TANGGA B',
-    standMeter: '00321 - 00346 (25 m³)',
+    nama: 'AHMAD ZAINUDDIN',
+    jmlPeserta: '3 ORANG',
+    tarifDaya: '',
+    standMeter: '',
     blnThn: 'OKT 2026',
-    tagihan: 145000,
-    adminBank: 2500,
-    totalBayar: 147500,
+    periode: '1 BULAN (OKT 2026)',
+    tagihan: 150000,
+    adminBank: 5000,
+    totalBayar: 155000,
     tanggal: '26/10/2026 17:30:22 WIB',
-    noRef: 'PDAM261026771029',
-    footerDisclaimer: 'Struk ini adalah bukti pembayaran PDAM yang sah.',
-    footerGreeting: 'Hemat Air Demi Kelestarian Lingkungan',
-    extraFields: [
-      { id: 'denda', label: 'DENDA', value: 'Rp 0' },
-      { id: 'retribusi', label: 'RETRIBUSI SAMPAH', value: 'Rp 5.000' },
-    ],
+    noRef: 'BPJS261026771029',
+    footerDisclaimer: 'BPJS menyatakan struk ini sbg bukti pembayaran yg sah.',
+    footerGreeting: 'Terima Kasih Atas Pembayaran Anda',
+    extraFields: [],
   },
 };

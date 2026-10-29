@@ -10,10 +10,13 @@ export interface ReceiptData {
   loket: string;
   idPel: string;
   noMeter?: string;
+  noPolis?: string;
   nama: string;
+  jmlPeserta?: string;
   tarifDaya: string;
   standMeter: string;
   blnThn: string;
+  periode?: string;
   stroomToken?: string;
   kwh?: string;
   tagihan: number;

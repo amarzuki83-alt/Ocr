@@ -22,7 +22,7 @@ export function generateReceiptCanvas(data: ReceiptData, paperSize: PaperSize = 
   const kwhValue = getReceiptKwh(data);
 
   // Measure content height dynamically
-  let estimatedHeight = is58 ? 560 : 620;
+  let estimatedHeight = is58 ? 470 : 530;
   if (isToken && tokenValue) {
     estimatedHeight += 90;
   }
@@ -32,8 +32,9 @@ export function generateReceiptCanvas(data: ReceiptData, paperSize: PaperSize = 
   if (data.extraFields && data.extraFields.length > 0) {
     estimatedHeight += data.extraFields.length * 28;
   }
-  if (data.footerDisclaimer) {
-    estimatedHeight += Math.ceil(data.footerDisclaimer.length / colWidth) * 24;
+  const disclaimerText = data.footerDisclaimer || 'Simpan struk ini sebagai bukti pembayaran yang sah';
+  if (disclaimerText) {
+    estimatedHeight += Math.ceil(disclaimerText.length / colWidth) * 24;
   }
 
   canvas.width = width;
@@ -77,16 +78,6 @@ export function generateReceiptCanvas(data: ReceiptData, paperSize: PaperSize = 
   ctx.fillStyle = '#18181b';
   ctx.fillText((data.headerTitle || 'STRUK PEMBAYARAN TAGIHAN LISTRIK').toUpperCase(), width / 2, y);
   y += 22;
-
-  // Optional subheader
-  if (data.subHeader) {
-    ctx.font = is58
-      ? '13px "Courier Prime", "Courier New", monospace'
-      : '15px "Courier Prime", "Courier New", monospace';
-    ctx.fillStyle = '#52525b';
-    ctx.fillText(data.subHeader.toUpperCase(), width / 2, y);
-    y += 20;
-  }
 
   // Double divider
   y += 6;
@@ -224,8 +215,8 @@ export function generateReceiptCanvas(data: ReceiptData, paperSize: PaperSize = 
   drawRowWithColon(ctx, 'ADMIN BANK', formatRupiah(adminBankVal), xLabel, xColon, xValue, y, { boldValue: true, fontSize: valueFontSize });
   y += 25;
 
-  // Double line for total
-  drawDashedLine(ctx, paddingX, width - paddingX, y, 4, '#09090b', 2);
+  // Line above total: dimulai sejajar dengan titik :
+  drawDashedLine(ctx, xColon, width - paddingX, y, 4, '#09090b', 2);
   y += 24;
 
   // TOTAL BAYAR (Bold, Prominent with aligned colon)
@@ -236,10 +227,7 @@ export function generateReceiptCanvas(data: ReceiptData, paperSize: PaperSize = 
     labelColor: '#09090b',
     valueColor: '#09090b',
   });
-  y += 10;
-
-  drawDashedLine(ctx, paddingX, width - paddingX, y, 4, '#09090b', 2);
-  y += 26;
+  y += 18;
 
   // Footer Disclaimer
   ctx.textAlign = 'center';
@@ -248,8 +236,9 @@ export function generateReceiptCanvas(data: ReceiptData, paperSize: PaperSize = 
     : 'italic 15px "Courier Prime", "Courier New", monospace';
   ctx.fillStyle = '#3f3f46';
 
-  if (data.footerDisclaimer) {
-    const words = data.footerDisclaimer.split(' ');
+  const footerText = data.footerDisclaimer || 'Simpan struk ini sebagai bukti pembayaran yang sah';
+  if (footerText) {
+    const words = footerText.split(' ');
     let line = '';
     const maxChars = is58 ? 30 : 38;
     for (const w of words) {
@@ -276,14 +265,6 @@ export function generateReceiptCanvas(data: ReceiptData, paperSize: PaperSize = 
     ctx.fillText(data.footerGreeting.toUpperCase(), width / 2, y);
     y += 22;
   }
-
-  // Barcode Graphic
-  y += 8;
-  drawBarcode(ctx, width / 2, y, is58 ? 170 : 200, 30);
-  y += 40;
-  ctx.font = is58 ? '12px "Courier Prime", monospace' : '13.5px "Courier Prime", monospace';
-  ctx.fillStyle = '#71717a';
-  ctx.fillText(data.idPel || data.noPolis || '537210984521', width / 2, y);
 
   return canvas;
 }

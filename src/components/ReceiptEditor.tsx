@@ -108,7 +108,7 @@ export const ReceiptEditor: React.FC<ReceiptEditorProps> = ({
       kwh: '',
       tagihan: currentTagihan,
       totalBayar: autoCalculate ? currentTagihan + defaultBpjsAdmin : (data.totalBayar || currentTagihan + defaultBpjsAdmin),
-      footerDisclaimer: 'BPJS menyatakan struk ini sbg bukti pembayaran yg sah.',
+      footerDisclaimer: data.footerDisclaimer || 'Simpan struk ini sebagai bukti pembayaran yang sah',
       footerGreeting: 'Terima Kasih Atas Pembayaran Anda',
       extraFields: [],
     });
@@ -316,19 +316,6 @@ export const ReceiptEditor: React.FC<ReceiptEditorProps> = ({
               className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500 transition"
             />
           </div>
-        </div>
-
-        <div>
-          <label className="block text-xs font-medium text-slate-400 mb-1">
-            Catatan Tambahan Header (Opsional - Kosongkan jika tidak perlu)
-          </label>
-          <input
-            type="text"
-            value={data.subHeader}
-            onChange={(e) => handleFieldChange('subHeader', e.target.value)}
-            placeholder="Kosong (atau isi bila ada unit/rayon)"
-            className="w-full bg-slate-900/60 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-300 focus:outline-none focus:border-cyan-500 transition"
-          />
         </div>
       </div>
 
@@ -938,7 +925,7 @@ export const ReceiptEditor: React.FC<ReceiptEditorProps> = ({
             rows={2}
             value={data.footerDisclaimer}
             onChange={(e) => handleFieldChange('footerDisclaimer', e.target.value)}
-            placeholder="PLN menyatakan struk ini sbg bukti pembayaran yg sah. Info hub 123"
+            placeholder="Simpan struk ini sebagai bukti pembayaran yang sah"
             className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500 transition resize-none"
           />
         </div>

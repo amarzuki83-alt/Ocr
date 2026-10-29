@@ -176,11 +176,6 @@ export const ThermalReceipt: React.FC<ThermalReceiptProps> = ({
             <h3 className="text-[11px] sm:text-xs font-bold text-slate-800 uppercase mt-0.5 tracking-wide">
               {data.headerTitle || 'STRUK PEMBAYARAN TAGIHAN LISTRIK'}
             </h3>
-            {data.subHeader && (
-              <p className="text-[10px] font-semibold text-slate-600 uppercase tracking-wide mt-0.5">
-                {data.subHeader}
-              </p>
-            )}
           </div>
 
           <div className="border-b-2 border-dashed border-slate-800 my-2" />
@@ -335,7 +330,9 @@ export const ThermalReceipt: React.FC<ThermalReceiptProps> = ({
               <span className="text-slate-900 font-semibold text-left">{formatRupiah(data.adminBank !== undefined && data.adminBank > 0 ? data.adminBank : 5000)}</span>
             </div>
 
-            <div className="border-b-2 border-dashed border-slate-800 my-1.5" />
+            <div className={`grid ${is58 ? 'grid-cols-[92px_12px_1fr]' : 'grid-cols-[120px_14px_1fr]'} items-center my-1.5`}>
+              <div className="col-start-2 col-span-2 border-b-2 border-dashed border-slate-800" />
+            </div>
 
             {/* Total Bayar Highlight */}
             <div className={`grid ${is58 ? 'grid-cols-[92px_12px_1fr]' : 'grid-cols-[120px_14px_1fr]'} items-baseline pt-0.5 font-bold text-xs sm:text-sm`}>
@@ -345,55 +342,19 @@ export const ThermalReceipt: React.FC<ThermalReceiptProps> = ({
                 {formatRupiah(data.totalBayar || ((data.tagihan || 0) + (data.adminBank !== undefined && data.adminBank > 0 ? data.adminBank : 5000)))}
               </span>
             </div>
-
-            <div className="border-b-2 border-dashed border-slate-800 my-1.5" />
           </div>
 
           {/* Disclaimer / Footer Notes */}
           <div className="pt-2 text-center space-y-1">
-            {data.footerDisclaimer && (
-              <p className="text-[10px] leading-tight text-slate-700 font-medium italic">
-                {data.footerDisclaimer}
-              </p>
-            )}
+            <p className="text-[10px] leading-tight text-slate-700 font-medium italic">
+              {data.footerDisclaimer || 'Simpan struk ini sebagai bukti pembayaran yang sah'}
+            </p>
 
             {data.footerGreeting && (
               <p className="text-[10px] font-bold text-slate-900 tracking-wider uppercase pt-1">
                 {data.footerGreeting}
               </p>
             )}
-          </div>
-
-          {/* Simulated Thermal Barcode / QR Section */}
-          <div className="mt-4 pt-2 border-t border-dashed border-slate-300 flex flex-col items-center">
-            {/* Barcode Lines Graphic */}
-            <div className="flex items-center justify-center gap-[2px] h-9 w-full max-w-[240px] px-2 opacity-85">
-              <span className="w-1.5 h-full bg-slate-950" />
-              <span className="w-0.5 h-full bg-slate-950" />
-              <span className="w-2 h-full bg-slate-950" />
-              <span className="w-1 h-full bg-slate-950" />
-              <span className="w-0.5 h-full bg-slate-950" />
-              <span className="w-2.5 h-full bg-slate-950" />
-              <span className="w-1 h-full bg-slate-950" />
-              <span className="w-1.5 h-full bg-slate-950" />
-              <span className="w-0.5 h-full bg-slate-950" />
-              <span className="w-2 h-full bg-slate-950" />
-              <span className="w-1.5 h-full bg-slate-950" />
-              <span className="w-0.5 h-full bg-slate-950" />
-              <span className="w-1 h-full bg-slate-950" />
-              <span className="w-2 h-full bg-slate-950" />
-              <span className="w-0.5 h-full bg-slate-950" />
-              <span className="w-1.5 h-full bg-slate-950" />
-              <span className="w-2 h-full bg-slate-950" />
-              <span className="w-1 h-full bg-slate-950" />
-              <span className="w-2.5 h-full bg-slate-950" />
-              <span className="w-0.5 h-full bg-slate-950" />
-              <span className="w-1 h-full bg-slate-950" />
-              <span className="w-2 h-full bg-slate-950" />
-            </div>
-            <span className="text-[9px] tracking-widest text-slate-600 mt-1 font-mono">
-              {data.idPel || '537210984521'}
-            </span>
           </div>
 
           <div className="mt-3 text-center">

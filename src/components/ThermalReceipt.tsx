@@ -161,12 +161,18 @@ export const ThermalReceipt: React.FC<ThermalReceiptProps> = ({
         >
           {/* Header Section:
               Baris 1: LOKET PPOB ATHAR DIGITAL (Paling Atas)
-              Baris 2: STRUK PEMBAYARAN TAGIHAN LISTRIK (Di bawahnya)
+              Alamat: Jl. Raya Bapuhbandung Glagah (Di bawah nama loket)
+              Baris 2: STRUK PEMBAYARAN TAGIHAN LISTRIK / TOKEN / BPJS
           */}
           <div className="text-center pb-2">
             <h2 className="text-sm sm:text-base font-extrabold tracking-tight text-slate-950 uppercase">
               {data.loket || 'LOKET PPOB ATHAR DIGITAL'}
             </h2>
+            {(data.alamat || 'Jl. Raya Bapuhbandung Glagah') && (
+              <p className="text-[10px] sm:text-[11px] font-medium text-slate-700 tracking-normal mt-0.5">
+                {data.alamat || 'Jl. Raya Bapuhbandung Glagah'}
+              </p>
+            )}
             <h3 className="text-[11px] sm:text-xs font-bold text-slate-800 uppercase mt-0.5 tracking-wide">
               {data.headerTitle || 'STRUK PEMBAYARAN TAGIHAN LISTRIK'}
             </h3>

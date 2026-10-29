@@ -8,6 +8,7 @@ export interface ReceiptData {
   headerTitle: string;
   subHeader: string;
   loket: string;
+  alamat?: string;
   idPel: string;
   noMeter?: string;
   noPolis?: string;

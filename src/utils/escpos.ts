@@ -203,8 +203,10 @@ export function generatePlainTextReceipt(data: ReceiptData, paperSize: PaperSize
     return ' '.repeat(pad) + trimmed;
   };
 
-  // Header: Baris 1: Loket (LOKET PPOB ATHAR DIGITAL), Baris 2: Judul (STRUK PEMBAYARAN TAGIHAN LISTRIK)
+  // Header: Baris 1: Loket (LOKET PPOB ATHAR DIGITAL), Alamat, Baris 2: Judul
   lines.push(center(data.loket || 'LOKET PPOB ATHAR DIGITAL'));
+  const alamatText = data.alamat || 'Jl. Raya Bapuhbandung Glagah';
+  if (alamatText) lines.push(center(alamatText));
   if (data.headerTitle) lines.push(center(data.headerTitle));
   if (data.subHeader) lines.push(center(data.subHeader));
   lines.push(doubleDivider);
@@ -340,8 +342,16 @@ export function buildEscPosBuffer(data: ReceiptData, paperSize: PaperSize = '58m
   // Baris 1: LOKET PPOB ATHAR DIGITAL
   addText((data.loket || 'LOKET PPOB ATHAR DIGITAL') + '\n');
   addBytes(ESC_POS.NORMAL_SIZE);
+  addBytes(ESC_POS.BOLD_OFF);
 
-  // Baris 2: STRUK PEMBAYARAN TAGIHAN LISTRIK
+  // Alamat di bawah nama loket
+  const alamatVal = data.alamat || 'Jl. Raya Bapuhbandung Glagah';
+  if (alamatVal) {
+    addText(alamatVal + '\n');
+  }
+
+  // Baris 2: Judul Struk
+  addBytes(ESC_POS.BOLD_ON);
   if (data.headerTitle) {
     addText(data.headerTitle + '\n');
   }

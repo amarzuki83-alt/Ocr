@@ -49,6 +49,8 @@ export const ReceiptEditor: React.FC<ReceiptEditorProps> = ({
     const initialKwh = data.kwh || calculateKwh(currentTagihan, data.tarifDaya || 'R1M / 1300 VA');
     onChange({
       ...data,
+      loket: data.loket || 'LOKET PPOB ATHAR DIGITAL',
+      alamat: data.alamat || 'Jl. Raya Bapuhbandung Glagah',
       headerTitle: 'STRUK PEMBELIAN TOKEN LISTRIK',
       adminBank: defaultTokenAdmin,
       noMeter: data.noMeter || '14238910452',
@@ -71,6 +73,8 @@ export const ReceiptEditor: React.FC<ReceiptEditorProps> = ({
     const currentTagihan = data.tagihan || 324500;
     onChange({
       ...data,
+      loket: data.loket || 'LOKET PPOB ATHAR DIGITAL',
+      alamat: data.alamat || 'Jl. Raya Bapuhbandung Glagah',
       headerTitle: 'STRUK PEMBAYARAN TAGIHAN LISTRIK',
       adminBank: defaultPostpaidAdmin,
       blnThn: data.blnThn || 'OKT 2026',
@@ -87,6 +91,8 @@ export const ReceiptEditor: React.FC<ReceiptEditorProps> = ({
     const currentTagihan = data.tagihan || 150000;
     onChange({
       ...data,
+      loket: data.loket || 'LOKET PPOB ATHAR DIGITAL',
+      alamat: data.alamat || 'Jl. Raya Bapuhbandung Glagah',
       headerTitle: 'STRUK PEMBAYARAN IURAN BPJS',
       adminBank: defaultBpjsAdmin,
       noPolis: data.noPolis || data.idPel || '0001284920194',
@@ -286,6 +292,19 @@ export const ReceiptEditor: React.FC<ReceiptEditorProps> = ({
           </div>
 
           <div>
+            <label className="block text-xs font-semibold text-cyan-300 mb-1">
+              Alamat Loket (Di Bawah Nama Loket)
+            </label>
+            <input
+              type="text"
+              value={data.alamat ?? 'Jl. Raya Bapuhbandung Glagah'}
+              onChange={(e) => handleFieldChange('alamat', e.target.value)}
+              placeholder="Jl. Raya Bapuhbandung Glagah"
+              className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500 transition"
+            />
+          </div>
+
+          <div className="sm:col-span-2">
             <label className="block text-xs font-semibold text-slate-300 mb-1">
               Judul Struk (Header Baris 2)
             </label>

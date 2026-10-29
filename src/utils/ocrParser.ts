@@ -606,6 +606,7 @@ export function parseReceiptFromOcr(ocrText: string): Partial<ReceiptData> {
 
   const parsed: Partial<ReceiptData> = {
     loket: 'LOKET PPOB ATHAR DIGITAL',
+    alamat: 'Jl. Raya Bapuhbandung Glagah',
     headerTitle: 'STRUK PEMBAYARAN TAGIHAN LISTRIK',
     subHeader: '',
     footerDisclaimer: 'PLN menyatakan struk ini sbg bukti pembayaran yg sah. Info hub 123',
@@ -633,6 +634,15 @@ export function parseReceiptFromOcr(ocrText: string): Partial<ReceiptData> {
     const val = loketMatch[1].trim().split('\n')[0].substring(0, 30);
     if (!/PEMBAYARAN|LISTRIK|PLN|BPJS/i.test(val)) {
       parsed.loket = val;
+    }
+  }
+
+  // 1b. Alamat Loket
+  const alamatMatch = text.match(/(?:ALAMAT|JL[\s\.]*RAYA|JL[\s\.]*|JALAN)\s*[:.]?\s*([A-Za-z0-9\s\,\.\-]+)/i);
+  if (alamatMatch && alamatMatch[1]) {
+    const rawAlamat = alamatMatch[1].trim().split('\n')[0].substring(0, 40);
+    if (!/PEMBAYARAN|LISTRIK|PLN|BPJS|IDPEL/i.test(rawAlamat)) {
+      parsed.alamat = rawAlamat;
     }
   }
 
@@ -827,6 +837,7 @@ export function parseReceiptFromOcr(ocrText: string): Partial<ReceiptData> {
 export const SAMPLE_PRESETS: Record<string, ReceiptData> = {
   plnPostpaid: {
     loket: 'LOKET PPOB ATHAR DIGITAL',
+    alamat: 'Jl. Raya Bapuhbandung Glagah',
     headerTitle: 'STRUK PEMBAYARAN TAGIHAN LISTRIK',
     subHeader: '',
     idPel: '537210984521',
@@ -846,6 +857,7 @@ export const SAMPLE_PRESETS: Record<string, ReceiptData> = {
   },
   plnPrepaid: {
     loket: 'LOKET PPOB ATHAR DIGITAL',
+    alamat: 'Jl. Raya Bapuhbandung Glagah',
     headerTitle: 'STRUK PEMBELIAN TOKEN LISTRIK',
     subHeader: '',
     idPel: '537210984521',
@@ -867,6 +879,7 @@ export const SAMPLE_PRESETS: Record<string, ReceiptData> = {
   },
   bpjs: {
     loket: 'LOKET PPOB ATHAR DIGITAL',
+    alamat: 'Jl. Raya Bapuhbandung Glagah',
     headerTitle: 'STRUK PEMBAYARAN IURAN BPJS',
     subHeader: '',
     idPel: '0001284920194',

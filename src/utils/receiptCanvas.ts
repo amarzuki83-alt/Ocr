@@ -22,7 +22,7 @@ export function generateReceiptCanvas(data: ReceiptData, paperSize: PaperSize = 
   const kwhValue = getReceiptKwh(data);
 
   // Measure content height dynamically
-  let estimatedHeight = is58 ? 580 : 640;
+  let estimatedHeight = is58 ? 604 : 664;
   if (isToken && tokenValue) {
     estimatedHeight += 90;
   }
@@ -48,16 +48,27 @@ export function generateReceiptCanvas(data: ReceiptData, paperSize: PaperSize = 
   ctx.lineWidth = 1.5;
   ctx.strokeRect(3, 3, width - 6, estimatedHeight - 6);
 
-  let y = 38;
+  let y = 36;
 
   // Header Baris 1: LOKET PPOB ATHAR DIGITAL (Bold, Large, Centered)
   ctx.fillStyle = '#09090b';
   ctx.textAlign = 'center';
   ctx.font = is58
-    ? 'bold 23px "Courier Prime", "Courier New", monospace'
-    : 'bold 27px "Courier Prime", "Courier New", monospace';
+    ? 'bold 22px "Courier Prime", "Courier New", monospace'
+    : 'bold 26px "Courier Prime", "Courier New", monospace';
   ctx.fillText((data.loket || 'LOKET PPOB ATHAR DIGITAL').toUpperCase(), width / 2, y);
-  y += 28;
+  y += 24;
+
+  // Alamat di bawah nama loket
+  const alamatVal = data.alamat ?? 'Jl. Raya Bapuhbandung Glagah';
+  if (alamatVal) {
+    ctx.font = is58
+      ? '13px "Courier Prime", "Courier New", monospace'
+      : '15px "Courier Prime", "Courier New", monospace';
+    ctx.fillStyle = '#3f3f46';
+    ctx.fillText(alamatVal, width / 2, y);
+    y += 20;
+  }
 
   // Header Baris 2: Judul Struk (Semi-bold, Centered)
   ctx.font = is58
@@ -413,6 +424,7 @@ export async function shareReceiptToWhatsApp(
     const captionLines: string[] = [
       `*${(data.headerTitle || (waIsBpjs ? 'STRUK PEMBAYARAN IURAN BPJS' : 'STRUK PEMBAYARAN TAGIHAN LISTRIK')).toUpperCase()}*`,
       `*${data.loket || 'LOKET PPOB ATHAR DIGITAL'}*`,
+      `${data.alamat || 'Jl. Raya Bapuhbandung Glagah'}`,
       `---------------------------------`,
     ];
 

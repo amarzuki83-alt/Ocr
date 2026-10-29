@@ -115,6 +115,7 @@ export default function App() {
         kwh: isTokenScan ? (parsed.kwh !== undefined ? parsed.kwh : (prev.kwh || '')) : (parsed.kwh || prev.kwh || ''),
         // Default to LOKET PPOB ATHAR DIGITAL unless user uploaded a specific custom merchant
         loket: parsed.loket || prev.loket || 'LOKET PPOB ATHAR DIGITAL',
+        alamat: parsed.alamat || prev.alamat || 'Jl. Raya Bapuhbandung Glagah',
         headerTitle: parsed.headerTitle || (isBpjsScan ? 'STRUK PEMBAYARAN IURAN BPJS' : isTokenScan ? 'STRUK PEMBELIAN TOKEN LISTRIK' : 'STRUK PEMBAYARAN TAGIHAN LISTRIK'),
         footerDisclaimer: parsed.footerDisclaimer || (isBpjsScan ? 'BPJS menyatakan struk ini sbg bukti pembayaran yg sah.' : 'PLN menyatakan struk ini sbg bukti pembayaran yg sah. Info hub 123'),
         extraFields: cleanExtra,
@@ -134,6 +135,7 @@ export default function App() {
   const handleResetForm = () => {
     setReceiptData({
       loket: 'LOKET PPOB ATHAR DIGITAL',
+      alamat: 'Jl. Raya Bapuhbandung Glagah',
       headerTitle: 'STRUK PEMBAYARAN TAGIHAN LISTRIK',
       subHeader: '',
       idPel: '',

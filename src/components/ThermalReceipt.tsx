@@ -155,8 +155,8 @@ export const ThermalReceipt: React.FC<ThermalReceiptProps> = ({
           id="printable-receipt"
           ref={receiptRef}
           className={`bg-white text-slate-950 shadow-2xl relative transition-all duration-300 font-receipt select-text rounded-xl border border-slate-200 ${
-            is58 ? 'w-[295px] max-w-[295px] text-xs' : 'receipt-80mm w-[390px] max-w-[390px] text-sm'
-          } p-4 sm:p-5`}
+            is58 ? 'w-[250px] max-w-[250px] text-[11px]' : 'receipt-80mm w-[320px] max-w-[320px] text-xs'
+          } p-3.5 sm:p-4`}
           style={{ letterSpacing: '-0.02em', lineHeight: '1.4' }}
         >
           {/* Header Section:
@@ -183,14 +183,14 @@ export const ThermalReceipt: React.FC<ThermalReceiptProps> = ({
           {/* Transaction Metadata: Format dua kolom dengan pemisah titik dua */}
           <div className="space-y-1 text-[11px] sm:text-xs">
             {data.tanggal && (
-              <div className={`grid ${is58 ? 'grid-cols-[92px_12px_1fr]' : 'grid-cols-[120px_14px_1fr]'} items-baseline`}>
+              <div className={`grid ${is58 ? 'grid-cols-[82px_12px_1fr]' : 'grid-cols-[108px_14px_1fr]'} items-baseline`}>
                 <span className="text-slate-600 font-medium">TANGGAL</span>
                 <span className="text-slate-900 font-bold text-center">:</span>
                 <span className="font-semibold text-slate-900 text-left">{data.tanggal}</span>
               </div>
             )}
             {data.noRef && (
-              <div className={`grid ${is58 ? 'grid-cols-[92px_12px_1fr]' : 'grid-cols-[120px_14px_1fr]'} items-baseline`}>
+              <div className={`grid ${is58 ? 'grid-cols-[82px_12px_1fr]' : 'grid-cols-[108px_14px_1fr]'} items-baseline`}>
                 <span className="text-slate-600 font-medium">NO REF</span>
                 <span className="text-slate-900 font-bold text-center">:</span>
                 <span className="font-semibold text-slate-900 text-left">{data.noRef}</span>
@@ -202,27 +202,27 @@ export const ThermalReceipt: React.FC<ThermalReceiptProps> = ({
           <div className="space-y-1 text-[11px] sm:text-xs">
             {isBpjs ? (
               <>
-                <div className={`grid ${is58 ? 'grid-cols-[92px_12px_1fr]' : 'grid-cols-[120px_14px_1fr]'} items-baseline`}>
+                <div className={`grid ${is58 ? 'grid-cols-[82px_12px_1fr]' : 'grid-cols-[108px_14px_1fr]'} items-baseline`}>
                   <span className="text-slate-700 font-semibold">NO POLIS</span>
                   <span className="text-slate-900 font-bold text-center">:</span>
                   <span className="text-slate-950 font-bold tracking-wider text-left">{data.noPolis || data.idPel || '-'}</span>
                 </div>
 
                 {data.nama && (
-                  <div className={`grid ${is58 ? 'grid-cols-[92px_12px_1fr]' : 'grid-cols-[120px_14px_1fr]'} items-baseline`}>
+                  <div className={`grid ${is58 ? 'grid-cols-[82px_12px_1fr]' : 'grid-cols-[108px_14px_1fr]'} items-baseline`}>
                     <span className="text-slate-700 font-semibold">NAMA</span>
                     <span className="text-slate-900 font-bold text-center">:</span>
                     <span className="text-slate-950 font-bold uppercase text-left truncate">{data.nama}</span>
                   </div>
                 )}
 
-                <div className={`grid ${is58 ? 'grid-cols-[92px_12px_1fr]' : 'grid-cols-[120px_14px_1fr]'} items-baseline`}>
+                <div className={`grid ${is58 ? 'grid-cols-[82px_12px_1fr]' : 'grid-cols-[108px_14px_1fr]'} items-baseline`}>
                   <span className="text-slate-600 font-medium">JML PESERTA</span>
                   <span className="text-slate-900 font-bold text-center">:</span>
                   <span className="text-slate-900 font-semibold text-left">{data.jmlPeserta || '1 ORANG'}</span>
                 </div>
 
-                <div className={`grid ${is58 ? 'grid-cols-[92px_12px_1fr]' : 'grid-cols-[120px_14px_1fr]'} items-baseline`}>
+                <div className={`grid ${is58 ? 'grid-cols-[82px_12px_1fr]' : 'grid-cols-[108px_14px_1fr]'} items-baseline`}>
                   <span className="text-slate-600 font-medium">PERIODE</span>
                   <span className="text-slate-900 font-bold text-center">:</span>
                   <span className="text-slate-900 text-left">{data.periode || data.blnThn || '-'}</span>
@@ -232,7 +232,7 @@ export const ThermalReceipt: React.FC<ThermalReceiptProps> = ({
               <>
                 {/* Kolom NO METER (Wajib untuk Token Listrik / bila tersedia) */}
                 {(isToken || data.noMeter) && (
-                  <div className={`grid ${is58 ? 'grid-cols-[92px_12px_1fr]' : 'grid-cols-[120px_14px_1fr]'} items-baseline`}>
+                  <div className={`grid ${is58 ? 'grid-cols-[82px_12px_1fr]' : 'grid-cols-[108px_14px_1fr]'} items-baseline`}>
                     <span className="text-slate-700 font-semibold">NO METER</span>
                     <span className="text-slate-900 font-bold text-center">:</span>
                     <span className="text-slate-950 font-bold tracking-wider text-left">{data.noMeter || '-'}</span>
@@ -240,7 +240,7 @@ export const ThermalReceipt: React.FC<ThermalReceiptProps> = ({
                 )}
 
                 {data.idPel && (
-                  <div className={`grid ${is58 ? 'grid-cols-[92px_12px_1fr]' : 'grid-cols-[120px_14px_1fr]'} items-baseline`}>
+                  <div className={`grid ${is58 ? 'grid-cols-[82px_12px_1fr]' : 'grid-cols-[108px_14px_1fr]'} items-baseline`}>
                     <span className="text-slate-700 font-semibold">{isToken ? 'IDPEL' : 'NO PELANGGAN'}</span>
                     <span className="text-slate-900 font-bold text-center">:</span>
                     <span className="text-slate-950 font-bold tracking-wider text-left">{data.idPel}</span>
@@ -248,14 +248,14 @@ export const ThermalReceipt: React.FC<ThermalReceiptProps> = ({
                 )}
 
                 {data.nama && (
-                  <div className={`grid ${is58 ? 'grid-cols-[92px_12px_1fr]' : 'grid-cols-[120px_14px_1fr]'} items-baseline`}>
+                  <div className={`grid ${is58 ? 'grid-cols-[82px_12px_1fr]' : 'grid-cols-[108px_14px_1fr]'} items-baseline`}>
                     <span className="text-slate-700 font-semibold">NAMA</span>
                     <span className="text-slate-900 font-bold text-center">:</span>
                     <span className="text-slate-950 font-bold uppercase text-left truncate">{data.nama}</span>
                   </div>
                 )}
                 {data.tarifDaya && (
-                  <div className={`grid ${is58 ? 'grid-cols-[92px_12px_1fr]' : 'grid-cols-[120px_14px_1fr]'} items-baseline`}>
+                  <div className={`grid ${is58 ? 'grid-cols-[82px_12px_1fr]' : 'grid-cols-[108px_14px_1fr]'} items-baseline`}>
                     <span className="text-slate-600 font-medium">TARIF / DAYA</span>
                     <span className="text-slate-900 font-bold text-center">:</span>
                     <span className="text-slate-900 font-semibold text-left">{data.tarifDaya}</span>
@@ -263,14 +263,14 @@ export const ThermalReceipt: React.FC<ThermalReceiptProps> = ({
                 )}
                 {/* For Token Listrik: BLN/THN and STAND METER must be omitted */}
                 {!isToken && data.blnThn && (
-                  <div className={`grid ${is58 ? 'grid-cols-[92px_12px_1fr]' : 'grid-cols-[120px_14px_1fr]'} items-baseline`}>
+                  <div className={`grid ${is58 ? 'grid-cols-[82px_12px_1fr]' : 'grid-cols-[108px_14px_1fr]'} items-baseline`}>
                     <span className="text-slate-600 font-medium">BLN / THN</span>
                     <span className="text-slate-900 font-bold text-center">:</span>
                     <span className="text-slate-900 text-left">{data.blnThn}</span>
                   </div>
                 )}
                 {!isToken && data.standMeter && (
-                  <div className={`grid ${is58 ? 'grid-cols-[92px_12px_1fr]' : 'grid-cols-[120px_14px_1fr]'} items-baseline`}>
+                  <div className={`grid ${is58 ? 'grid-cols-[82px_12px_1fr]' : 'grid-cols-[108px_14px_1fr]'} items-baseline`}>
                     <span className="text-slate-600 font-medium">STAND METER</span>
                     <span className="text-slate-900 font-bold text-center">:</span>
                     <span className="text-slate-900 text-left">{data.standMeter}</span>
@@ -279,7 +279,7 @@ export const ThermalReceipt: React.FC<ThermalReceiptProps> = ({
 
                 {/* JML KWH for Token Listrik */}
                 {isToken && kwhValue && (
-                  <div className={`grid ${is58 ? 'grid-cols-[92px_12px_1fr]' : 'grid-cols-[120px_14px_1fr]'} items-baseline`}>
+                  <div className={`grid ${is58 ? 'grid-cols-[82px_12px_1fr]' : 'grid-cols-[108px_14px_1fr]'} items-baseline`}>
                     <span className="text-slate-600 font-medium">JML KWH</span>
                     <span className="text-slate-900 font-bold text-center">:</span>
                     <span className="text-slate-950 font-bold text-left">{kwhValue}</span>
@@ -289,7 +289,7 @@ export const ThermalReceipt: React.FC<ThermalReceiptProps> = ({
                 {/* STROOM / TOKEN Section: 20-Digit Token Enlarged & Prominent */}
                 {isToken && tokenValue && (
                   <div className="my-2 p-2 bg-slate-50 border-2 border-dashed border-slate-900 rounded-lg text-center shadow-xs">
-                    <div className={`grid ${is58 ? 'grid-cols-[92px_12px_1fr]' : 'grid-cols-[120px_14px_1fr]'} items-center mb-1 text-left`}>
+                    <div className={`grid ${is58 ? 'grid-cols-[82px_12px_1fr]' : 'grid-cols-[108px_14px_1fr]'} items-center mb-1 text-left`}>
                       <span className="text-slate-900 font-extrabold uppercase text-[10px] sm:text-xs tracking-wider">STROOM / TOKEN</span>
                       <span className="text-slate-900 font-extrabold text-center">:</span>
                       <span className="text-slate-500 text-[9px] italic">20 Digit Token PLN</span>
@@ -308,7 +308,7 @@ export const ThermalReceipt: React.FC<ThermalReceiptProps> = ({
                 return null;
               }
               return (
-                <div key={field.id} className={`grid ${is58 ? 'grid-cols-[92px_12px_1fr]' : 'grid-cols-[120px_14px_1fr]'} items-baseline bg-slate-50 px-1 py-0.5 rounded`}>
+                <div key={field.id} className={`grid ${is58 ? 'grid-cols-[82px_12px_1fr]' : 'grid-cols-[108px_14px_1fr]'} items-baseline bg-slate-50 px-1 py-0.5 rounded`}>
                   <span className="text-slate-700 font-semibold uppercase">{field.label}</span>
                   <span className="text-slate-900 font-bold text-center">:</span>
                   <span className="text-slate-950 font-bold text-left">{field.value}</span>
@@ -319,26 +319,26 @@ export const ThermalReceipt: React.FC<ThermalReceiptProps> = ({
 
           {/* Financial Calculation Section: For Token Listrik, "RP TAG PLN" is changed to "RP BAYAR", for BPJS "RP TAGIHAN" */}
           <div className="space-y-1 text-[11px] sm:text-xs">
-            <div className={`grid ${is58 ? 'grid-cols-[92px_12px_1fr]' : 'grid-cols-[120px_14px_1fr]'} items-baseline`}>
+            <div className={`grid ${is58 ? 'grid-cols-[82px_12px_1fr]' : 'grid-cols-[108px_14px_1fr]'} items-baseline`}>
               <span className="text-slate-600 font-medium">{isToken ? 'RP BAYAR' : isBpjs ? 'RP TAGIHAN' : 'RP TAG PLN'}</span>
               <span className="text-slate-900 font-bold text-center">:</span>
               <span className="text-slate-900 font-semibold text-left">{formatRupiah(data.tagihan)}</span>
             </div>
-            <div className={`grid ${is58 ? 'grid-cols-[92px_12px_1fr]' : 'grid-cols-[120px_14px_1fr]'} items-baseline`}>
+            <div className={`grid ${is58 ? 'grid-cols-[82px_12px_1fr]' : 'grid-cols-[108px_14px_1fr]'} items-baseline`}>
               <span className="text-slate-600 font-medium">ADMIN BANK</span>
               <span className="text-slate-900 font-bold text-center">:</span>
               <span className="text-slate-900 font-semibold text-left">{formatRupiah(data.adminBank !== undefined && data.adminBank > 0 ? data.adminBank : 5000)}</span>
             </div>
 
             {/* Total Bayar Highlight with dashed line from colon to end of amount */}
-            <div className={`grid ${is58 ? 'grid-cols-[92px_12px_1fr]' : 'grid-cols-[120px_14px_1fr]'} items-center my-1.5`}>
+            <div className={`grid ${is58 ? 'grid-cols-[82px_12px_1fr]' : 'grid-cols-[108px_14px_1fr]'} items-center my-1.5`}>
               <div className="col-start-1" />
               <div className="col-start-2 col-span-2 flex items-center">
                 <div className="inline-block border-b-2 border-dashed border-slate-800 w-fit min-w-[125px]" />
               </div>
             </div>
 
-            <div className={`grid ${is58 ? 'grid-cols-[92px_12px_1fr]' : 'grid-cols-[120px_14px_1fr]'} items-baseline pt-0.5 font-bold text-xs sm:text-sm`}>
+            <div className={`grid ${is58 ? 'grid-cols-[82px_12px_1fr]' : 'grid-cols-[108px_14px_1fr]'} items-baseline pt-0.5 font-bold text-xs sm:text-sm`}>
               <span className="text-slate-950 font-extrabold uppercase">TOTAL BAYAR</span>
               <span className="text-slate-950 font-extrabold text-center">:</span>
               <span className="text-slate-950 text-sm sm:text-base font-extrabold tracking-tight text-left">

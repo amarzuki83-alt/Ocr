@@ -851,8 +851,8 @@ export const SAMPLE_PRESETS: Record<string, ReceiptData> = {
     totalBayar: 329500,
     tanggal: '26/10/2026 18:45:10 WIB',
     noRef: 'PLN2610269874561230',
-    footerDisclaimer: 'Simpan struk ini sebagai bukti pembayaran yang sah',
-    footerGreeting: 'Terima Kasih Atas Pembayaran Anda',
+    footerDisclaimer: 'Simpan struk ini sebagai bukti pembayaran',
+    footerGreeting: 'Terimakasih',
     extraFields: [],
   },
   plnPrepaid: {
@@ -873,8 +873,8 @@ export const SAMPLE_PRESETS: Record<string, ReceiptData> = {
     totalBayar: 105000,
     tanggal: '26/10/2026 19:12:04 WIB',
     noRef: 'TOKEN261026884192',
-    footerDisclaimer: 'Simpan struk ini sebagai bukti pembayaran yang sah',
-    footerGreeting: 'Simpan Struk Ini Sebagai Bukti Sah',
+    footerDisclaimer: 'Simpan struk ini sebagai bukti pembayaran',
+    footerGreeting: 'Terimakasih',
     extraFields: [],
   },
   bpjs: {
@@ -896,8 +896,8 @@ export const SAMPLE_PRESETS: Record<string, ReceiptData> = {
     totalBayar: 155000,
     tanggal: '26/10/2026 17:30:22 WIB',
     noRef: 'BPJS261026771029',
-    footerDisclaimer: 'Simpan struk ini sebagai bukti pembayaran yang sah',
-    footerGreeting: 'Terima Kasih Atas Pembayaran Anda',
+    footerDisclaimer: 'Simpan struk ini sebagai bukti pembayaran',
+    footerGreeting: 'Terimakasih',
     extraFields: [],
   },
 };

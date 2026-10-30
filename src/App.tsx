@@ -117,7 +117,8 @@ export default function App() {
         loket: parsed.loket || prev.loket || 'LOKET PPOB ATHAR DIGITAL',
         alamat: parsed.alamat || prev.alamat || 'Jl. Raya Bapuhbandung Glagah',
         headerTitle: parsed.headerTitle || (isBpjsScan ? 'STRUK PEMBAYARAN IURAN BPJS' : isTokenScan ? 'STRUK PEMBELIAN TOKEN LISTRIK' : 'STRUK PEMBAYARAN TAGIHAN LISTRIK'),
-        footerDisclaimer: parsed.footerDisclaimer || 'Simpan struk ini sebagai bukti pembayaran yang sah',
+        footerDisclaimer: parsed.footerDisclaimer || 'Simpan struk ini sebagai bukti pembayaran',
+        footerGreeting: parsed.footerGreeting || 'Terimakasih',
         extraFields: cleanExtra,
       };
     });
@@ -151,8 +152,8 @@ export default function App() {
       totalBayar: 5000,
       tanggal: new Date().toLocaleDateString('id-ID') + ' ' + new Date().toLocaleTimeString('id-ID') + ' WIB',
       noRef: 'PLN' + Date.now().toString().slice(-10),
-      footerDisclaimer: 'Simpan struk ini sebagai bukti pembayaran yang sah',
-      footerGreeting: 'Terima Kasih Atas Pembayaran Anda',
+      footerDisclaimer: 'Simpan struk ini sebagai bukti pembayaran',
+      footerGreeting: 'Terimakasih',
       extraFields: [],
     });
     showToast('Formulir direset.');

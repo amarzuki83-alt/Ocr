@@ -280,7 +280,7 @@ export function generatePlainTextReceipt(data: ReceiptData, paperSize: PaperSize
   lines.push(formatTwoColumns('TOTAL BAYAR', formattedTotalStr, width));
 
   // Footer
-  const disclaimerStr = data.footerDisclaimer || 'Simpan struk ini sebagai bukti pembayaran yang sah';
+  const disclaimerStr = data.footerDisclaimer || 'Simpan struk ini sebagai bukti pembayaran';
   if (disclaimerStr) {
     // Wrap disclaimer text nicely
     const words = disclaimerStr.split(' ');
@@ -296,9 +296,10 @@ export function generatePlainTextReceipt(data: ReceiptData, paperSize: PaperSize
     if (currentLine) lines.push(center(currentLine));
   }
 
-  if (data.footerGreeting) {
+  const greetingStr = data.footerGreeting !== undefined ? data.footerGreeting : 'Terimakasih';
+  if (greetingStr) {
     lines.push('');
-    lines.push(center(data.footerGreeting));
+    lines.push(center(greetingStr));
   }
 
   return lines.join('\n');
@@ -455,7 +456,7 @@ export function buildEscPosBuffer(data: ReceiptData, paperSize: PaperSize = '58m
 
   // 6. Disclaimer & Footer
   addBytes(ESC_POS.ALIGN_CENTER);
-  const escDisclaimerStr = data.footerDisclaimer || 'Simpan struk ini sebagai bukti pembayaran yang sah';
+  const escDisclaimerStr = data.footerDisclaimer || 'Simpan struk ini sebagai bukti pembayaran';
   if (escDisclaimerStr) {
     const words = escDisclaimerStr.split(' ');
     let currentLine = '';
@@ -470,8 +471,9 @@ export function buildEscPosBuffer(data: ReceiptData, paperSize: PaperSize = '58m
     if (currentLine) addText(centerText(currentLine));
   }
 
-  if (data.footerGreeting) {
-    addText('\n' + centerText(data.footerGreeting));
+  const escGreetingStr = data.footerGreeting !== undefined ? data.footerGreeting : 'Terimakasih';
+  if (escGreetingStr) {
+    addText('\n' + centerText(escGreetingStr));
   }
 
   // 7. Extra feeds and paper tear clearance

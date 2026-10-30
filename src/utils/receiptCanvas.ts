@@ -234,7 +234,7 @@ export function generateReceiptCanvas(data: ReceiptData, paperSize: PaperSize = 
     : 'italic 10.5px "Courier Prime", "Courier New", Courier, monospace';
   ctx.fillStyle = '#18181b';
 
-  const footerText = data.footerDisclaimer || 'Simpan struk ini sebagai bukti pembayaran yang sah';
+  const footerText = data.footerDisclaimer || 'Simpan struk ini sebagai bukti pembayaran';
   if (footerText) {
     const words = footerText.split(' ');
     let line = '';
@@ -254,13 +254,14 @@ export function generateReceiptCanvas(data: ReceiptData, paperSize: PaperSize = 
     }
   }
 
-  if (data.footerGreeting) {
+  const greetingText = data.footerGreeting !== undefined ? data.footerGreeting : 'Terimakasih';
+  if (greetingText) {
     y += 2;
     ctx.font = is58
       ? 'bold 10px "Courier Prime", "Courier New", Courier, monospace'
       : 'bold 12px "Courier Prime", "Courier New", Courier, monospace';
     ctx.fillStyle = '#000000';
-    ctx.fillText(data.footerGreeting.toUpperCase(), baseWidth / 2, y);
+    ctx.fillText(greetingText.toUpperCase(), baseWidth / 2, y);
     y += 13;
   }
 
@@ -454,7 +455,7 @@ export async function shareReceiptToWhatsApp(
       `---------------------------------`,
       `*NO REF*      : ${data.noRef || '-'}`,
       `*TANGGAL*     : ${data.tanggal || '-'}`,
-      `_${data.footerDisclaimer || 'Simpan struk ini sebagai bukti pembayaran yang sah'}_`,
+      `_${data.footerDisclaimer || 'Simpan struk ini sebagai bukti pembayaran'}_`,
       ``,
       `*Status: LUNAS / SAH*`,
       `_Gambar struk PNG latar putih bersih resmi terlampir._`

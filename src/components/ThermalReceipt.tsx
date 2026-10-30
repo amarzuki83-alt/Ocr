@@ -350,12 +350,12 @@ export const ThermalReceipt: React.FC<ThermalReceiptProps> = ({
           {/* Disclaimer / Footer Notes */}
           <div className="pt-2 text-center space-y-1">
             <p className="text-[10px] leading-tight text-slate-700 font-medium italic">
-              {data.footerDisclaimer || 'Simpan struk ini sebagai bukti pembayaran yang sah'}
+              {data.footerDisclaimer || 'Simpan struk ini sebagai bukti pembayaran'}
             </p>
 
-            {data.footerGreeting && (
+            {(data.footerGreeting ?? 'Terimakasih') && (
               <p className="text-[10px] font-bold text-slate-900 tracking-wider uppercase pt-1">
-                {data.footerGreeting}
+                {data.footerGreeting ?? 'Terimakasih'}
               </p>
             )}
           </div>

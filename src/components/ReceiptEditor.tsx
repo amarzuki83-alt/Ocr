@@ -925,7 +925,7 @@ export const ReceiptEditor: React.FC<ReceiptEditorProps> = ({
             rows={2}
             value={data.footerDisclaimer}
             onChange={(e) => handleFieldChange('footerDisclaimer', e.target.value)}
-            placeholder="Simpan struk ini sebagai bukti pembayaran yang sah"
+            placeholder="Simpan struk ini sebagai bukti pembayaran"
             className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500 transition resize-none"
           />
         </div>
@@ -938,7 +938,7 @@ export const ReceiptEditor: React.FC<ReceiptEditorProps> = ({
             type="text"
             value={data.footerGreeting}
             onChange={(e) => handleFieldChange('footerGreeting', e.target.value)}
-            placeholder="Terima Kasih Atas Pembayaran Anda"
+            placeholder="Terimakasih"
             className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500 transition"
           />
         </div>

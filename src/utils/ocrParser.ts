@@ -609,8 +609,8 @@ export function parseReceiptFromOcr(ocrText: string): Partial<ReceiptData> {
     alamat: 'Jl. Raya Bapuhbandung Glagah',
     headerTitle: 'STRUK PEMBAYARAN TAGIHAN LISTRIK',
     subHeader: '',
-    footerDisclaimer: 'Simpan struk ini sebagai bukti pembayaran yang sah',
-    footerGreeting: 'Terima Kasih Atas Pembayaran Anda',
+    footerDisclaimer: 'Simpan struk ini sebagai bukti pembayaran',
+    footerGreeting: 'Terimakasih',
   };
 
   // Header detection
@@ -622,8 +622,8 @@ export function parseReceiptFromOcr(ocrText: string): Partial<ReceiptData> {
     parsed.standMeter = '';
   } else if (isBpjsScan) {
     parsed.headerTitle = 'STRUK PEMBAYARAN IURAN BPJS';
-    parsed.footerDisclaimer = 'BPJS menyatakan struk ini sbg bukti pembayaran yg sah.';
-    parsed.footerGreeting = 'Terima Kasih Atas Pembayaran Anda';
+    parsed.footerDisclaimer = 'Simpan struk ini sebagai bukti pembayaran';
+    parsed.footerGreeting = 'Terimakasih';
   } else {
     parsed.headerTitle = 'STRUK PEMBAYARAN TAGIHAN LISTRIK';
   }

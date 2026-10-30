@@ -88,6 +88,29 @@ export default function App() {
     return () => document.removeEventListener('visibilitychange', handleVisibility);
   }, []);
 
+  // Auto-migrate legacy disclaimer or greeting to requested text immediately
+  useEffect(() => {
+    setReceiptData((prev) => {
+      const needsDisclaimerUpdate =
+        !prev.footerDisclaimer ||
+        /yang sah/i.test(prev.footerDisclaimer) ||
+        /sbg bukti pembayaran yg sah/i.test(prev.footerDisclaimer);
+      const needsGreetingUpdate =
+        !prev.footerGreeting ||
+        /Terima Kasih Atas Pembayaran Anda/i.test(prev.footerGreeting) ||
+        /Simpan Struk Ini Sebagai Bukti Sah/i.test(prev.footerGreeting);
+
+      if (needsDisclaimerUpdate || needsGreetingUpdate) {
+        return {
+          ...prev,
+          footerDisclaimer: needsDisclaimerUpdate ? 'Simpan struk ini sebagai bukti pembayaran' : prev.footerDisclaimer,
+          footerGreeting: needsGreetingUpdate ? 'Terimakasih' : prev.footerGreeting,
+        };
+      }
+      return prev;
+    });
+  }, []);
+
   // Handle OCR Completion: merge detected fields with existing
   const handleOcrScanComplete = (parsed: Partial<ReceiptData>, rawText: string) => {
     const isTokenScan = (parsed.headerTitle || '').includes('TOKEN') || Boolean(parsed.stroomToken);

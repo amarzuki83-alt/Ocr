@@ -108,8 +108,8 @@ export const ReceiptEditor: React.FC<ReceiptEditorProps> = ({
       kwh: '',
       tagihan: currentTagihan,
       totalBayar: autoCalculate ? currentTagihan + defaultBpjsAdmin : (data.totalBayar || currentTagihan + defaultBpjsAdmin),
-      footerDisclaimer: data.footerDisclaimer || 'Simpan struk ini sebagai bukti pembayaran yang sah',
-      footerGreeting: 'Terima Kasih Atas Pembayaran Anda',
+      footerDisclaimer: data.footerDisclaimer || 'Simpan struk ini sebagai bukti pembayaran',
+      footerGreeting: 'Terimakasih',
       extraFields: [],
     });
   };

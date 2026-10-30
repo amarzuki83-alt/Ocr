@@ -88,9 +88,10 @@ export default function App() {
     return () => document.removeEventListener('visibilitychange', handleVisibility);
   }, []);
 
-  // Auto-migrate legacy disclaimer or greeting to requested text immediately
+  // Auto-migrate legacy disclaimer, greeting, and enforce loket name to LOKET PPOB ATHAR DIGITAL
   useEffect(() => {
     setReceiptData((prev) => {
+      const needsLoketUpdate = !prev.loket || prev.loket.toUpperCase() !== 'LOKET PPOB ATHAR DIGITAL';
       const needsDisclaimerUpdate =
         !prev.footerDisclaimer ||
         /yang sah/i.test(prev.footerDisclaimer) ||
@@ -100,9 +101,10 @@ export default function App() {
         /Terima Kasih Atas Pembayaran Anda/i.test(prev.footerGreeting) ||
         /Simpan Struk Ini Sebagai Bukti Sah/i.test(prev.footerGreeting);
 
-      if (needsDisclaimerUpdate || needsGreetingUpdate) {
+      if (needsLoketUpdate || needsDisclaimerUpdate || needsGreetingUpdate) {
         return {
           ...prev,
+          loket: 'LOKET PPOB ATHAR DIGITAL',
           footerDisclaimer: needsDisclaimerUpdate ? 'Simpan struk ini sebagai bukti pembayaran' : prev.footerDisclaimer,
           footerGreeting: needsGreetingUpdate ? 'Terimakasih' : prev.footerGreeting,
         };
@@ -136,8 +138,8 @@ export default function App() {
         jmlPeserta: parsed.jmlPeserta || prev.jmlPeserta || '',
         periode: parsed.periode || prev.periode || '',
         kwh: isTokenScan ? (parsed.kwh !== undefined ? parsed.kwh : (prev.kwh || '')) : (parsed.kwh || prev.kwh || ''),
-        // Default to LOKET PPOB ATHAR DIGITAL unless user uploaded a specific custom merchant
-        loket: parsed.loket || prev.loket || 'LOKET PPOB ATHAR DIGITAL',
+        // Requirement: Pertahankan nama loket di semua struk menjadi LOKET PPOB ATHAR DIGITAL
+        loket: 'LOKET PPOB ATHAR DIGITAL',
         alamat: parsed.alamat || prev.alamat || 'Jl. Raya Bapuhbandung Glagah',
         headerTitle: parsed.headerTitle || (isBpjsScan ? 'STRUK PEMBAYARAN IURAN BPJS' : isTokenScan ? 'STRUK PEMBELIAN TOKEN LISTRIK' : 'STRUK PEMBAYARAN TAGIHAN LISTRIK'),
         footerDisclaimer: parsed.footerDisclaimer || 'Simpan struk ini sebagai bukti pembayaran',

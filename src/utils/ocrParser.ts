@@ -628,14 +628,8 @@ export function parseReceiptFromOcr(ocrText: string): Partial<ReceiptData> {
     parsed.headerTitle = 'STRUK PEMBAYARAN TAGIHAN LISTRIK';
   }
 
-  // 1. Loket / Agen
-  const loketMatch = text.match(/(?:LOKET|KASIR|AGEN|MERCHANT|MITRA)\s*[:.]?\s*([A-Za-z0-9\s\-_\.]+)/i);
-  if (loketMatch && loketMatch[1]) {
-    const val = loketMatch[1].trim().split('\n')[0].substring(0, 30);
-    if (!/PEMBAYARAN|LISTRIK|PLN|BPJS/i.test(val)) {
-      parsed.loket = val;
-    }
-  }
+  // 1. Loket / Agen (Wajib selalu dipertahankan: LOKET PPOB ATHAR DIGITAL)
+  parsed.loket = 'LOKET PPOB ATHAR DIGITAL';
 
   // 1b. Alamat Loket
   const alamatMatch = text.match(/(?:ALAMAT|JL[\s\.]*RAYA|JL[\s\.]*|JALAN)\s*[:.]?\s*([A-Za-z0-9\s\,\.\-]+)/i);

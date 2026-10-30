@@ -9,11 +9,11 @@ import { formatRupiah, formatTwoColumns, isTokenReceipt, isBpjsReceipt, getStroo
 export function generateReceiptCanvas(data: ReceiptData, paperSize: PaperSize = '58mm'): HTMLCanvasElement {
   const is58 = paperSize === '58mm';
   // Lebar struk diperkecil lagi sesuai permintaan:
-  // 58mm: 320 CSS px (640 physical px at 2x supersampling)
-  // 80mm: 420 CSS px (840 physical px at 2x supersampling)
-  const baseWidth = is58 ? 320 : 420;
-  const paddingX = is58 ? 12 : 18;
-  const colWidth = is58 ? 22 : 30;
+  // 58mm: 270 CSS px (810 physical px pada 3x Hi-DPI supersampling)
+  // 80mm: 350 CSS px (1050 physical px pada 3x Hi-DPI supersampling)
+  const baseWidth = is58 ? 270 : 350;
+  const paddingX = is58 ? 10 : 14;
+  const colWidth = is58 ? 20 : 26;
 
   const isToken = isTokenReceipt(data);
   const isBpjs = isBpjsReceipt(data);
@@ -21,23 +21,24 @@ export function generateReceiptCanvas(data: ReceiptData, paperSize: PaperSize = 
   const kwhValue = getReceiptKwh(data);
 
   // Measure content height dynamically in CSS pixels
-  let estimatedHeight = is58 ? 440 : 490;
+  let estimatedHeight = is58 ? 430 : 480;
   if (isToken && tokenValue) {
-    estimatedHeight += 85;
+    estimatedHeight += 80;
   }
   if (isToken && kwhValue) {
-    estimatedHeight += 24;
+    estimatedHeight += 22;
   }
   if (data.extraFields && data.extraFields.length > 0) {
-    estimatedHeight += data.extraFields.length * 26;
+    estimatedHeight += data.extraFields.length * 24;
   }
   const disclaimerText = data.footerDisclaimer || 'Simpan struk ini sebagai bukti pembayaran yang sah';
   if (disclaimerText) {
-    estimatedHeight += Math.ceil(disclaimerText.length / colWidth) * 22;
+    estimatedHeight += Math.ceil(disclaimerText.length / colWidth) * 20;
   }
 
-  // 2x Hi-DPI Supersampling untuk hasil cetak printer tinta ultra tajam, pekat, dan tidak buram
-  const scale = 2;
+  // 3x Ultra Hi-DPI Supersampling: menghasilkan resolusi ultra tinggi (810px / 1050px)
+  // Sangat tajam dan jernih ketika dicetak pada printer tinta (inkjet printer)
+  const scale = 3;
   const canvas = document.createElement('canvas');
   canvas.width = Math.round(baseWidth * scale);
   canvas.height = Math.round(estimatedHeight * scale);
@@ -45,7 +46,7 @@ export function generateReceiptCanvas(data: ReceiptData, paperSize: PaperSize = 
   const ctx = canvas.getContext('2d')!;
   ctx.scale(scale, scale);
 
-  // Background Paper: Putih cerah pekat murni (#ffffff)
+  // Background Paper: Putih bersih pekat murni (#ffffff)
   ctx.fillStyle = '#ffffff';
   ctx.fillRect(0, 0, baseWidth, estimatedHeight);
 
@@ -54,59 +55,59 @@ export function generateReceiptCanvas(data: ReceiptData, paperSize: PaperSize = 
   ctx.lineWidth = 1;
   ctx.strokeRect(2, 2, baseWidth - 4, estimatedHeight - 4);
 
-  let y = 30;
+  let y = 28;
 
   // Header Baris 1: LOKET PPOB ATHAR DIGITAL (Bold, Large, Centered)
   ctx.fillStyle = '#000000';
   ctx.textAlign = 'center';
   ctx.font = is58
-    ? 'bold 16.5px "Courier Prime", "Courier New", Courier, monospace'
-    : 'bold 20px "Courier Prime", "Courier New", Courier, monospace';
+    ? 'bold 15px "Courier Prime", "Courier New", Courier, monospace'
+    : 'bold 18px "Courier Prime", "Courier New", Courier, monospace';
   ctx.fillText((data.loket || 'LOKET PPOB ATHAR DIGITAL').toUpperCase(), baseWidth / 2, y);
-  y += 20;
+  y += 18;
 
   // Alamat di bawah nama loket (Font lebih tebal / bold)
   const alamatVal = data.alamat ?? 'Jl. Raya Bapuhbandung Glagah';
   if (alamatVal) {
     ctx.font = is58
-      ? 'bold 11px "Courier Prime", "Courier New", Courier, monospace'
-      : 'bold 13px "Courier Prime", "Courier New", Courier, monospace';
+      ? 'bold 10px "Courier Prime", "Courier New", Courier, monospace'
+      : 'bold 12px "Courier Prime", "Courier New", Courier, monospace';
     ctx.fillStyle = '#000000';
     ctx.fillText(alamatVal, baseWidth / 2, y);
-    y += 18;
+    y += 17;
   }
 
   // Header Baris 2: Judul Struk (Digeser ke bawah sedikit agar lebih dekat dengan garis putus-putus)
-  y += 6;
+  y += 5;
   ctx.font = is58
-    ? 'bold 13px "Courier Prime", "Courier New", Courier, monospace'
-    : 'bold 16px "Courier Prime", "Courier New", Courier, monospace';
+    ? 'bold 11.5px "Courier Prime", "Courier New", Courier, monospace'
+    : 'bold 14px "Courier Prime", "Courier New", Courier, monospace';
   ctx.fillStyle = '#000000';
   ctx.fillText((data.headerTitle || 'STRUK PEMBAYARAN TAGIHAN LISTRIK').toUpperCase(), baseWidth / 2, y);
-  y += 13; // Jarak rapat dan dekat ke garis putus-putus
+  y += 12; // Jarak rapat dan dekat ke garis putus-putus
 
   // Double divider
   drawDashedLine(ctx, paddingX, baseWidth - paddingX, y, 4, '#000000', 1.5);
-  y += 19;
+  y += 18;
 
   // Column layout coordinates for 2-column format with colon separator:
   // Column 1: Label (left-aligned at xLabel)
   // Column 2: Colon ':' (digeser lebih ke kanan agar berjarak longgar dan tidak mepet kolom sisi kiri)
   // Column 3: Value (left-aligned at xValue)
   const xLabel = paddingX;
-  const xColon = is58 ? paddingX + 110 : paddingX + 145;
-  const xValue = xColon + 9;
-  const baseFontSize = is58 ? 12 : 14.5;
-  const valueFontSize = is58 ? 12.5 : 15;
+  const xColon = is58 ? paddingX + 96 : paddingX + 125;
+  const xValue = xColon + 8;
+  const baseFontSize = is58 ? 10.5 : 12.5;
+  const valueFontSize = is58 ? 11 : 13.5;
 
   // Metadata: Tanggal & No Ref
   if (data.tanggal) {
-    drawRowWithColon(ctx, 'TANGGAL', data.tanggal, xLabel, xColon, xValue, y, { fontSize: is58 ? 11.5 : 13.5 });
-    y += 20;
+    drawRowWithColon(ctx, 'TANGGAL', data.tanggal, xLabel, xColon, xValue, y, { fontSize: is58 ? 10 : 12 });
+    y += 19;
   }
   if (data.noRef) {
-    drawRowWithColon(ctx, 'NO REF', data.noRef, xLabel, xColon, xValue, y, { fontSize: is58 ? 12 : 14 });
-    y += 20;
+    drawRowWithColon(ctx, 'NO REF', data.noRef, xLabel, xColon, xValue, y, { fontSize: is58 ? 10.5 : 12.5 });
+    y += 19;
   }
   y += 4;
 
@@ -161,37 +162,37 @@ export function generateReceiptCanvas(data: ReceiptData, paperSize: PaperSize = 
     if (isToken && tokenValue) {
       y += 3;
       drawDashedLine(ctx, paddingX, baseWidth - paddingX, y, 4, '#000000', 1.5);
-      y += 20;
+      y += 18;
 
       // Label with colon
       drawRowWithColon(ctx, 'STROOM / TOKEN', '', xLabel, xColon, xValue, y, {
         boldLabel: true,
-        fontSize: is58 ? 14 : 16,
+        fontSize: is58 ? 12.5 : 14.5,
         labelColor: '#000000',
       });
-      y += 23;
+      y += 20;
 
       // Prominent enlarged 20-digit token box (high contrast, bold font)
       const tokenFormatted = formatToken20(tokenValue);
-      const boxH = is58 ? 38 : 42;
+      const boxH = is58 ? 34 : 38;
       const boxW = baseWidth - (paddingX * 2);
 
       ctx.fillStyle = '#ffffff';
-      ctx.fillRect(paddingX, y - 24, boxW, boxH);
+      ctx.fillRect(paddingX, y - 20, boxW, boxH);
       ctx.strokeStyle = '#000000';
       ctx.lineWidth = 1.5;
-      ctx.strokeRect(paddingX, y - 24, boxW, boxH);
+      ctx.strokeRect(paddingX, y - 20, boxW, boxH);
 
       ctx.textAlign = 'center';
       ctx.font = is58
-        ? 'bold 16px "Courier Prime", "Courier New", Courier, monospace'
-        : 'bold 19px "Courier Prime", "Courier New", Courier, monospace';
+        ? 'bold 13.5px "Courier Prime", "Courier New", Courier, monospace'
+        : 'bold 16.5px "Courier Prime", "Courier New", Courier, monospace';
       ctx.fillStyle = '#000000';
       ctx.fillText(tokenFormatted, baseWidth / 2, y + 2);
-      y += 26;
+      y += 24;
 
       drawDashedLine(ctx, paddingX, baseWidth - paddingX, y, 4, '#000000', 1.5);
-      y += 20;
+      y += 18;
     }
   }
 
@@ -203,12 +204,12 @@ export function generateReceiptCanvas(data: ReceiptData, paperSize: PaperSize = 
           continue;
         }
         drawRowWithColon(ctx, f.label.toUpperCase(), f.value, xLabel, xColon, xValue, y, { boldValue: true, fontSize: baseFontSize });
-        y += 22;
+        y += 20;
       }
     }
   }
 
-  y += 6;
+  y += 5;
 
   // Financials: For Token Listrik, "RP TAG PLN" is changed to "RP BAYAR", for BPJS "RP TAGIHAN"
   const tagihanLabel = isToken ? 'RP BAYAR' : isBpjs ? 'RP TAGIHAN' : 'RP TAG PLN';
@@ -216,13 +217,13 @@ export function generateReceiptCanvas(data: ReceiptData, paperSize: PaperSize = 
   const totalBayarVal = data.totalBayar || ((data.tagihan || 0) + adminBankVal);
 
   drawRowWithColon(ctx, tagihanLabel, formatRupiah(data.tagihan), xLabel, xColon, xValue, y, { boldValue: true, fontSize: valueFontSize });
-  y += 22;
+  y += 20;
   drawRowWithColon(ctx, 'ADMIN BANK', formatRupiah(adminBankVal), xLabel, xColon, xValue, y, { boldValue: true, fontSize: valueFontSize });
-  y += 18; // Berikan jarak vertikal bersih di bawah ADMIN BANK agar garis tidak menempel pada angka
+  y += 16; // Berikan jarak vertikal bersih di bawah ADMIN BANK agar garis tidak menempel pada angka
 
   // TOTAL BAYAR (Bold, Prominent with aligned colon)
   const totalFormatted = formatRupiah(totalBayarVal);
-  const totalFontSize = is58 ? 15 : 18;
+  const totalFontSize = is58 ? 13 : 15.5;
 
   // Line above total: dimulai tepat sejajar dari titik : sampai angka terakhir total bayar
   ctx.save();
@@ -232,7 +233,7 @@ export function generateReceiptCanvas(data: ReceiptData, paperSize: PaperSize = 
   ctx.restore();
 
   drawDashedLine(ctx, xColon, lineEndX, y, 3, '#000000', 1.5);
-  y += 22; // Berikan jarak vertikal bersih dari garis ke baris TOTAL BAYAR
+  y += 20; // Berikan jarak vertikal bersih dari garis ke baris TOTAL BAYAR
 
   drawRowWithColon(ctx, 'TOTAL BAYAR', totalFormatted, xLabel, xColon, xValue, y, {
     boldLabel: true,
@@ -241,13 +242,13 @@ export function generateReceiptCanvas(data: ReceiptData, paperSize: PaperSize = 
     labelColor: '#000000',
     valueColor: '#000000',
   });
-  y += 20;
+  y += 18;
 
   // Footer Disclaimer
   ctx.textAlign = 'center';
   ctx.font = is58
-    ? 'italic 12px "Courier Prime", "Courier New", Courier, monospace'
-    : 'italic 13.5px "Courier Prime", "Courier New", Courier, monospace';
+    ? 'italic 10.5px "Courier Prime", "Courier New", Courier, monospace'
+    : 'italic 12px "Courier Prime", "Courier New", Courier, monospace';
   ctx.fillStyle = '#18181b';
 
   const footerText = data.footerDisclaimer || 'Simpan struk ini sebagai bukti pembayaran yang sah';

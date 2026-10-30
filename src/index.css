@@ -7,8 +7,9 @@
 }
 
 /* Custom font styling for authentic thermal receipt look */
-.font-receipt {
-  font-family: 'Courier Prime', 'VT323', 'Courier New', Courier, monospace;
+.font-receipt,
+.font-receipt * {
+  font-family: 'Courier Prime', 'Courier New', Courier, monospace !important;
 }
 
 /* Efek sobekan kertas dihilangkan untuk tampilan rapi */

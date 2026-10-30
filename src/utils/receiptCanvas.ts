@@ -8,21 +8,20 @@ import { formatRupiah, formatTwoColumns, isTokenReceipt, isBpjsReceipt, getStroo
  */
 export function generateReceiptCanvas(data: ReceiptData, paperSize: PaperSize = '58mm'): HTMLCanvasElement {
   const is58 = paperSize === '58mm';
-  // Reduced width: 58mm reduced to 370px; 80mm reduced to 480px for a more compact and elegant thermal look
-  const width = is58 ? 370 : 480;
-  const paddingX = is58 ? 14 : 20;
-  const colWidth = is58 ? 24 : 32;
-
-  const canvas = document.createElement('canvas');
-  const ctx = canvas.getContext('2d')!;
+  // Lebar struk diperkecil lagi sesuai permintaan:
+  // 58mm: 320 CSS px (640 physical px at 2x supersampling)
+  // 80mm: 420 CSS px (840 physical px at 2x supersampling)
+  const baseWidth = is58 ? 320 : 420;
+  const paddingX = is58 ? 12 : 18;
+  const colWidth = is58 ? 22 : 30;
 
   const isToken = isTokenReceipt(data);
   const isBpjs = isBpjsReceipt(data);
   const tokenValue = getStroomToken(data);
   const kwhValue = getReceiptKwh(data);
 
-  // Measure content height dynamically
-  let estimatedHeight = is58 ? 440 : 500;
+  // Measure content height dynamically in CSS pixels
+  let estimatedHeight = is58 ? 440 : 490;
   if (isToken && tokenValue) {
     estimatedHeight += 85;
   }
@@ -37,71 +36,77 @@ export function generateReceiptCanvas(data: ReceiptData, paperSize: PaperSize = 
     estimatedHeight += Math.ceil(disclaimerText.length / colWidth) * 22;
   }
 
-  canvas.width = width;
-  canvas.height = estimatedHeight;
+  // 2x Hi-DPI Supersampling untuk hasil cetak printer tinta ultra tajam, pekat, dan tidak buram
+  const scale = 2;
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.round(baseWidth * scale);
+  canvas.height = Math.round(estimatedHeight * scale);
 
-  // Background Paper: Putih bersih terang (#ffffff)
+  const ctx = canvas.getContext('2d')!;
+  ctx.scale(scale, scale);
+
+  // Background Paper: Putih cerah pekat murni (#ffffff)
   ctx.fillStyle = '#ffffff';
-  ctx.fillRect(0, 0, width, estimatedHeight);
+  ctx.fillRect(0, 0, baseWidth, estimatedHeight);
 
   // Subtle clean paper border
   ctx.strokeStyle = '#e2e8f0';
-  ctx.lineWidth = 1.5;
-  ctx.strokeRect(3, 3, width - 6, estimatedHeight - 6);
+  ctx.lineWidth = 1;
+  ctx.strokeRect(2, 2, baseWidth - 4, estimatedHeight - 4);
 
-  let y = 32;
+  let y = 30;
 
   // Header Baris 1: LOKET PPOB ATHAR DIGITAL (Bold, Large, Centered)
-  ctx.fillStyle = '#09090b';
+  ctx.fillStyle = '#000000';
   ctx.textAlign = 'center';
   ctx.font = is58
-    ? 'bold 18px "Courier Prime", "Courier New", monospace'
-    : 'bold 23px "Courier Prime", "Courier New", monospace';
-  ctx.fillText((data.loket || 'LOKET PPOB ATHAR DIGITAL').toUpperCase(), width / 2, y);
-  y += 22;
+    ? 'bold 16.5px "Courier Prime", "Courier New", Courier, monospace'
+    : 'bold 20px "Courier Prime", "Courier New", Courier, monospace';
+  ctx.fillText((data.loket || 'LOKET PPOB ATHAR DIGITAL').toUpperCase(), baseWidth / 2, y);
+  y += 20;
 
   // Alamat di bawah nama loket (Font lebih tebal / bold)
   const alamatVal = data.alamat ?? 'Jl. Raya Bapuhbandung Glagah';
   if (alamatVal) {
     ctx.font = is58
-      ? 'bold 12px "Courier Prime", "Courier New", monospace'
-      : 'bold 14.5px "Courier Prime", "Courier New", monospace';
-    ctx.fillStyle = '#09090b';
-    ctx.fillText(alamatVal, width / 2, y);
-    y += 19;
+      ? 'bold 11px "Courier Prime", "Courier New", Courier, monospace'
+      : 'bold 13px "Courier Prime", "Courier New", Courier, monospace';
+    ctx.fillStyle = '#000000';
+    ctx.fillText(alamatVal, baseWidth / 2, y);
+    y += 18;
   }
 
   // Header Baris 2: Judul Struk (Semi-bold, Centered)
   ctx.font = is58
-    ? 'bold 14.5px "Courier Prime", "Courier New", monospace'
-    : 'bold 17.5px "Courier Prime", "Courier New", monospace';
-  ctx.fillStyle = '#18181b';
-  ctx.fillText((data.headerTitle || 'STRUK PEMBAYARAN TAGIHAN LISTRIK').toUpperCase(), width / 2, y);
-  y += 19;
+    ? 'bold 13px "Courier Prime", "Courier New", Courier, monospace'
+    : 'bold 16px "Courier Prime", "Courier New", Courier, monospace';
+  ctx.fillStyle = '#000000';
+  ctx.fillText((data.headerTitle || 'STRUK PEMBAYARAN TAGIHAN LISTRIK').toUpperCase(), baseWidth / 2, y);
+  y += 18;
 
   // Double divider
   y += 4;
-  drawDashedLine(ctx, paddingX, width - paddingX, y, 4, '#18181b', 1.8);
-  y += 20;
+  drawDashedLine(ctx, paddingX, baseWidth - paddingX, y, 4, '#000000', 1.5);
+  y += 19;
 
   // Column layout coordinates for 2-column format with colon separator:
   // Column 1: Label (left-aligned at xLabel)
   // Column 2: Colon ':' (aligned at xColon)
   // Column 3: Value (left-aligned at xValue)
   const xLabel = paddingX;
-  const xColon = is58 ? paddingX + 104 : paddingX + 138;
-  const xValue = xColon + 10;
-  const baseFontSize = is58 ? 13.5 : 16;
-  const valueFontSize = is58 ? 14 : 16.5;
+  const xColon = is58 ? paddingX + 90 : paddingX + 120;
+  const xValue = xColon + 9;
+  const baseFontSize = is58 ? 12 : 14.5;
+  const valueFontSize = is58 ? 12.5 : 15;
 
   // Metadata: Tanggal & No Ref
   if (data.tanggal) {
-    drawRowWithColon(ctx, 'TANGGAL', data.tanggal, xLabel, xColon, xValue, y, { fontSize: is58 ? 12.5 : 15 });
-    y += 22;
+    drawRowWithColon(ctx, 'TANGGAL', data.tanggal, xLabel, xColon, xValue, y, { fontSize: is58 ? 11.5 : 13.5 });
+    y += 20;
   }
   if (data.noRef) {
-    drawRowWithColon(ctx, 'NO REF', data.noRef, xLabel, xColon, xValue, y, { fontSize: is58 ? 13 : 15.5 });
-    y += 22;
+    drawRowWithColon(ctx, 'NO REF', data.noRef, xLabel, xColon, xValue, y, { fontSize: is58 ? 12 : 14 });
+    y += 20;
   }
   y += 4;
 
@@ -155,38 +160,38 @@ export function generateReceiptCanvas(data: ReceiptData, paperSize: PaperSize = 
     // STROOM / TOKEN Section: 20 Digit Enlarged & Prominent
     if (isToken && tokenValue) {
       y += 3;
-      drawDashedLine(ctx, paddingX, width - paddingX, y, 4, '#09090b', 2);
+      drawDashedLine(ctx, paddingX, baseWidth - paddingX, y, 4, '#000000', 1.5);
       y += 20;
 
       // Label with colon
       drawRowWithColon(ctx, 'STROOM / TOKEN', '', xLabel, xColon, xValue, y, {
         boldLabel: true,
-        fontSize: is58 ? 16 : 18,
-        labelColor: '#09090b',
+        fontSize: is58 ? 14 : 16,
+        labelColor: '#000000',
       });
       y += 23;
 
       // Prominent enlarged 20-digit token box (high contrast, bold font)
       const tokenFormatted = formatToken20(tokenValue);
-      const boxH = is58 ? 40 : 44;
-      const boxW = width - (paddingX * 2);
+      const boxH = is58 ? 38 : 42;
+      const boxW = baseWidth - (paddingX * 2);
 
-      ctx.fillStyle = '#f8fafc';
+      ctx.fillStyle = '#ffffff';
       ctx.fillRect(paddingX, y - 24, boxW, boxH);
-      ctx.strokeStyle = '#09090b';
+      ctx.strokeStyle = '#000000';
       ctx.lineWidth = 1.5;
       ctx.strokeRect(paddingX, y - 24, boxW, boxH);
 
       ctx.textAlign = 'center';
       ctx.font = is58
-        ? 'bold 19px "Courier Prime", "Courier New", monospace'
-        : 'bold 22px "Courier Prime", "Courier New", monospace';
-      ctx.fillStyle = '#09090b';
-      ctx.fillText(tokenFormatted, width / 2, y + 3);
-      y += 27;
+        ? 'bold 16px "Courier Prime", "Courier New", Courier, monospace'
+        : 'bold 19px "Courier Prime", "Courier New", Courier, monospace';
+      ctx.fillStyle = '#000000';
+      ctx.fillText(tokenFormatted, baseWidth / 2, y + 2);
+      y += 26;
 
-      drawDashedLine(ctx, paddingX, width - paddingX, y, 4, '#09090b', 2);
-      y += 22;
+      drawDashedLine(ctx, paddingX, baseWidth - paddingX, y, 4, '#000000', 1.5);
+      y += 20;
     }
   }
 
@@ -198,7 +203,7 @@ export function generateReceiptCanvas(data: ReceiptData, paperSize: PaperSize = 
           continue;
         }
         drawRowWithColon(ctx, f.label.toUpperCase(), f.value, xLabel, xColon, xValue, y, { boldValue: true, fontSize: baseFontSize });
-        y += 24;
+        y += 22;
       }
     }
   }
@@ -211,67 +216,68 @@ export function generateReceiptCanvas(data: ReceiptData, paperSize: PaperSize = 
   const totalBayarVal = data.totalBayar || ((data.tagihan || 0) + adminBankVal);
 
   drawRowWithColon(ctx, tagihanLabel, formatRupiah(data.tagihan), xLabel, xColon, xValue, y, { boldValue: true, fontSize: valueFontSize });
-  y += 25;
+  y += 22;
   drawRowWithColon(ctx, 'ADMIN BANK', formatRupiah(adminBankVal), xLabel, xColon, xValue, y, { boldValue: true, fontSize: valueFontSize });
+  y += 18; // Berikan jarak vertikal bersih di bawah ADMIN BANK agar garis tidak menempel pada angka
+
   // TOTAL BAYAR (Bold, Prominent with aligned colon)
   const totalFormatted = formatRupiah(totalBayarVal);
-  const totalFontSize = is58 ? 16.5 : 20;
+  const totalFontSize = is58 ? 15 : 18;
 
   // Line above total: dimulai tepat sejajar dari titik : sampai angka terakhir total bayar
   ctx.save();
-  ctx.font = `bold ${totalFontSize}px "Courier Prime", "Courier New", monospace`;
+  ctx.font = `bold ${totalFontSize}px "Courier Prime", "Courier New", Courier, monospace`;
   const textWidth = ctx.measureText(totalFormatted).width;
-  // Jarak dari xColon ke titik awal teks nilai adalah (xValue - xColon)
   const lineEndX = xValue + textWidth;
   ctx.restore();
 
-  drawDashedLine(ctx, xColon, lineEndX, y, 4, '#09090b', 2);
-  y += 24;
+  drawDashedLine(ctx, xColon, lineEndX, y, 3, '#000000', 1.5);
+  y += 22; // Berikan jarak vertikal bersih dari garis ke baris TOTAL BAYAR
 
   drawRowWithColon(ctx, 'TOTAL BAYAR', totalFormatted, xLabel, xColon, xValue, y, {
     boldLabel: true,
     boldValue: true,
     fontSize: totalFontSize,
-    labelColor: '#09090b',
-    valueColor: '#09090b',
+    labelColor: '#000000',
+    valueColor: '#000000',
   });
-  y += 18;
+  y += 20;
 
   // Footer Disclaimer
   ctx.textAlign = 'center';
   ctx.font = is58
-    ? 'italic 13.5px "Courier Prime", "Courier New", monospace'
-    : 'italic 15px "Courier Prime", "Courier New", monospace';
-  ctx.fillStyle = '#3f3f46';
+    ? 'italic 12px "Courier Prime", "Courier New", Courier, monospace'
+    : 'italic 13.5px "Courier Prime", "Courier New", Courier, monospace';
+  ctx.fillStyle = '#18181b';
 
   const footerText = data.footerDisclaimer || 'Simpan struk ini sebagai bukti pembayaran yang sah';
   if (footerText) {
     const words = footerText.split(' ');
     let line = '';
-    const maxChars = is58 ? 30 : 38;
+    const maxChars = is58 ? 28 : 36;
     for (const w of words) {
       if ((line + ' ' + w).trim().length <= maxChars) {
         line = (line + ' ' + w).trim();
       } else {
-        ctx.fillText(line, width / 2, y);
-        y += 18;
+        ctx.fillText(line, baseWidth / 2, y);
+        y += 16;
         line = w;
       }
     }
     if (line) {
-      ctx.fillText(line, width / 2, y);
-      y += 18;
+      ctx.fillText(line, baseWidth / 2, y);
+      y += 16;
     }
   }
 
   if (data.footerGreeting) {
     y += 6;
     ctx.font = is58
-      ? 'bold 14px "Courier Prime", "Courier New", monospace'
-      : 'bold 16px "Courier Prime", "Courier New", monospace';
-    ctx.fillStyle = '#18181b';
-    ctx.fillText(data.footerGreeting.toUpperCase(), width / 2, y);
-    y += 22;
+      ? 'bold 12.5px "Courier Prime", "Courier New", Courier, monospace'
+      : 'bold 14.5px "Courier Prime", "Courier New", Courier, monospace';
+    ctx.fillStyle = '#000000';
+    ctx.fillText(data.footerGreeting.toUpperCase(), baseWidth / 2, y);
+    y += 20;
   }
 
   return canvas;
@@ -313,23 +319,23 @@ function drawRowWithColon(
     valueColor?: string;
   }
 ) {
-  const fontSize = options?.fontSize || 19;
-  const labelColor = options?.labelColor || '#3f3f46';
-  const valueColor = options?.valueColor || '#09090b';
+  const fontSize = options?.fontSize || 15;
+  const labelColor = options?.labelColor || '#18181b';
+  const valueColor = options?.valueColor || '#000000';
 
   // 1. Draw Label (Left Aligned)
   ctx.textAlign = 'left';
-  ctx.font = `${options?.boldLabel ? 'bold ' : ''}${fontSize}px "Courier Prime", "Courier New", monospace`;
+  ctx.font = `${options?.boldLabel ? 'bold ' : ''}${fontSize}px "Courier Prime", "Courier New", Courier, monospace`;
   ctx.fillStyle = labelColor;
   ctx.fillText(label, xLabel, y);
 
   // 2. Draw Colon (Aligned at xColon)
-  ctx.font = `bold ${fontSize}px "Courier Prime", "Courier New", monospace`;
-  ctx.fillStyle = '#18181b';
+  ctx.font = `bold ${fontSize}px "Courier Prime", "Courier New", Courier, monospace`;
+  ctx.fillStyle = '#000000';
   ctx.fillText(':', xColon, y);
 
   // 3. Draw Value (Aligned at xValue)
-  ctx.font = `${options?.boldValue ? 'bold ' : ''}${fontSize}px "Courier Prime", "Courier New", monospace`;
+  ctx.font = `${options?.boldValue ? 'bold ' : ''}${fontSize}px "Courier Prime", "Courier New", Courier, monospace`;
   ctx.fillStyle = valueColor;
   ctx.fillText(value, xValue, y);
 }

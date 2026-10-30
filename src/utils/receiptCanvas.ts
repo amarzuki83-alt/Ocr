@@ -76,25 +76,25 @@ export function generateReceiptCanvas(data: ReceiptData, paperSize: PaperSize = 
     y += 18;
   }
 
-  // Header Baris 2: Judul Struk (Semi-bold, Centered)
+  // Header Baris 2: Judul Struk (Digeser ke bawah sedikit agar lebih dekat dengan garis putus-putus)
+  y += 6;
   ctx.font = is58
     ? 'bold 13px "Courier Prime", "Courier New", Courier, monospace'
     : 'bold 16px "Courier Prime", "Courier New", Courier, monospace';
   ctx.fillStyle = '#000000';
   ctx.fillText((data.headerTitle || 'STRUK PEMBAYARAN TAGIHAN LISTRIK').toUpperCase(), baseWidth / 2, y);
-  y += 18;
+  y += 13; // Jarak rapat dan dekat ke garis putus-putus
 
   // Double divider
-  y += 4;
   drawDashedLine(ctx, paddingX, baseWidth - paddingX, y, 4, '#000000', 1.5);
   y += 19;
 
   // Column layout coordinates for 2-column format with colon separator:
   // Column 1: Label (left-aligned at xLabel)
-  // Column 2: Colon ':' (aligned at xColon)
+  // Column 2: Colon ':' (digeser lebih ke kanan agar berjarak longgar dan tidak mepet kolom sisi kiri)
   // Column 3: Value (left-aligned at xValue)
   const xLabel = paddingX;
-  const xColon = is58 ? paddingX + 90 : paddingX + 120;
+  const xColon = is58 ? paddingX + 110 : paddingX + 145;
   const xValue = xColon + 9;
   const baseFontSize = is58 ? 12 : 14.5;
   const valueFontSize = is58 ? 12.5 : 15;

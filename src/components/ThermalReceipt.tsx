@@ -173,12 +173,12 @@ export const ThermalReceipt: React.FC<ThermalReceiptProps> = ({
                 {data.alamat || 'Jl. Raya Bapuhbandung Glagah'}
               </p>
             )}
-            <h3 className="text-[11px] sm:text-xs font-bold text-slate-800 uppercase mt-0.5 tracking-wide">
+            <h3 className="text-[11px] sm:text-xs font-bold text-slate-800 uppercase mt-2 mb-0.5 tracking-wide">
               {data.headerTitle || 'STRUK PEMBAYARAN TAGIHAN LISTRIK'}
             </h3>
           </div>
 
-          <div className="border-b-2 border-dashed border-slate-800 my-2" />
+          <div className="border-b-2 border-dashed border-slate-800 mt-1 mb-2" />
 
           {/* Transaction Metadata: Format dua kolom dengan pemisah titik dua */}
           <div className="space-y-1 text-[11px] sm:text-xs">

@@ -330,11 +330,14 @@ export const ThermalReceipt: React.FC<ThermalReceiptProps> = ({
               <span className="text-slate-900 font-semibold text-left">{formatRupiah(data.adminBank !== undefined && data.adminBank > 0 ? data.adminBank : 5000)}</span>
             </div>
 
+            {/* Total Bayar Highlight with dashed line from colon to end of amount */}
             <div className={`grid ${is58 ? 'grid-cols-[92px_12px_1fr]' : 'grid-cols-[120px_14px_1fr]'} items-center my-1.5`}>
-              <div className="col-start-2 col-span-2 border-b-2 border-dashed border-slate-800" />
+              <div className="col-start-1" />
+              <div className="col-start-2 col-span-2 flex items-center">
+                <div className="inline-block border-b-2 border-dashed border-slate-800 w-fit min-w-[125px]" />
+              </div>
             </div>
 
-            {/* Total Bayar Highlight */}
             <div className={`grid ${is58 ? 'grid-cols-[92px_12px_1fr]' : 'grid-cols-[120px_14px_1fr]'} items-baseline pt-0.5 font-bold text-xs sm:text-sm`}>
               <span className="text-slate-950 font-extrabold uppercase">TOTAL BAYAR</span>
               <span className="text-slate-950 font-extrabold text-center">:</span>

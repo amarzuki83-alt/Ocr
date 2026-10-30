@@ -213,17 +213,25 @@ export function generateReceiptCanvas(data: ReceiptData, paperSize: PaperSize = 
   drawRowWithColon(ctx, tagihanLabel, formatRupiah(data.tagihan), xLabel, xColon, xValue, y, { boldValue: true, fontSize: valueFontSize });
   y += 25;
   drawRowWithColon(ctx, 'ADMIN BANK', formatRupiah(adminBankVal), xLabel, xColon, xValue, y, { boldValue: true, fontSize: valueFontSize });
-  y += 25;
+  // TOTAL BAYAR (Bold, Prominent with aligned colon)
+  const totalFormatted = formatRupiah(totalBayarVal);
+  const totalFontSize = is58 ? 16.5 : 20;
 
-  // Line above total: dimulai sejajar dengan titik :
-  drawDashedLine(ctx, xColon, width - paddingX, y, 4, '#09090b', 2);
+  // Line above total: dimulai tepat sejajar dari titik : sampai angka terakhir total bayar
+  ctx.save();
+  ctx.font = `bold ${totalFontSize}px "Courier Prime", "Courier New", monospace`;
+  const textWidth = ctx.measureText(totalFormatted).width;
+  // Jarak dari xColon ke titik awal teks nilai adalah (xValue - xColon)
+  const lineEndX = xValue + textWidth;
+  ctx.restore();
+
+  drawDashedLine(ctx, xColon, lineEndX, y, 4, '#09090b', 2);
   y += 24;
 
-  // TOTAL BAYAR (Bold, Prominent with aligned colon)
-  drawRowWithColon(ctx, 'TOTAL BAYAR', formatRupiah(totalBayarVal), xLabel, xColon, xValue, y, {
+  drawRowWithColon(ctx, 'TOTAL BAYAR', totalFormatted, xLabel, xColon, xValue, y, {
     boldLabel: true,
     boldValue: true,
-    fontSize: is58 ? 16.5 : 20,
+    fontSize: totalFontSize,
     labelColor: '#09090b',
     valueColor: '#09090b',
   });

@@ -271,13 +271,13 @@ export function generatePlainTextReceipt(data: ReceiptData, paperSize: PaperSize
   lines.push(formatTwoColumns(tagihanLabel, formatRupiah(data.tagihan), width));
   lines.push(formatTwoColumns('ADMIN BANK', formatRupiah(adminFee), width));
 
-  // Garis horisontal diatas total tagihan dimulai sejajar dengan titik :
-  // (Lebar garis sebelah kanan titik dua)
-  const leftColWidth = 14;
-  const lineRightWidth = width - leftColWidth;
-  lines.push(' '.repeat(leftColWidth) + '-'.repeat(lineRightWidth));
+  // Garis horisontal diatas total bayar dimulai dari : sampai angka terakhir total bayar
+  const formattedTotalStr = formatRupiah(total);
+  const leftColWidth = 12; // posisi titik dua
+  const lineLength = 2 + formattedTotalStr.length; // ': ' + teks nominal
+  lines.push(' '.repeat(leftColWidth) + '-'.repeat(lineLength));
 
-  lines.push(formatTwoColumns('TOTAL BAYAR', formatRupiah(total), width));
+  lines.push(formatTwoColumns('TOTAL BAYAR', formattedTotalStr, width));
 
   // Footer
   const disclaimerStr = data.footerDisclaimer || 'Simpan struk ini sebagai bukti pembayaran yang sah';
@@ -442,14 +442,15 @@ export function buildEscPosBuffer(data: ReceiptData, paperSize: PaperSize = '58m
   addText(formatTwoColumns(escposTagihanLabel, formatRupiah(data.tagihan), width) + '\n');
   addText(formatTwoColumns('ADMIN BANK', formatRupiah(escposAdminFee), width) + '\n');
 
-  // Garis horisontal diatas total tagihan dimulai sejajar dengan titik :
-  const escLeftColWidth = 14;
-  const escLineRightWidth = width - escLeftColWidth;
-  addText(' '.repeat(escLeftColWidth) + '-'.repeat(escLineRightWidth) + '\n');
+  // Garis horisontal diatas total bayar dimulai dari : sampai angka terakhir total bayar
+  const escFormattedTotal = formatRupiah(escposTotal);
+  const escLeftColWidth = 12; // posisi titik dua
+  const escLineLength = 2 + escFormattedTotal.length; // ': ' + teks nominal
+  addText(' '.repeat(escLeftColWidth) + '-'.repeat(escLineLength) + '\n');
 
   // Total Bayar (Bold, Larger)
   addBytes(ESC_POS.BOLD_ON);
-  addText(formatTwoColumns('TOTAL BAYAR', formatRupiah(escposTotal), width) + '\n');
+  addText(formatTwoColumns('TOTAL BAYAR', escFormattedTotal, width) + '\n');
   addBytes(ESC_POS.BOLD_OFF);
 
   // 6. Disclaimer & Footer

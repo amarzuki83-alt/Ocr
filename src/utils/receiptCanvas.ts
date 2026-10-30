@@ -8,10 +8,10 @@ import { formatRupiah, formatTwoColumns, isTokenReceipt, isBpjsReceipt, getStroo
  */
 export function generateReceiptCanvas(data: ReceiptData, paperSize: PaperSize = '58mm'): HTMLCanvasElement {
   const is58 = paperSize === '58mm';
-  // Reduced width: 58mm reduced from 640px to 460px; 80mm reduced from 800px to 580px
-  const width = is58 ? 460 : 580;
-  const paddingX = is58 ? 20 : 28;
-  const colWidth = is58 ? 28 : 38;
+  // Reduced width: 58mm reduced to 370px; 80mm reduced to 480px for a more compact and elegant thermal look
+  const width = is58 ? 370 : 480;
+  const paddingX = is58 ? 14 : 20;
+  const colWidth = is58 ? 24 : 32;
 
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d')!;
@@ -22,19 +22,19 @@ export function generateReceiptCanvas(data: ReceiptData, paperSize: PaperSize = 
   const kwhValue = getReceiptKwh(data);
 
   // Measure content height dynamically
-  let estimatedHeight = is58 ? 470 : 530;
+  let estimatedHeight = is58 ? 440 : 500;
   if (isToken && tokenValue) {
-    estimatedHeight += 90;
+    estimatedHeight += 85;
   }
   if (isToken && kwhValue) {
-    estimatedHeight += 26;
+    estimatedHeight += 24;
   }
   if (data.extraFields && data.extraFields.length > 0) {
-    estimatedHeight += data.extraFields.length * 28;
+    estimatedHeight += data.extraFields.length * 26;
   }
   const disclaimerText = data.footerDisclaimer || 'Simpan struk ini sebagai bukti pembayaran yang sah';
   if (disclaimerText) {
-    estimatedHeight += Math.ceil(disclaimerText.length / colWidth) * 24;
+    estimatedHeight += Math.ceil(disclaimerText.length / colWidth) * 22;
   }
 
   canvas.width = width;
@@ -49,59 +49,59 @@ export function generateReceiptCanvas(data: ReceiptData, paperSize: PaperSize = 
   ctx.lineWidth = 1.5;
   ctx.strokeRect(3, 3, width - 6, estimatedHeight - 6);
 
-  let y = 36;
+  let y = 32;
 
   // Header Baris 1: LOKET PPOB ATHAR DIGITAL (Bold, Large, Centered)
   ctx.fillStyle = '#09090b';
   ctx.textAlign = 'center';
   ctx.font = is58
-    ? 'bold 22px "Courier Prime", "Courier New", monospace'
-    : 'bold 26px "Courier Prime", "Courier New", monospace';
+    ? 'bold 18px "Courier Prime", "Courier New", monospace'
+    : 'bold 23px "Courier Prime", "Courier New", monospace';
   ctx.fillText((data.loket || 'LOKET PPOB ATHAR DIGITAL').toUpperCase(), width / 2, y);
-  y += 24;
+  y += 22;
 
   // Alamat di bawah nama loket (Font lebih tebal / bold)
   const alamatVal = data.alamat ?? 'Jl. Raya Bapuhbandung Glagah';
   if (alamatVal) {
     ctx.font = is58
-      ? 'bold 14px "Courier Prime", "Courier New", monospace'
-      : 'bold 16px "Courier Prime", "Courier New", monospace';
+      ? 'bold 12px "Courier Prime", "Courier New", monospace'
+      : 'bold 14.5px "Courier Prime", "Courier New", monospace';
     ctx.fillStyle = '#09090b';
     ctx.fillText(alamatVal, width / 2, y);
-    y += 22;
+    y += 19;
   }
 
   // Header Baris 2: Judul Struk (Semi-bold, Centered)
   ctx.font = is58
-    ? 'bold 17px "Courier Prime", "Courier New", monospace'
-    : 'bold 20px "Courier Prime", "Courier New", monospace';
+    ? 'bold 14.5px "Courier Prime", "Courier New", monospace'
+    : 'bold 17.5px "Courier Prime", "Courier New", monospace';
   ctx.fillStyle = '#18181b';
   ctx.fillText((data.headerTitle || 'STRUK PEMBAYARAN TAGIHAN LISTRIK').toUpperCase(), width / 2, y);
-  y += 22;
+  y += 19;
 
   // Double divider
-  y += 6;
-  drawDashedLine(ctx, paddingX, width - paddingX, y, 4, '#18181b', 2);
-  y += 22;
+  y += 4;
+  drawDashedLine(ctx, paddingX, width - paddingX, y, 4, '#18181b', 1.8);
+  y += 20;
 
   // Column layout coordinates for 2-column format with colon separator:
   // Column 1: Label (left-aligned at xLabel)
   // Column 2: Colon ':' (aligned at xColon)
   // Column 3: Value (left-aligned at xValue)
   const xLabel = paddingX;
-  const xColon = is58 ? paddingX + 130 : paddingX + 165;
-  const xValue = xColon + 12;
-  const baseFontSize = is58 ? 16 : 18;
-  const valueFontSize = is58 ? 16.5 : 18.5;
+  const xColon = is58 ? paddingX + 104 : paddingX + 138;
+  const xValue = xColon + 10;
+  const baseFontSize = is58 ? 13.5 : 16;
+  const valueFontSize = is58 ? 14 : 16.5;
 
   // Metadata: Tanggal & No Ref
   if (data.tanggal) {
-    drawRowWithColon(ctx, 'TANGGAL', data.tanggal, xLabel, xColon, xValue, y, { fontSize: is58 ? 14.5 : 16.5 });
-    y += 24;
+    drawRowWithColon(ctx, 'TANGGAL', data.tanggal, xLabel, xColon, xValue, y, { fontSize: is58 ? 12.5 : 15 });
+    y += 22;
   }
   if (data.noRef) {
-    drawRowWithColon(ctx, 'NO REF', data.noRef, xLabel, xColon, xValue, y, { fontSize: is58 ? 15 : 17 });
-    y += 24;
+    drawRowWithColon(ctx, 'NO REF', data.noRef, xLabel, xColon, xValue, y, { fontSize: is58 ? 13 : 15.5 });
+    y += 22;
   }
   y += 4;
 
@@ -223,7 +223,7 @@ export function generateReceiptCanvas(data: ReceiptData, paperSize: PaperSize = 
   drawRowWithColon(ctx, 'TOTAL BAYAR', formatRupiah(totalBayarVal), xLabel, xColon, xValue, y, {
     boldLabel: true,
     boldValue: true,
-    fontSize: is58 ? 20 : 23,
+    fontSize: is58 ? 16.5 : 20,
     labelColor: '#09090b',
     valueColor: '#09090b',
   });
@@ -441,7 +441,7 @@ export async function shareReceiptToWhatsApp(
       `---------------------------------`,
       `*NO REF*      : ${data.noRef || '-'}`,
       `*TANGGAL*     : ${data.tanggal || '-'}`,
-      `_${data.footerDisclaimer || (waIsBpjs ? 'BPJS menyatakan struk ini sbg bukti pembayaran yg sah.' : 'PLN menyatakan struk ini sbg bukti pembayaran yg sah. Info hub 123')}_`,
+      `_${data.footerDisclaimer || 'Simpan struk ini sebagai bukti pembayaran yang sah'}_`,
       ``,
       `*Status: LUNAS / SAH*`,
       `_Gambar struk PNG latar putih bersih resmi terlampir._`

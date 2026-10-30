@@ -270,14 +270,20 @@ export function generatePlainTextReceipt(data: ReceiptData, paperSize: PaperSize
   const tagihanLabel = isToken ? 'RP BAYAR' : isBpjs ? 'RP TAGIHAN' : 'RP TAG PLN';
   lines.push(formatTwoColumns(tagihanLabel, formatRupiah(data.tagihan), width));
   lines.push(formatTwoColumns('ADMIN BANK', formatRupiah(adminFee), width));
-  lines.push(doubleDivider);
+
+  // Garis horisontal diatas total tagihan dimulai sejajar dengan titik :
+  // (Lebar garis sebelah kanan titik dua)
+  const leftColWidth = 14;
+  const lineRightWidth = width - leftColWidth;
+  lines.push(' '.repeat(leftColWidth) + '-'.repeat(lineRightWidth));
+
   lines.push(formatTwoColumns('TOTAL BAYAR', formatRupiah(total), width));
-  lines.push(doubleDivider);
 
   // Footer
-  if (data.footerDisclaimer) {
+  const disclaimerStr = data.footerDisclaimer || 'Simpan struk ini sebagai bukti pembayaran yang sah';
+  if (disclaimerStr) {
     // Wrap disclaimer text nicely
-    const words = data.footerDisclaimer.split(' ');
+    const words = disclaimerStr.split(' ');
     let currentLine = '';
     for (const word of words) {
       if ((currentLine + ' ' + word).trim().length <= width) {
@@ -435,18 +441,22 @@ export function buildEscPosBuffer(data: ReceiptData, paperSize: PaperSize = '58m
   const escposTagihanLabel = isToken ? 'RP BAYAR' : isBpjs ? 'RP TAGIHAN' : 'RP TAG PLN';
   addText(formatTwoColumns(escposTagihanLabel, formatRupiah(data.tagihan), width) + '\n');
   addText(formatTwoColumns('ADMIN BANK', formatRupiah(escposAdminFee), width) + '\n');
-  addText(doubleDivider);
+
+  // Garis horisontal diatas total tagihan dimulai sejajar dengan titik :
+  const escLeftColWidth = 14;
+  const escLineRightWidth = width - escLeftColWidth;
+  addText(' '.repeat(escLeftColWidth) + '-'.repeat(escLineRightWidth) + '\n');
 
   // Total Bayar (Bold, Larger)
   addBytes(ESC_POS.BOLD_ON);
   addText(formatTwoColumns('TOTAL BAYAR', formatRupiah(escposTotal), width) + '\n');
   addBytes(ESC_POS.BOLD_OFF);
-  addText(doubleDivider);
 
   // 6. Disclaimer & Footer
   addBytes(ESC_POS.ALIGN_CENTER);
-  if (data.footerDisclaimer) {
-    const words = data.footerDisclaimer.split(' ');
+  const escDisclaimerStr = data.footerDisclaimer || 'Simpan struk ini sebagai bukti pembayaran yang sah';
+  if (escDisclaimerStr) {
+    const words = escDisclaimerStr.split(' ');
     let currentLine = '';
     for (const word of words) {
       if ((currentLine + ' ' + word).trim().length <= width) {

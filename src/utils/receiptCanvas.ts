@@ -20,179 +20,162 @@ export function generateReceiptCanvas(data: ReceiptData, paperSize: PaperSize = 
   const tokenValue = getStroomToken(data);
   const kwhValue = getReceiptKwh(data);
 
-  // Measure content height dynamically in CSS pixels
-  let estimatedHeight = is58 ? 430 : 480;
-  if (isToken && tokenValue) {
-    estimatedHeight += 80;
-  }
-  if (isToken && kwhValue) {
-    estimatedHeight += 22;
-  }
-  if (data.extraFields && data.extraFields.length > 0) {
-    estimatedHeight += data.extraFields.length * 24;
-  }
-  const disclaimerText = data.footerDisclaimer || 'Simpan struk ini sebagai bukti pembayaran yang sah';
-  if (disclaimerText) {
-    estimatedHeight += Math.ceil(disclaimerText.length / colWidth) * 20;
-  }
+  // Scratch canvas height sebagai render buffer yang aman sebelum dipotong presisi
+  const scratchHeight = 650;
 
   // 3x Ultra Hi-DPI Supersampling: menghasilkan resolusi ultra tinggi (810px / 1050px)
   // Sangat tajam dan jernih ketika dicetak pada printer tinta (inkjet printer)
   const scale = 3;
   const canvas = document.createElement('canvas');
   canvas.width = Math.round(baseWidth * scale);
-  canvas.height = Math.round(estimatedHeight * scale);
+  canvas.height = Math.round(scratchHeight * scale);
 
   const ctx = canvas.getContext('2d')!;
   ctx.scale(scale, scale);
 
   // Background Paper: Putih bersih pekat murni (#ffffff)
   ctx.fillStyle = '#ffffff';
-  ctx.fillRect(0, 0, baseWidth, estimatedHeight);
+  ctx.fillRect(0, 0, baseWidth, scratchHeight);
 
-  // Subtle clean paper border
-  ctx.strokeStyle = '#e2e8f0';
-  ctx.lineWidth = 1;
-  ctx.strokeRect(2, 2, baseWidth - 4, estimatedHeight - 4);
+  // Start y dengan margin atas yang lebih ringkas & pendek
+  let y = 16;
 
-  let y = 28;
-
-  // Header Baris 1: LOKET PPOB ATHAR DIGITAL (Bold, Large, Centered)
+  // Header Baris 1: LOKET PPOB ATHAR DIGITAL (Bold, Centered)
   ctx.fillStyle = '#000000';
   ctx.textAlign = 'center';
   ctx.font = is58
-    ? 'bold 15px "Courier Prime", "Courier New", Courier, monospace'
-    : 'bold 18px "Courier Prime", "Courier New", Courier, monospace';
+    ? 'bold 13.5px "Courier Prime", "Courier New", Courier, monospace'
+    : 'bold 16.5px "Courier Prime", "Courier New", Courier, monospace';
   ctx.fillText((data.loket || 'LOKET PPOB ATHAR DIGITAL').toUpperCase(), baseWidth / 2, y);
-  y += 18;
+  y += 13;
 
-  // Alamat di bawah nama loket (Font lebih tebal / bold)
+  // Alamat di bawah nama loket (Font tebal / bold)
   const alamatVal = data.alamat ?? 'Jl. Raya Bapuhbandung Glagah';
   if (alamatVal) {
     ctx.font = is58
-      ? 'bold 10px "Courier Prime", "Courier New", Courier, monospace'
-      : 'bold 12px "Courier Prime", "Courier New", Courier, monospace';
+      ? 'bold 9px "Courier Prime", "Courier New", Courier, monospace'
+      : 'bold 11px "Courier Prime", "Courier New", Courier, monospace';
     ctx.fillStyle = '#000000';
     ctx.fillText(alamatVal, baseWidth / 2, y);
-    y += 17;
+    y += 12;
   }
 
-  // Header Baris 2: Judul Struk (Digeser ke bawah sedikit agar lebih dekat dengan garis putus-putus)
-  y += 5;
+  // Header Baris 2: Judul Struk (Rapat mendekati garis putus-putus)
+  y += 2;
   ctx.font = is58
-    ? 'bold 11.5px "Courier Prime", "Courier New", Courier, monospace'
-    : 'bold 14px "Courier Prime", "Courier New", Courier, monospace';
+    ? 'bold 10.5px "Courier Prime", "Courier New", Courier, monospace'
+    : 'bold 13px "Courier Prime", "Courier New", Courier, monospace';
   ctx.fillStyle = '#000000';
   ctx.fillText((data.headerTitle || 'STRUK PEMBAYARAN TAGIHAN LISTRIK').toUpperCase(), baseWidth / 2, y);
-  y += 12; // Jarak rapat dan dekat ke garis putus-putus
+  y += 8; // Rapat dan dekat ke garis putus-putus
 
   // Double divider
   drawDashedLine(ctx, paddingX, baseWidth - paddingX, y, 4, '#000000', 1.5);
-  y += 18;
+  y += 13;
 
   // Column layout coordinates for 2-column format with colon separator:
   // Column 1: Label (left-aligned at xLabel)
-  // Column 2: Colon ':' (digeser lebih ke kanan agar berjarak longgar dan tidak mepet kolom sisi kiri)
+  // Column 2: Colon ':' (digeser ke kanan agar berjarak longgar dari label)
   // Column 3: Value (left-aligned at xValue)
   const xLabel = paddingX;
   const xColon = is58 ? paddingX + 96 : paddingX + 125;
   const xValue = xColon + 8;
-  const baseFontSize = is58 ? 10.5 : 12.5;
-  const valueFontSize = is58 ? 11 : 13.5;
+  const baseFontSize = is58 ? 9.5 : 11.5;
+  const valueFontSize = is58 ? 10 : 12;
 
   // Metadata: Tanggal & No Ref
   if (data.tanggal) {
-    drawRowWithColon(ctx, 'TANGGAL', data.tanggal, xLabel, xColon, xValue, y, { fontSize: is58 ? 10 : 12 });
-    y += 19;
+    drawRowWithColon(ctx, 'TANGGAL', data.tanggal, xLabel, xColon, xValue, y, { fontSize: is58 ? 9 : 11 });
+    y += 14;
   }
   if (data.noRef) {
-    drawRowWithColon(ctx, 'NO REF', data.noRef, xLabel, xColon, xValue, y, { fontSize: is58 ? 10.5 : 12.5 });
-    y += 19;
+    drawRowWithColon(ctx, 'NO REF', data.noRef, xLabel, xColon, xValue, y, { fontSize: is58 ? 9.5 : 11.5 });
+    y += 14;
   }
-  y += 4;
+  y += 2;
 
   // Customer details
   if (isBpjs) {
     drawRowWithColon(ctx, 'NO POLIS', data.noPolis || data.idPel || '-', xLabel, xColon, xValue, y, { boldValue: true, fontSize: valueFontSize });
-    y += 25;
+    y += 15;
     if (data.nama) {
       drawRowWithColon(ctx, 'NAMA', data.nama.toUpperCase(), xLabel, xColon, xValue, y, { boldValue: true, fontSize: valueFontSize });
-      y += 25;
+      y += 15;
     }
     drawRowWithColon(ctx, 'JML PESERTA', data.jmlPeserta || '1 ORANG', xLabel, xColon, xValue, y, { fontSize: baseFontSize });
-    y += 24;
+    y += 14;
     drawRowWithColon(ctx, 'PERIODE', data.periode || data.blnThn || '-', xLabel, xColon, xValue, y, { fontSize: baseFontSize });
-    y += 24;
+    y += 14;
   } else {
     // Customer details: NO METER, IDPEL, NAMA, TARIF/DAYA
     if (isToken || data.noMeter) {
       drawRowWithColon(ctx, 'NO METER', data.noMeter || '-', xLabel, xColon, xValue, y, { boldValue: true, fontSize: valueFontSize });
-      y += 25;
+      y += 15;
     }
     if (data.idPel) {
       drawRowWithColon(ctx, isToken ? 'IDPEL' : 'IDPEL/NO PEL', data.idPel, xLabel, xColon, xValue, y, { boldValue: true, fontSize: valueFontSize });
-      y += 25;
+      y += 15;
     }
     if (data.nama) {
       drawRowWithColon(ctx, 'NAMA', data.nama.toUpperCase(), xLabel, xColon, xValue, y, { boldValue: true, fontSize: valueFontSize });
-      y += 25;
+      y += 15;
     }
     if (data.tarifDaya) {
       drawRowWithColon(ctx, 'TARIF / DAYA', data.tarifDaya, xLabel, xColon, xValue, y, { fontSize: baseFontSize });
-      y += 24;
+      y += 14;
     }
 
     // For Token Listrik: BLN/THN and STAND METER are completely omitted
     if (!isToken) {
       if (data.blnThn) {
         drawRowWithColon(ctx, 'BLN / THN', data.blnThn, xLabel, xColon, xValue, y, { fontSize: baseFontSize });
-        y += 24;
+        y += 14;
       }
       if (data.standMeter) {
         drawRowWithColon(ctx, 'STAND METER', data.standMeter, xLabel, xColon, xValue, y, { fontSize: baseFontSize });
-        y += 24;
+        y += 14;
       }
     } else if (kwhValue) {
       // JML KWH for Token Listrik
       drawRowWithColon(ctx, 'JML KWH', kwhValue, xLabel, xColon, xValue, y, { boldValue: true, fontSize: valueFontSize });
-      y += 25;
+      y += 15;
     }
 
     // STROOM / TOKEN Section: 20 Digit Enlarged & Prominent
     if (isToken && tokenValue) {
-      y += 3;
+      y += 2;
       drawDashedLine(ctx, paddingX, baseWidth - paddingX, y, 4, '#000000', 1.5);
-      y += 18;
+      y += 12;
 
       // Label with colon
       drawRowWithColon(ctx, 'STROOM / TOKEN', '', xLabel, xColon, xValue, y, {
         boldLabel: true,
-        fontSize: is58 ? 12.5 : 14.5,
+        fontSize: is58 ? 10.5 : 12.5,
         labelColor: '#000000',
       });
-      y += 20;
+      y += 14;
 
       // Prominent enlarged 20-digit token box (high contrast, bold font)
       const tokenFormatted = formatToken20(tokenValue);
-      const boxH = is58 ? 34 : 38;
+      const boxH = is58 ? 26 : 30;
       const boxW = baseWidth - (paddingX * 2);
 
       ctx.fillStyle = '#ffffff';
-      ctx.fillRect(paddingX, y - 20, boxW, boxH);
+      ctx.fillRect(paddingX, y - 16, boxW, boxH);
       ctx.strokeStyle = '#000000';
       ctx.lineWidth = 1.5;
-      ctx.strokeRect(paddingX, y - 20, boxW, boxH);
+      ctx.strokeRect(paddingX, y - 16, boxW, boxH);
 
       ctx.textAlign = 'center';
       ctx.font = is58
-        ? 'bold 13.5px "Courier Prime", "Courier New", Courier, monospace'
-        : 'bold 16.5px "Courier Prime", "Courier New", Courier, monospace';
+        ? 'bold 12px "Courier Prime", "Courier New", Courier, monospace'
+        : 'bold 14.5px "Courier Prime", "Courier New", Courier, monospace';
       ctx.fillStyle = '#000000';
-      ctx.fillText(tokenFormatted, baseWidth / 2, y + 2);
-      y += 24;
+      ctx.fillText(tokenFormatted, baseWidth / 2, y + 1);
+      y += 17;
 
       drawDashedLine(ctx, paddingX, baseWidth - paddingX, y, 4, '#000000', 1.5);
-      y += 18;
+      y += 12;
     }
   }
 
@@ -204,12 +187,12 @@ export function generateReceiptCanvas(data: ReceiptData, paperSize: PaperSize = 
           continue;
         }
         drawRowWithColon(ctx, f.label.toUpperCase(), f.value, xLabel, xColon, xValue, y, { boldValue: true, fontSize: baseFontSize });
-        y += 20;
+        y += 14;
       }
     }
   }
 
-  y += 5;
+  y += 2;
 
   // Financials: For Token Listrik, "RP TAG PLN" is changed to "RP BAYAR", for BPJS "RP TAGIHAN"
   const tagihanLabel = isToken ? 'RP BAYAR' : isBpjs ? 'RP TAGIHAN' : 'RP TAG PLN';
@@ -217,13 +200,13 @@ export function generateReceiptCanvas(data: ReceiptData, paperSize: PaperSize = 
   const totalBayarVal = data.totalBayar || ((data.tagihan || 0) + adminBankVal);
 
   drawRowWithColon(ctx, tagihanLabel, formatRupiah(data.tagihan), xLabel, xColon, xValue, y, { boldValue: true, fontSize: valueFontSize });
-  y += 20;
+  y += 15;
   drawRowWithColon(ctx, 'ADMIN BANK', formatRupiah(adminBankVal), xLabel, xColon, xValue, y, { boldValue: true, fontSize: valueFontSize });
-  y += 16; // Berikan jarak vertikal bersih di bawah ADMIN BANK agar garis tidak menempel pada angka
+  y += 12; // Berikan jarak vertikal bersih di bawah ADMIN BANK agar garis tidak menempel pada angka
 
   // TOTAL BAYAR (Bold, Prominent with aligned colon)
   const totalFormatted = formatRupiah(totalBayarVal);
-  const totalFontSize = is58 ? 13 : 15.5;
+  const totalFontSize = is58 ? 11.5 : 13.5;
 
   // Line above total: dimulai tepat sejajar dari titik : sampai angka terakhir total bayar
   ctx.save();
@@ -233,7 +216,7 @@ export function generateReceiptCanvas(data: ReceiptData, paperSize: PaperSize = 
   ctx.restore();
 
   drawDashedLine(ctx, xColon, lineEndX, y, 3, '#000000', 1.5);
-  y += 20; // Berikan jarak vertikal bersih dari garis ke baris TOTAL BAYAR
+  y += 14; // Berikan jarak vertikal bersih dari garis ke baris TOTAL BAYAR
 
   drawRowWithColon(ctx, 'TOTAL BAYAR', totalFormatted, xLabel, xColon, xValue, y, {
     boldLabel: true,
@@ -242,13 +225,13 @@ export function generateReceiptCanvas(data: ReceiptData, paperSize: PaperSize = 
     labelColor: '#000000',
     valueColor: '#000000',
   });
-  y += 18;
+  y += 14;
 
   // Footer Disclaimer
   ctx.textAlign = 'center';
   ctx.font = is58
-    ? 'italic 10.5px "Courier Prime", "Courier New", Courier, monospace'
-    : 'italic 12px "Courier Prime", "Courier New", Courier, monospace';
+    ? 'italic 9.5px "Courier Prime", "Courier New", Courier, monospace'
+    : 'italic 11px "Courier Prime", "Courier New", Courier, monospace';
   ctx.fillStyle = '#18181b';
 
   const footerText = data.footerDisclaimer || 'Simpan struk ini sebagai bukti pembayaran yang sah';
@@ -261,27 +244,42 @@ export function generateReceiptCanvas(data: ReceiptData, paperSize: PaperSize = 
         line = (line + ' ' + w).trim();
       } else {
         ctx.fillText(line, baseWidth / 2, y);
-        y += 16;
+        y += 12;
         line = w;
       }
     }
     if (line) {
       ctx.fillText(line, baseWidth / 2, y);
-      y += 16;
+      y += 12;
     }
   }
 
   if (data.footerGreeting) {
-    y += 6;
+    y += 2;
     ctx.font = is58
-      ? 'bold 12.5px "Courier Prime", "Courier New", Courier, monospace'
-      : 'bold 14.5px "Courier Prime", "Courier New", Courier, monospace';
+      ? 'bold 10.5px "Courier Prime", "Courier New", Courier, monospace'
+      : 'bold 12.5px "Courier Prime", "Courier New", Courier, monospace';
     ctx.fillStyle = '#000000';
     ctx.fillText(data.footerGreeting.toUpperCase(), baseWidth / 2, y);
-    y += 20;
+    y += 13;
   }
 
-  return canvas;
+  // Potong kanvas pas di batas akhir konten (ditambah padding bawah ringkas 8 CSS px)
+  // Ini memastikan panjang struk PNG jauh lebih pendek dan tidak ada ruang putih kosong
+  const finalHeightCSS = Math.ceil(y + 8);
+  const finalCanvas = document.createElement('canvas');
+  finalCanvas.width = Math.round(baseWidth * scale);
+  finalCanvas.height = Math.round(finalHeightCSS * scale);
+  const finalCtx = finalCanvas.getContext('2d')!;
+
+  // Salin isi dari canvas sementara ke canvas final yang sudah dipangkas panjangnya
+  finalCtx.drawImage(
+    canvas,
+    0, 0, Math.round(baseWidth * scale), Math.round(finalHeightCSS * scale),
+    0, 0, Math.round(baseWidth * scale), Math.round(finalHeightCSS * scale)
+  );
+
+  return finalCanvas;
 }
 
 function drawDashedLine(

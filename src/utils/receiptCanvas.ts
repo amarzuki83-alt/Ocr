@@ -1,5 +1,5 @@
 import { ReceiptData, PaperSize } from '../types';
-import { formatRupiah, formatTwoColumns, isTokenReceipt, isBpjsReceipt, getStroomToken, formatToken20, getReceiptKwh } from './escpos';
+import { formatRupiah, formatTwoColumns, isTokenReceipt, isBpjsReceipt, isTransferReceipt, getStroomToken, formatToken20, getReceiptKwh } from './escpos';
 
 /**
  * Draws a high-resolution, authentic thermal receipt onto an HTML5 Canvas
@@ -17,6 +17,7 @@ export function generateReceiptCanvas(data: ReceiptData, paperSize: PaperSize = 
 
   const isToken = isTokenReceipt(data);
   const isBpjs = isBpjsReceipt(data);
+  const isTransfer = isTransferReceipt(data);
   const tokenValue = getStroomToken(data);
   const kwhValue = getReceiptKwh(data);
 
@@ -69,7 +70,14 @@ export function generateReceiptCanvas(data: ReceiptData, paperSize: PaperSize = 
     ? 'bold 8.5px "Courier Prime", "Courier New", Courier, monospace'
     : 'bold 11px "Courier Prime", "Courier New", Courier, monospace';
   ctx.fillStyle = '#000000';
-  ctx.fillText((data.headerTitle || 'STRUK PEMBAYARAN TAGIHAN LISTRIK').toUpperCase(), baseWidth / 2, y);
+  const defaultHeaderTitle = isTransfer
+    ? 'STRUK TRANSAKSI KIRIM UANG'
+    : isBpjs
+    ? 'STRUK PEMBAYARAN IURAN BPJS'
+    : isToken
+    ? 'STRUK PEMBELIAN LISTRIK PRABAYAR'
+    : 'STRUK PEMBAYARAN TAGIHAN LISTRIK';
+  ctx.fillText((data.headerTitle || defaultHeaderTitle).toUpperCase(), baseWidth / 2, y);
   y += 7;
 
   // Garis putus-putus DI BAWAH judul struk
@@ -97,8 +105,31 @@ export function generateReceiptCanvas(data: ReceiptData, paperSize: PaperSize = 
   }
   y += 2;
 
-  // Customer details
-  if (isBpjs) {
+  // Customer / Transaction details
+  if (isTransfer) {
+    // Struk Kirim Uang / Transfer Bank Details
+    if (data.bankTujuan) {
+      drawRowWithColon(ctx, 'BANK TUJUAN', data.bankTujuan.toUpperCase(), xLabel, xColon, xValue, y, { boldValue: true, fontSize: valueFontSize });
+      y += 15;
+    }
+    if (data.noRekening) {
+      drawRowWithColon(ctx, 'NO REKENING', data.noRekening, xLabel, xColon, xValue, y, { boldValue: true, fontSize: valueFontSize });
+      y += 15;
+    }
+    const namaPenerima = data.namaPenerima || data.nama;
+    if (namaPenerima) {
+      drawRowWithColon(ctx, 'PENERIMA', namaPenerima.toUpperCase(), xLabel, xColon, xValue, y, { boldValue: true, fontSize: valueFontSize });
+      y += 15;
+    }
+    if (data.namaPengirim) {
+      drawRowWithColon(ctx, 'SUMBER DANA', data.namaPengirim.toUpperCase(), xLabel, xColon, xValue, y, { fontSize: baseFontSize });
+      y += 14;
+    }
+    if (data.statusTransaksi) {
+      drawRowWithColon(ctx, 'STATUS', data.statusTransaksi.toUpperCase(), xLabel, xColon, xValue, y, { boldValue: true, fontSize: valueFontSize });
+      y += 15;
+    }
+  } else if (isBpjs) {
     drawRowWithColon(ctx, 'NO POLIS', data.noPolis || data.idPel || '-', xLabel, xColon, xValue, y, { boldValue: true, fontSize: valueFontSize });
     y += 15;
     if (data.nama) {
@@ -198,8 +229,8 @@ export function generateReceiptCanvas(data: ReceiptData, paperSize: PaperSize = 
 
   y += 2;
 
-  // Financials: For Token Listrik, "RP TAG PLN" is changed to "RP BAYAR", for BPJS "RP TAGIHAN"
-  const tagihanLabel = isToken ? 'RP BAYAR' : isBpjs ? 'RP TAGIHAN' : 'RP TAG PLN';
+  // Financials: For Kirim Uang "NOMINAL TRF", for Token Listrik "RP BAYAR", for BPJS "RP TAGIHAN", else "RP TAG PLN"
+  const tagihanLabel = isTransfer ? 'NOMINAL TRF' : isToken ? 'RP BAYAR' : isBpjs ? 'RP TAGIHAN' : 'RP TAG PLN';
   const adminBankVal = data.adminBank !== undefined && data.adminBank > 0 ? data.adminBank : 5000;
   const totalBayarVal = data.totalBayar || ((data.tagihan || 0) + adminBankVal);
 
@@ -415,6 +446,7 @@ export async function shareReceiptToWhatsApp(
     }
 
     // WhatsApp summary caption with two-column colon alignment
+    const waIsTransfer = isTransferReceipt(data);
     const waIsBpjs = isBpjsReceipt(data);
     const waIsToken = isTokenReceipt(data);
     const waTokenValue = getStroomToken(data);
@@ -422,15 +454,30 @@ export async function shareReceiptToWhatsApp(
     const adminBankVal = data.adminBank !== undefined && data.adminBank > 0 ? data.adminBank : 5000;
     const totalBayarVal = data.totalBayar || ((data.tagihan || 0) + adminBankVal);
 
+    const waDefaultTitle = waIsTransfer
+      ? 'STRUK TRANSAKSI KIRIM UANG'
+      : waIsBpjs
+      ? 'STRUK PEMBAYARAN IURAN BPJS'
+      : waIsToken
+      ? 'STRUK PEMBELIAN LISTRIK PRABAYAR'
+      : 'STRUK PEMBAYARAN TAGIHAN LISTRIK';
+
     const captionLines: string[] = [
       `*LOKET PPOB ATHAR DIGITAL*`,
       `*${data.alamat || 'Jl. Raya Bapuhbandung Glagah'}*`,
       `---------------------------------`,
-      `*${(data.headerTitle || (waIsBpjs ? 'STRUK PEMBAYARAN IURAN BPJS' : 'STRUK PEMBAYARAN TAGIHAN LISTRIK')).toUpperCase()}*`,
+      `*${(data.headerTitle || waDefaultTitle).toUpperCase()}*`,
       `---------------------------------`,
     ];
 
-    if (waIsBpjs) {
+    if (waIsTransfer) {
+      if (data.bankTujuan) captionLines.push(`*BANK TUJUAN*  : ${data.bankTujuan.toUpperCase()}`);
+      if (data.noRekening) captionLines.push(`*NO REKENING*  : ${data.noRekening}`);
+      const waPenerima = data.namaPenerima || data.nama;
+      if (waPenerima) captionLines.push(`*PENERIMA*     : ${waPenerima.toUpperCase()}`);
+      if (data.namaPengirim) captionLines.push(`*SUMBER DANA*  : ${data.namaPengirim.toUpperCase()}`);
+      if (data.statusTransaksi) captionLines.push(`*STATUS*       : ${data.statusTransaksi.toUpperCase()}`);
+    } else if (waIsBpjs) {
       captionLines.push(
         `*NO POLIS*     : ${data.noPolis || data.idPel || '-'}`,
         `*NAMA*         : ${data.nama || '-'}`,
@@ -463,7 +510,7 @@ export async function shareReceiptToWhatsApp(
 
     captionLines.push(
       `---------------------------------`,
-      `*${waIsToken ? 'RP BAYAR' : waIsBpjs ? 'RP TAGIHAN' : 'RP TAG PLN'}*  : ${formatRupiah(data.tagihan)}`,
+      `*${waIsTransfer ? 'NOMINAL TRF' : waIsToken ? 'RP BAYAR' : waIsBpjs ? 'RP TAGIHAN' : 'RP TAG PLN'}*  : ${formatRupiah(data.tagihan)}`,
       `*ADMIN BANK*  : ${formatRupiah(adminBankVal)}`,
       `*TOTAL BAYAR* : ${formatRupiah(totalBayarVal)}`,
       `---------------------------------`,
@@ -471,7 +518,7 @@ export async function shareReceiptToWhatsApp(
       `*TANGGAL*     : ${data.tanggal || '-'}`,
       `_${data.footerDisclaimer || 'Simpan struk ini sebagai bukti pembayaran'}_`,
       ``,
-      `*Status: LUNAS / SAH*`,
+      `*Status: ${data.statusTransaksi || 'LUNAS / SAH'}*`,
       `_Gambar struk PNG latar putih bersih resmi terlampir._`
     );
 

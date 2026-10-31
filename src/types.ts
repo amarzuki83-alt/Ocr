@@ -29,6 +29,11 @@ export interface ReceiptData {
   footerGreeting: string;
   extraFields: ExtraReceiptField[];
   customNote?: string;
+  bankTujuan?: string;
+  noRekening?: string;
+  namaPenerima?: string;
+  namaPengirim?: string;
+  statusTransaksi?: string;
 }
 
 export type PaperSize = '58mm' | '80mm';

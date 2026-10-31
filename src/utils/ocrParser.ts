@@ -574,6 +574,215 @@ export function extractKwhFromText(text: string, lines: string[]): string {
 }
 
 /**
+ * Advanced Indonesian Transfer & Remittance OCR Parser
+ * Accurately isolates Sumber Dana / Pengirim vs Rekening & Penerima Tujuan
+ * strictly according to the uploaded receipt/screenshot.
+ */
+export function parseTransferDetails(text: string, lines: string[]): {
+  bankTujuan?: string;
+  noRekening?: string;
+  namaPenerima?: string;
+  namaPengirim?: string;
+  statusTransaksi?: string;
+} {
+  const result: {
+    bankTujuan?: string;
+    noRekening?: string;
+    namaPenerima?: string;
+    namaPengirim?: string;
+    statusTransaksi?: string;
+  } = {};
+
+  const cleanLines = lines.map((l) => l.trim()).filter(Boolean);
+
+  // Helper to test if a string resembles a person's name (not a banking keyword or currency)
+  const isLikelyPersonName = (str: string): boolean => {
+    if (!str || str.length < 3 || str.length > 35) return false;
+    if (/BERHASIL|SUKSES|PENDING|GAGAL|TRANSFER|KIRIM|UANG|TRANSAKSI|RUPIAH|TOTAL|ADMIN|BIAYA|REFERENSI|TANGGAL|WAKTU|NOMINAL|CATATAN|BERITA|SUMBER|DANA|TUJUAN|REKENING|BANK|TABUNGAN|GIRO|DEPOSITO|KARTU|PPOB|LOKET/i.test(str)) {
+      return false;
+    }
+    const lettersOnly = str.replace(/[^A-Za-z]/g, '');
+    if (lettersOnly.length < 3) return false;
+    const digitsOnly = str.replace(/[^0-9]/g, '');
+    if (digitsOnly.length > 2) return false;
+    return true;
+  };
+
+  const cleanNameCandidate = (raw: string): string => {
+    let s = raw.trim();
+    s = s.replace(/^(?:SUMBER[\s/.]*DANA|PENGIRIM|NAMA[\s/.]*PENGIRIM|DARI[\s/.]*REK(?:ENING)?|DARI|PENERIMA|NAMA[\s/.]*PENERIMA|KE[\s/.]*REK(?:ENING)?|REK(?:ENING)?[\s/.]*TUJUAN|ATAS[\s/.]*NAMA|A[\s/.]*N|KEPADA|TUJUAN)\s*[:.]?\s*/i, '');
+    s = s.replace(/^(?:TABUNGAN(?:\s+NOW|\s+MANDIRI|\s+BRI|\s+BCA)?|GIRO|SIMPEDES|BRITAMA)\s*[-/]?\s*/i, '');
+    s = s.replace(/^[0-9\s-]{6,25}\s*[-/]?\s*/, '');
+    s = s.replace(/\s*[-/]?\s*[0-9\s-]{6,25}$/, '');
+    s = cleanIndonesianName(s);
+    return s.trim();
+  };
+
+  // ==========================================
+  // 1. EXTRACT SUMBER DANA / NAMA PENGIRIM
+  // ==========================================
+  const senderInlineMatch = text.match(/(?:SUMBER[\s/.]*DANA|NAMA[\s/.]*PENGIRIM|PENGIRIM|DARI[\s/.]*REK(?:ENING)?|PEMILIK[\s/.]*SUMBER[\s/.]*DANA|REK(?:ENING)?[\s/.]*SUMBER)\s*[:.]?\s*([A-Za-z0-9\s\.\,\'\-\/]+)/i);
+  if (senderInlineMatch && senderInlineMatch[1]) {
+    const rawVal = senderInlineMatch[1].split('\n')[0].trim();
+    const candidate = cleanNameCandidate(rawVal);
+    if (isLikelyPersonName(candidate)) {
+      result.namaPengirim = candidate;
+    }
+  }
+
+  // Multi-line search for SUMBER DANA / PENGIRIM
+  if (!result.namaPengirim) {
+    for (let i = 0; i < cleanLines.length; i++) {
+      const line = cleanLines[i];
+      if (/^(?:SUMBER[\s/.]*DANA|REK(?:ENING)?[\s/.]*SUMBER|DARI[\s/.]*REK(?:ENING)?|PENGIRIM|NAMA[\s/.]*PENGIRIM|PEMILIK[\s/.]*SUMBER[\s/.]*DANA)\b/i.test(line)) {
+        for (let j = 1; j <= 3 && i + j < cleanLines.length; j++) {
+          const nextL = cleanLines[i + j];
+          if (/TUJUAN|PENERIMA|KE\s*REKENING|NOMINAL|TOTAL|BIAYA|ADMIN|BERITA|CATATAN/i.test(nextL)) {
+            break;
+          }
+          const candidate = cleanNameCandidate(nextL);
+          if (isLikelyPersonName(candidate)) {
+            result.namaPengirim = candidate;
+            break;
+          }
+        }
+        if (result.namaPengirim) break;
+      }
+    }
+  }
+
+  // Fallback for "DARI: ..." pattern
+  if (!result.namaPengirim) {
+    const dariMatch = text.match(/\bDARI\s*[:.]?\s*([A-Za-z\s\.\,\'\-]+)/i);
+    if (dariMatch && dariMatch[1]) {
+      const candidate = cleanNameCandidate(dariMatch[1].split('\n')[0]);
+      if (isLikelyPersonName(candidate) && !/BANK|REKENING|TABUNGAN/i.test(candidate)) {
+        result.namaPengirim = candidate;
+      }
+    }
+  }
+
+  // ==========================================
+  // 2. EXTRACT REKENING TUJUAN & NAMA PENERIMA
+  // ==========================================
+  const penerimaInline = text.match(/(?:NAMA[\s/.]*PENERIMA|PENERIMA|ATAS[\s/.]*NAMA|A[\s/.]*N|NAMA[\s/.]*TUJUAN|KEPADA)\s*[:.]?\s*([A-Za-z0-9\s\.\,\'\-]+)/i);
+  if (penerimaInline && penerimaInline[1]) {
+    const rawVal = penerimaInline[1].split('\n')[0].trim();
+    const candidate = cleanNameCandidate(rawVal);
+    if (isLikelyPersonName(candidate)) {
+      result.namaPenerima = candidate;
+    }
+  }
+
+  const noRekInline = text.match(/(?:NO[\s/.]*REK(?:ENING)?[\s/.]*TUJUAN|NOMOR[\s/.]*REKENING[\s/.]*TUJUAN|REK(?:ENING)?[\s/.]*TUJUAN|KE[\s/.]*REK(?:ENING)?|NO[\s/.]*REK(?:ENING)?|NOMOR[\s/.]*REKENING)\s*[:.]?\s*([0-9\s-]{6,25})/i);
+  if (noRekInline && noRekInline[1]) {
+    const digits = cleanDigitSequence(noRekInline[1]);
+    if (digits.length >= 6) {
+      result.noRekening = digits;
+    }
+  }
+
+  // Multi-line search for REKENING TUJUAN / TUJUAN / PENERIMA
+  for (let i = 0; i < cleanLines.length; i++) {
+    const line = cleanLines[i];
+    if (/^(?:REK(?:ENING)?[\s/.]*TUJUAN|TUJUAN[\s/.]*TRANSFER|TRANSFER[\s/.]*KE|KE[\s/.]*REK(?:ENING)?|PENERIMA|TUJUAN)\b/i.test(line)) {
+      for (let j = 1; j <= 4 && i + j < cleanLines.length; j++) {
+        const nextL = cleanLines[i + j];
+        if (/NOMINAL|JUMLAH|TOTAL|ADMIN|BIAYA|BERITA|CATATAN|WAKTU|TANGGAL|REF/i.test(nextL)) {
+          break;
+        }
+
+        const digitsMatch = nextL.match(/(?:[A-Za-z\s-]*[:.]?\s*)?([0-9\s-]{8,25})/);
+        if (digitsMatch && !result.noRekening) {
+          const digits = cleanDigitSequence(digitsMatch[1]);
+          if (digits.length >= 8 && digits.length <= 22) {
+            result.noRekening = digits;
+          }
+        }
+
+        const candidate = cleanNameCandidate(nextL);
+        if (isLikelyPersonName(candidate) && candidate !== result.namaPengirim && !result.namaPenerima) {
+          result.namaPenerima = candidate;
+        }
+      }
+    }
+  }
+
+  // Fallback: search for 10-18 digit account sequence
+  if (!result.noRekening) {
+    const allDigits = text.match(/\b([0-9]{10,18})\b/g);
+    if (allDigits) {
+      for (const d of allDigits) {
+        if (!d.startsWith('2026') && !d.startsWith('2025') && !d.startsWith('08')) {
+          result.noRekening = d;
+          break;
+        }
+      }
+    }
+  }
+
+  // ==========================================
+  // 3. EXTRACT BANK TUJUAN
+  // ==========================================
+  const knownBanks = [
+    { pattern: /\b(?:BANK[\s-]*)?BRI\b/i, name: 'BANK BRI' },
+    { pattern: /\b(?:BANK[\s-]*)?BCA\b/i, name: 'BANK BCA' },
+    { pattern: /\b(?:BANK[\s-]*)?MANDIRI\b/i, name: 'BANK MANDIRI' },
+    { pattern: /\b(?:BANK[\s-]*)?BNI\b/i, name: 'BANK BNI' },
+    { pattern: /\b(?:BANK[\s-]*)?BSI\b/i, name: 'BANK BSI' },
+    { pattern: /\b(?:BANK[\s-]*)?CIMB(?:\s*NIAGA)?\b/i, name: 'BANK CIMB NIAGA' },
+    { pattern: /\b(?:BANK[\s-]*)?PERMATA\b/i, name: 'BANK PERMATA' },
+    { pattern: /\b(?:BANK[\s-]*)?BTN\b/i, name: 'BANK BTN' },
+    { pattern: /\b(?:BANK[\s-]*)?DANAMON\b/i, name: 'BANK DANAMON' },
+    { pattern: /\b(?:BANK[\s-]*)?MEGA\b/i, name: 'BANK MEGA' },
+    { pattern: /\b(?:BANK[\s-]*)?JAGO\b/i, name: 'BANK JAGO' },
+    { pattern: /\bSEABANK\b/i, name: 'SEABANK' },
+    { pattern: /\b(?:BANK[\s-]*)?NEO\b/i, name: 'BANK NEO' },
+    { pattern: /\bDANA\b/i, name: 'DANA' },
+    { pattern: /\bGOPAY\b/i, name: 'GOPAY' },
+    { pattern: /\bOVO\b/i, name: 'OVO' },
+    { pattern: /\bSHOPEEPAY\b/i, name: 'SHOPEEPAY' },
+  ];
+
+  for (let i = 0; i < cleanLines.length; i++) {
+    const line = cleanLines[i];
+    if (/TUJUAN|PENERIMA|KE\s*REKENING|BANK/i.test(line)) {
+      for (const b of knownBanks) {
+        if (b.pattern.test(line)) {
+          result.bankTujuan = b.name;
+          break;
+        }
+      }
+      if (result.bankTujuan) break;
+    }
+  }
+
+  if (!result.bankTujuan) {
+    for (const b of knownBanks) {
+      if (b.pattern.test(text)) {
+        result.bankTujuan = b.name;
+        break;
+      }
+    }
+  }
+
+  // ==========================================
+  // 4. STATUS TRANSAKSI
+  // ==========================================
+  if (/BERHASIL|SUKSES|SUCCESS/i.test(text)) {
+    result.statusTransaksi = 'BERHASIL / SUKSES';
+  } else if (/PENDING|MENUNGGU/i.test(text)) {
+    result.statusTransaksi = 'PENDING';
+  } else if (/PROSES|DIPROSES/i.test(text)) {
+    result.statusTransaksi = 'PROSES';
+  } else {
+    result.statusTransaksi = 'BERHASIL / SUKSES';
+  }
+
+  return result;
+}
+
+/**
  * Specialized Indonesian PLN & PPOB receipt parser with zero-mistake reconciliation
  */
 export function parseReceiptFromOcr(ocrText: string): Partial<ReceiptData> {
@@ -614,9 +823,15 @@ export function parseReceiptFromOcr(ocrText: string): Partial<ReceiptData> {
   };
 
   // Header detection
-  const isTokenScan = /TOKEN\s*LISTRIK|PRABAYAR|PREPAID|STROOM/i.test(text);
-  const isBpjsScan = /BPJS|KESEHATAN|KETENAGAKERJAAN/i.test(text);
-  if (isTokenScan) {
+  const isTransferScan = /TRANSFER|KIRIM\s*UANG|REKENING\s*TUJUAN|NOMINAL\s*TRF|NOMINAL\s*TRANSFER|SUMBER\s*DANA|REK\s*SUMBER/i.test(text);
+  const isTokenScan = !isTransferScan && /TOKEN\s*LISTRIK|PRABAYAR|PREPAID|STROOM/i.test(text);
+  const isBpjsScan = !isTransferScan && /BPJS|KESEHATAN|KETENAGAKERJAAN/i.test(text);
+  if (isTransferScan) {
+    parsed.headerTitle = 'STRUK TRANSAKSI KIRIM UANG';
+    parsed.blnThn = '';
+    parsed.standMeter = '';
+    parsed.tarifDaya = '';
+  } else if (isTokenScan) {
     parsed.headerTitle = 'STRUK PEMBELIAN TOKEN LISTRIK';
     parsed.blnThn = '';
     parsed.standMeter = '';
@@ -635,8 +850,30 @@ export function parseReceiptFromOcr(ocrText: string): Partial<ReceiptData> {
   const alamatMatch = text.match(/(?:ALAMAT|JL[\s\.]*RAYA|JL[\s\.]*|JALAN)\s*[:.]?\s*([A-Za-z0-9\s\,\.\-]+)/i);
   if (alamatMatch && alamatMatch[1]) {
     const rawAlamat = alamatMatch[1].trim().split('\n')[0].substring(0, 40);
-    if (!/PEMBAYARAN|LISTRIK|PLN|BPJS|IDPEL/i.test(rawAlamat)) {
+    if (!/PEMBAYARAN|LISTRIK|PLN|BPJS|IDPEL|TRANSFER|KIRIM/i.test(rawAlamat)) {
       parsed.alamat = rawAlamat;
+    }
+  }
+
+  // Transfer-specific fields extraction: strictly follow what is uploaded
+  if (isTransferScan) {
+    const transferDetails = parseTransferDetails(text, lines);
+    if (transferDetails.bankTujuan) {
+      parsed.bankTujuan = transferDetails.bankTujuan;
+    }
+    if (transferDetails.noRekening) {
+      parsed.noRekening = transferDetails.noRekening;
+      if (!parsed.idPel) parsed.idPel = transferDetails.noRekening;
+    }
+    if (transferDetails.namaPenerima) {
+      parsed.namaPenerima = transferDetails.namaPenerima;
+      parsed.nama = transferDetails.namaPenerima;
+    }
+    if (transferDetails.namaPengirim) {
+      parsed.namaPengirim = transferDetails.namaPengirim;
+    }
+    if (transferDetails.statusTransaksi) {
+      parsed.statusTransaksi = transferDetails.statusTransaksi;
     }
   }
 
@@ -739,8 +976,8 @@ export function parseReceiptFromOcr(ocrText: string): Partial<ReceiptData> {
     }
   }
 
-  // 8. Rp Tag PLN / Rp Bayar / Rp Tagihan (Tagihan Murni / Nominal Token / Iuran BPJS)
-  const tagihanMatch = text.match(/(?:RP\s*TAGIHAN|TAGIHAN\s*BPJS|JUMLAH\s*TAGIHAN|TOTAL\s*PREMI|JUMLAH\s*PREMI|PREMI|JUMLAH\s*IURAN|RP\s*IURAN|IURAN|RP\s*BAYAR|RP\s*TAG\s*PLN|TAGIHAN\s*PLN|TAGIHAN|SUBTOTAL|NOMINAL|JML\s*BAYAR)\s*[:.]?\s*RP?\.?\s*([\d\.,Oo]+)/i);
+  // 8. Rp Tag PLN / Rp Bayar / Rp Tagihan / Nominal Transfer (Tagihan Murni / Nominal Token / Iuran BPJS / Transfer)
+  const tagihanMatch = text.match(/(?:NOMINAL\s*TRF|NOMINAL\s*TRANSFER|JUMLAH\s*TRANSFER|JML\s*TRANSFER|RP\s*TAGIHAN|TAGIHAN\s*BPJS|JUMLAH\s*TAGIHAN|TOTAL\s*PREMI|JUMLAH\s*PREMI|PREMI|JUMLAH\s*IURAN|RP\s*IURAN|IURAN|RP\s*BAYAR|RP\s*TAG\s*PLN|TAGIHAN\s*PLN|TAGIHAN|SUBTOTAL|NOMINAL|JML\s*BAYAR)\s*[:.]?\s*RP?\.?\s*([\d\.,Oo]+)/i);
   if (tagihanMatch && tagihanMatch[1]) {
     parsed.tagihan = parseCleanNumber(tagihanMatch[1]);
   }
@@ -890,6 +1127,30 @@ export const SAMPLE_PRESETS: Record<string, ReceiptData> = {
     totalBayar: 155000,
     tanggal: '26/10/2026 17:30:22 WIB',
     noRef: 'BPJS261026771029',
+    footerDisclaimer: 'Simpan struk ini sebagai bukti pembayaran',
+    footerGreeting: 'Terimakasih',
+    extraFields: [],
+  },
+  kirimUang: {
+    loket: 'LOKET PPOB ATHAR DIGITAL',
+    alamat: 'Jl. Raya Bapuhbandung Glagah',
+    headerTitle: 'STRUK TRANSAKSI KIRIM UANG',
+    subHeader: '',
+    idPel: '',
+    bankTujuan: 'BANK BRI',
+    noRekening: '0123-01-089765-50-8',
+    namaPenerima: 'BAMBANG SETIAWAN',
+    namaPengirim: 'AHMAD MARZUKI',
+    statusTransaksi: 'BERHASIL / SUKSES',
+    nama: 'BAMBANG SETIAWAN',
+    tarifDaya: '',
+    standMeter: '',
+    blnThn: '',
+    tagihan: 500000,
+    adminBank: 5000,
+    totalBayar: 505000,
+    tanggal: '26/10/2026 14:15:30 WIB',
+    noRef: 'TRF261026987123',
     footerDisclaimer: 'Simpan struk ini sebagai bukti pembayaran',
     footerGreeting: 'Terimakasih',
     extraFields: [],

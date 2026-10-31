@@ -1,6 +1,6 @@
 import React from 'react';
 import { ReceiptData, ExtraReceiptField } from '../types';
-import { isTokenReceipt, isBpjsReceipt, getStroomToken, formatToken20, getReceiptKwh, calculateKwh } from '../utils/escpos';
+import { isTokenReceipt, isBpjsReceipt, isTransferReceipt, getStroomToken, formatToken20, getReceiptKwh, calculateKwh } from '../utils/escpos';
 import { cleanTarifDaya } from '../utils/ocrParser';
 import { 
   Building2, 
@@ -19,7 +19,8 @@ import {
   Radio,
   Sparkles,
   Info,
-  Gauge
+  Gauge,
+  ArrowRightLeft
 } from 'lucide-react';
 
 interface ReceiptEditorProps {
@@ -39,8 +40,43 @@ export const ReceiptEditor: React.FC<ReceiptEditorProps> = ({
 }) => {
   const isToken = isTokenReceipt(data);
   const isBpjs = isBpjsReceipt(data);
+  const isTransfer = isTransferReceipt(data);
   const currentToken = getStroomToken(data);
   const currentKwh = getReceiptKwh(data);
+
+  // Switch to Kirim Uang / Transfer Bank
+  const handleSelectTransferType = () => {
+    const defaultTransferAdmin = 5000;
+    const currentNominal = data.tagihan || 500000;
+    onChange({
+      ...data,
+      loket: data.loket || 'LOKET PPOB ATHAR DIGITAL',
+      alamat: data.alamat || 'Jl. Raya Bapuhbandung Glagah',
+      headerTitle: 'STRUK TRANSAKSI KIRIM UANG',
+      bankTujuan: data.bankTujuan || 'BANK BRI',
+      noRekening: data.noRekening || '0123-01-089765-50-8',
+      namaPenerima: data.namaPenerima || data.nama || 'BAMBANG SETIAWAN',
+      namaPengirim: data.namaPengirim || 'AHMAD MARZUKI',
+      statusTransaksi: data.statusTransaksi || 'BERHASIL / SUKSES',
+      nama: data.namaPenerima || data.nama || 'BAMBANG SETIAWAN',
+      idPel: '',
+      noMeter: '',
+      noPolis: '',
+      jmlPeserta: '',
+      periode: '',
+      blnThn: '',
+      standMeter: '',
+      tarifDaya: '',
+      stroomToken: '',
+      kwh: '',
+      tagihan: currentNominal,
+      adminBank: defaultTransferAdmin,
+      totalBayar: autoCalculate ? currentNominal + defaultTransferAdmin : (data.totalBayar || currentNominal + defaultTransferAdmin),
+      footerDisclaimer: 'Simpan struk ini sebagai bukti pembayaran',
+      footerGreeting: 'Terimakasih',
+      extraFields: [],
+    });
+  };
 
   // Switch to Token Listrik (Prabayar)
   const handleSelectTokenType = () => {
@@ -235,7 +271,7 @@ export const ReceiptEditor: React.FC<ReceiptEditorProps> = ({
             type="button"
             onClick={handleSelectPostpaidType}
             className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 active:scale-95 ${
-              !isToken && !isBpjs
+              !isToken && !isBpjs && !isTransfer
                 ? 'bg-cyan-600 text-white shadow-md'
                 : 'bg-slate-800 text-slate-400 hover:text-white border border-slate-700'
             }`}
@@ -266,6 +302,18 @@ export const ReceiptEditor: React.FC<ReceiptEditorProps> = ({
           >
             <ShieldCheck className="w-3.5 h-3.5 text-emerald-300" />
             <span>Iuran BPJS</span>
+          </button>
+          <button
+            type="button"
+            onClick={handleSelectTransferType}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 active:scale-95 ${
+              isTransfer
+                ? 'bg-purple-600 text-white shadow-md ring-1 ring-purple-400'
+                : 'bg-slate-800 text-slate-400 hover:text-white border border-slate-700'
+            }`}
+          >
+            <ArrowRightLeft className="w-3.5 h-3.5 text-purple-300" />
+            <span>Kirim Uang / Transfer</span>
           </button>
         </div>
       </div>
@@ -319,14 +367,121 @@ export const ReceiptEditor: React.FC<ReceiptEditorProps> = ({
         </div>
       </div>
 
-      {/* 2. Informasi Pelanggan & Daya / BPJS */}
+      {/* 2. Informasi Pelanggan & Daya / BPJS / Kirim Uang */}
       <div className="space-y-3 pt-2 border-t border-slate-700/60">
         <div className="flex items-center gap-2 text-xs font-bold text-amber-400 uppercase tracking-wider">
           <User className="w-3.5 h-3.5" />
-          <span>{isBpjs ? 'Informasi Kepesertaan BPJS' : 'Informasi Pelanggan & Stand Meter'}</span>
+          <span>{isTransfer ? 'Informasi Kirim Uang & Rekening Bank' : isBpjs ? 'Informasi Kepesertaan BPJS' : 'Informasi Pelanggan & Stand Meter'}</span>
         </div>
 
-        {isBpjs ? (
+        {isTransfer ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-xs font-semibold text-purple-300">
+                  Bank / E-Wallet Tujuan <span className="text-rose-400">*</span>
+                </label>
+              </div>
+              <input
+                type="text"
+                value={data.bankTujuan || ''}
+                onChange={(e) => handleFieldChange('bankTujuan', e.target.value)}
+                placeholder="Contoh: BANK BRI"
+                className="w-full bg-slate-900 border border-purple-500/60 rounded-lg px-3 py-2 text-sm font-bold text-purple-200 focus:outline-none focus:border-purple-400 transition"
+              />
+              <div className="flex items-center gap-1 text-[10px] flex-wrap mt-1.5">
+                <span className="text-slate-400">Pilih:</span>
+                {['BANK BRI', 'BANK BCA', 'BANK MANDIRI', 'BANK BNI', 'BANK BSI', 'DANA', 'GOPAY', 'OVO', 'SHOPEEPAY'].map((bank) => (
+                  <button
+                    key={bank}
+                    type="button"
+                    onClick={() => handleFieldChange('bankTujuan', bank)}
+                    className={`px-1.5 py-0.5 rounded transition ${
+                      data.bankTujuan === bank
+                        ? 'bg-purple-600 text-white font-bold'
+                        : 'bg-slate-800 text-slate-300 hover:text-white border border-slate-700'
+                    }`}
+                  >
+                    {bank.replace('BANK ', '')}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-300 mb-1">
+                Nomor Rekening Tujuan <span className="text-rose-400">*</span>
+              </label>
+              <input
+                type="text"
+                value={data.noRekening || ''}
+                onChange={(e) => handleFieldChange('noRekening', e.target.value)}
+                placeholder="Contoh: 0123-01-089765-50-8"
+                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm font-mono text-cyan-300 focus:outline-none focus:border-purple-500 transition"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-300 mb-1">
+                Nama Penerima / Tujuan <span className="text-rose-400">*</span>
+              </label>
+              <input
+                type="text"
+                value={data.namaPenerima || data.nama || ''}
+                onChange={(e) => {
+                  handleFieldChange('namaPenerima', e.target.value);
+                  handleFieldChange('nama', e.target.value);
+                }}
+                placeholder="Contoh: BAMBANG SETIAWAN"
+                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm font-bold text-white focus:outline-none focus:border-purple-500 transition"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-300 mb-1">
+                Sumber Dana / Nama Pengirim
+              </label>
+              <input
+                type="text"
+                value={data.namaPengirim || ''}
+                onChange={(e) => handleFieldChange('namaPengirim', e.target.value)}
+                placeholder="Contoh: AHMAD MARZUKI"
+                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm font-bold text-slate-100 focus:outline-none focus:border-purple-500 transition"
+              />
+            </div>
+
+            <div className="sm:col-span-2">
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-xs font-semibold text-slate-300">
+                  Status Transaksi
+                </label>
+                <div className="flex items-center gap-1 text-[10px]">
+                  {['BERHASIL / SUKSES', 'PENDING', 'PROSES'].map((st) => (
+                    <button
+                      key={st}
+                      type="button"
+                      onClick={() => handleFieldChange('statusTransaksi', st)}
+                      className={`px-2 py-0.5 rounded font-bold transition ${
+                        (data.statusTransaksi || 'BERHASIL / SUKSES') === st
+                          ? 'bg-emerald-600 text-white shadow-xs'
+                          : 'bg-slate-800 text-slate-300 hover:text-white'
+                      }`}
+                    >
+                      {st}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <input
+                type="text"
+                value={data.statusTransaksi || 'BERHASIL / SUKSES'}
+                onChange={(e) => handleFieldChange('statusTransaksi', e.target.value)}
+                placeholder="BERHASIL / SUKSES"
+                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm font-bold text-emerald-400 focus:outline-none focus:border-purple-500 transition"
+              />
+            </div>
+          </div>
+        ) : isBpjs ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-semibold text-emerald-300 mb-1">
@@ -646,9 +801,42 @@ export const ReceiptEditor: React.FC<ReceiptEditorProps> = ({
           <div>
             <div className="flex items-center justify-between mb-1">
               <label className="block text-xs font-medium text-slate-300">
-                {isToken ? 'RP BAYAR (Nominal Token)' : isBpjs ? 'RP TAGIHAN (Iuran BPJS)' : 'RP TAG PLN (Tagihan Murni)'}
+                {isTransfer ? 'NOMINAL TRF (Transfer)' : isToken ? 'RP BAYAR (Nominal Token)' : isBpjs ? 'RP TAGIHAN (Iuran BPJS)' : 'RP TAG PLN (Tagihan Murni)'}
               </label>
-              {isToken && (
+              {isTransfer ? (
+                <div className="flex gap-1 text-[10px]">
+                  <button
+                    type="button"
+                    onClick={() => handleFieldChange('tagihan', 100000)}
+                    className="px-1.5 py-0.5 rounded bg-slate-700 hover:bg-slate-600 text-slate-200"
+                  >
+                    100k
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleFieldChange('tagihan', 200000)}
+                    className="px-1.5 py-0.5 rounded bg-slate-700 hover:bg-slate-600 text-slate-200"
+                  >
+                    200k
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleFieldChange('tagihan', 500000)}
+                    className={`px-1.5 py-0.5 rounded font-bold ${
+                      data.tagihan === 500000 ? 'bg-purple-600 text-white ring-1 ring-purple-400' : 'bg-slate-700 hover:bg-slate-600 text-slate-200'
+                    }`}
+                  >
+                    500k
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleFieldChange('tagihan', 1000000)}
+                    className="px-1.5 py-0.5 rounded bg-slate-700 hover:bg-slate-600 text-slate-200"
+                  >
+                    1jt
+                  </button>
+                </div>
+              ) : isToken ? (
                 <div className="flex gap-1 text-[10px]">
                   <button
                     type="button"
@@ -681,7 +869,7 @@ export const ReceiptEditor: React.FC<ReceiptEditorProps> = ({
                     200k
                   </button>
                 </div>
-              )}
+              ) : null}
             </div>
             <div className="relative">
               <span className="absolute left-3 top-2 text-xs font-bold text-slate-400">Rp</span>
@@ -689,7 +877,7 @@ export const ReceiptEditor: React.FC<ReceiptEditorProps> = ({
                 type="number"
                 value={data.tagihan || ''}
                 onChange={(e) => handleFieldChange('tagihan', Number(e.target.value))}
-                placeholder={isToken ? "100000" : isBpjs ? "150000" : "324500"}
+                placeholder={isTransfer ? "500000" : isToken ? "100000" : isBpjs ? "150000" : "324500"}
                 className="w-full bg-slate-900 border border-slate-700 rounded-lg pl-9 pr-3 py-2 text-sm font-semibold text-white focus:outline-none focus:border-emerald-500 transition"
               />
             </div>
@@ -700,14 +888,14 @@ export const ReceiptEditor: React.FC<ReceiptEditorProps> = ({
               <label className="block text-xs font-medium text-slate-300">
                 Admin Bank <span className="text-emerald-400 font-bold">(Otomatis: 5.000)</span>
               </label>
-              {isToken || isBpjs ? (
+              {isTransfer || isToken || isBpjs ? (
                 <div className="flex gap-1.5 text-[10px]">
                   <button
                     type="button"
                     onClick={() => handleAdminPreset(5000)}
                     className={`px-2 py-0.5 rounded font-bold transition ${
                       data.adminBank === 5000 || !data.adminBank
-                        ? (isBpjs ? 'bg-emerald-600 text-white shadow-sm ring-1 ring-emerald-400' : 'bg-amber-600 text-white shadow-sm ring-1 ring-amber-400')
+                        ? (isTransfer ? 'bg-purple-600 text-white shadow-sm ring-1 ring-purple-400' : isBpjs ? 'bg-emerald-600 text-white shadow-sm ring-1 ring-emerald-400' : 'bg-amber-600 text-white shadow-sm ring-1 ring-amber-400')
                         : 'bg-slate-700 hover:bg-slate-600 text-slate-200'
                     }`}
                   >
@@ -718,7 +906,7 @@ export const ReceiptEditor: React.FC<ReceiptEditorProps> = ({
                     onClick={() => handleAdminPreset(10000)}
                     className={`px-2 py-0.5 rounded font-bold transition ${
                       data.adminBank === 10000
-                        ? (isBpjs ? 'bg-emerald-600 text-white shadow-sm ring-1 ring-emerald-400' : 'bg-amber-600 text-white shadow-sm ring-1 ring-amber-400')
+                        ? (isTransfer ? 'bg-purple-600 text-white shadow-sm ring-1 ring-purple-400' : isBpjs ? 'bg-emerald-600 text-white shadow-sm ring-1 ring-emerald-400' : 'bg-amber-600 text-white shadow-sm ring-1 ring-amber-400')
                         : 'bg-slate-700 hover:bg-slate-600 text-slate-200'
                     }`}
                   >

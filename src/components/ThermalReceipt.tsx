@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { ReceiptData, PaperSize } from '../types';
-import { formatRupiah, isTokenReceipt, isBpjsReceipt, getStroomToken, formatToken20, getReceiptKwh } from '../utils/escpos';
+import { formatRupiah, isTokenReceipt, isBpjsReceipt, isTransferReceipt, getStroomToken, formatToken20, getReceiptKwh } from '../utils/escpos';
 import { generateReceiptCanvas, shareReceiptToWhatsApp } from '../utils/receiptCanvas';
 import { 
   Copy, 
@@ -72,6 +72,7 @@ export const ThermalReceipt: React.FC<ThermalReceiptProps> = ({
   const is58 = paperSize === '58mm';
   const isToken = isTokenReceipt(data);
   const isBpjs = isBpjsReceipt(data);
+  const isTransfer = isTransferReceipt(data);
   const tokenValue = getStroomToken(data);
   const kwhValue = getReceiptKwh(data);
 
@@ -178,7 +179,7 @@ export const ThermalReceipt: React.FC<ThermalReceiptProps> = ({
             <div className="border-b-2 border-dashed border-slate-800 my-1.5" />
 
             <h3 className="text-[10.5px] sm:text-xs font-bold text-slate-900 uppercase my-1 tracking-wide">
-              {data.headerTitle || 'STRUK PEMBAYARAN TAGIHAN LISTRIK'}
+              {data.headerTitle || (isTransfer ? 'STRUK TRANSAKSI KIRIM UANG' : isBpjs ? 'STRUK PEMBAYARAN IURAN BPJS' : isToken ? 'STRUK PEMBELIAN LISTRIK PRABAYAR' : 'STRUK PEMBAYARAN TAGIHAN LISTRIK')}
             </h3>
           </div>
 
@@ -203,9 +204,51 @@ export const ThermalReceipt: React.FC<ThermalReceiptProps> = ({
             )}
           </div>
 
-          {/* Customer & Bill Details: Format dua kolom dengan pemisah titik dua */}
+          {/* Customer / Transaction Details: Format dua kolom dengan pemisah titik dua */}
           <div className="space-y-1 text-[11px] sm:text-xs">
-            {isBpjs ? (
+            {isTransfer ? (
+              <>
+                {data.bankTujuan && (
+                  <div className={`grid ${is58 ? 'grid-cols-[74px_10px_1fr]' : 'grid-cols-[98px_12px_1fr]'} items-baseline`}>
+                    <span className="text-slate-700 font-semibold">BANK TUJUAN</span>
+                    <span className="text-slate-900 font-bold text-center">:</span>
+                    <span className="text-slate-950 font-bold uppercase text-left">{data.bankTujuan}</span>
+                  </div>
+                )}
+
+                {data.noRekening && (
+                  <div className={`grid ${is58 ? 'grid-cols-[74px_10px_1fr]' : 'grid-cols-[98px_12px_1fr]'} items-baseline`}>
+                    <span className="text-slate-700 font-semibold">NO REKENING</span>
+                    <span className="text-slate-900 font-bold text-center">:</span>
+                    <span className="text-slate-950 font-bold tracking-wider text-left">{data.noRekening}</span>
+                  </div>
+                )}
+
+                {(data.namaPenerima || data.nama) && (
+                  <div className={`grid ${is58 ? 'grid-cols-[74px_10px_1fr]' : 'grid-cols-[98px_12px_1fr]'} items-baseline`}>
+                    <span className="text-slate-700 font-semibold">PENERIMA</span>
+                    <span className="text-slate-900 font-bold text-center">:</span>
+                    <span className="text-slate-950 font-bold uppercase text-left truncate">{data.namaPenerima || data.nama}</span>
+                  </div>
+                )}
+
+                {data.namaPengirim && (
+                  <div className={`grid ${is58 ? 'grid-cols-[74px_10px_1fr]' : 'grid-cols-[98px_12px_1fr]'} items-baseline`}>
+                    <span className="text-slate-600 font-medium">SUMBER DANA</span>
+                    <span className="text-slate-900 font-bold text-center">:</span>
+                    <span className="text-slate-900 font-semibold uppercase text-left">{data.namaPengirim}</span>
+                  </div>
+                )}
+
+                {data.statusTransaksi && (
+                  <div className={`grid ${is58 ? 'grid-cols-[74px_10px_1fr]' : 'grid-cols-[98px_12px_1fr]'} items-baseline`}>
+                    <span className="text-slate-700 font-semibold">STATUS</span>
+                    <span className="text-slate-900 font-bold text-center">:</span>
+                    <span className="text-slate-950 font-bold uppercase text-left">{data.statusTransaksi}</span>
+                  </div>
+                )}
+              </>
+            ) : isBpjs ? (
               <>
                 <div className={`grid ${is58 ? 'grid-cols-[74px_10px_1fr]' : 'grid-cols-[98px_12px_1fr]'} items-baseline`}>
                   <span className="text-slate-700 font-semibold">NO POLIS</span>
@@ -322,10 +365,10 @@ export const ThermalReceipt: React.FC<ThermalReceiptProps> = ({
             })}
           </div>
 
-          {/* Financial Calculation Section: For Token Listrik, "RP TAG PLN" is changed to "RP BAYAR", for BPJS "RP TAGIHAN" */}
+          {/* Financial Calculation Section: For Kirim Uang "NOMINAL TRF", Token Listrik "RP BAYAR", BPJS "RP TAGIHAN" */}
           <div className="space-y-1 text-[11px] sm:text-xs">
             <div className={`grid ${is58 ? 'grid-cols-[74px_10px_1fr]' : 'grid-cols-[98px_12px_1fr]'} items-baseline`}>
-              <span className="text-slate-600 font-medium">{isToken ? 'RP BAYAR' : isBpjs ? 'RP TAGIHAN' : 'RP TAG PLN'}</span>
+              <span className="text-slate-600 font-medium">{isTransfer ? 'NOMINAL TRF' : isToken ? 'RP BAYAR' : isBpjs ? 'RP TAGIHAN' : 'RP TAG PLN'}</span>
               <span className="text-slate-900 font-bold text-center">:</span>
               <span className="text-slate-900 font-semibold text-left">{formatRupiah(data.tagihan)}</span>
             </div>

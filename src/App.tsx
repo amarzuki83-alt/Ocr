@@ -115,13 +115,14 @@ export default function App() {
 
   // Handle OCR Completion: merge detected fields with existing
   const handleOcrScanComplete = (parsed: Partial<ReceiptData>, rawText: string) => {
-    const isTokenScan = (parsed.headerTitle || '').includes('TOKEN') || Boolean(parsed.stroomToken);
-    const isBpjsScan = (parsed.headerTitle || '').includes('BPJS') || Boolean(parsed.noPolis) || Boolean(parsed.jmlPeserta);
+    const isTransferScan = (parsed.headerTitle || '').includes('KIRIM') || (parsed.headerTitle || '').includes('TRANSFER') || Boolean(parsed.bankTujuan) || Boolean(parsed.noRekening) || Boolean(parsed.namaPenerima) || Boolean(parsed.namaPengirim);
+    const isTokenScan = !isTransferScan && ((parsed.headerTitle || '').includes('TOKEN') || Boolean(parsed.stroomToken));
+    const isBpjsScan = !isTransferScan && ((parsed.headerTitle || '').includes('BPJS') || Boolean(parsed.noPolis) || Boolean(parsed.jmlPeserta));
     setReceiptData((prev) => {
       const cleanExtra = (parsed.extraFields || prev.extraFields || []).filter((f) => 
         !isTokenScan || (!/PPJ/i.test(f.label) && !/ppj/i.test(f.id) && !/TOKEN|STROOM/i.test(f.label) && !/token/i.test(f.id))
       );
-      // Requirement: Admin bank 5000 otomatis untuk struk token, pascabayar, maupun BPJS tanpa perlu klik lagi
+      // Requirement: Admin bank 5000 otomatis untuk struk token, pascabayar, BPJS, maupun Kirim Uang tanpa perlu klik lagi
       const adminBank = 5000;
       const tagihan = parsed.tagihan !== undefined ? parsed.tagihan : (prev.tagihan || 0);
       const totalBayar = tagihan > 0 ? tagihan + adminBank : (parsed.totalBayar || prev.totalBayar || adminBank);
@@ -131,9 +132,16 @@ export default function App() {
         ...parsed,
         adminBank,
         totalBayar,
-        blnThn: (isTokenScan || isBpjsScan) ? (parsed.blnThn || '') : (parsed.blnThn !== undefined ? parsed.blnThn : prev.blnThn),
-        standMeter: (isTokenScan || isBpjsScan) ? '' : (parsed.standMeter !== undefined ? parsed.standMeter : prev.standMeter),
-        tarifDaya: isBpjsScan ? '' : (parsed.tarifDaya || prev.tarifDaya),
+        // Pastikan sumber dana / pengirim, no rekening tujuan, dan penerima strictly menggunakan data hasil upload
+        bankTujuan: parsed.bankTujuan !== undefined ? parsed.bankTujuan : (isTransferScan ? 'BANK BRI' : prev.bankTujuan || ''),
+        noRekening: parsed.noRekening !== undefined ? parsed.noRekening : (isTransferScan ? '' : prev.noRekening || ''),
+        namaPenerima: parsed.namaPenerima !== undefined ? parsed.namaPenerima : (isTransferScan ? '' : prev.namaPenerima || ''),
+        namaPengirim: parsed.namaPengirim !== undefined ? parsed.namaPengirim : (isTransferScan ? '' : prev.namaPengirim || ''),
+        nama: (isTransferScan ? (parsed.namaPenerima || parsed.nama || '') : (parsed.nama || prev.nama || '')),
+        statusTransaksi: parsed.statusTransaksi || 'BERHASIL / SUKSES',
+        blnThn: (isTokenScan || isBpjsScan || isTransferScan) ? (parsed.blnThn || '') : (parsed.blnThn !== undefined ? parsed.blnThn : prev.blnThn),
+        standMeter: (isTokenScan || isBpjsScan || isTransferScan) ? '' : (parsed.standMeter !== undefined ? parsed.standMeter : prev.standMeter),
+        tarifDaya: (isBpjsScan || isTransferScan) ? '' : (parsed.tarifDaya || prev.tarifDaya),
         noPolis: parsed.noPolis || prev.noPolis || '',
         jmlPeserta: parsed.jmlPeserta || prev.jmlPeserta || '',
         periode: parsed.periode || prev.periode || '',
@@ -141,7 +149,7 @@ export default function App() {
         // Requirement: Pertahankan nama loket di semua struk menjadi LOKET PPOB ATHAR DIGITAL
         loket: 'LOKET PPOB ATHAR DIGITAL',
         alamat: parsed.alamat || prev.alamat || 'Jl. Raya Bapuhbandung Glagah',
-        headerTitle: parsed.headerTitle || (isBpjsScan ? 'STRUK PEMBAYARAN IURAN BPJS' : isTokenScan ? 'STRUK PEMBELIAN TOKEN LISTRIK' : 'STRUK PEMBAYARAN TAGIHAN LISTRIK'),
+        headerTitle: parsed.headerTitle || (isTransferScan ? 'STRUK TRANSAKSI KIRIM UANG' : isBpjsScan ? 'STRUK PEMBAYARAN IURAN BPJS' : isTokenScan ? 'STRUK PEMBELIAN TOKEN LISTRIK' : 'STRUK PEMBAYARAN TAGIHAN LISTRIK'),
         footerDisclaimer: parsed.footerDisclaimer || 'Simpan struk ini sebagai bukti pembayaran',
         footerGreeting: parsed.footerGreeting || 'Terimakasih',
         extraFields: cleanExtra,
@@ -172,6 +180,11 @@ export default function App() {
       blnThn: '',
       stroomToken: '',
       kwh: '',
+      bankTujuan: '',
+      noRekening: '',
+      namaPenerima: '',
+      namaPengirim: '',
+      statusTransaksi: '',
       tagihan: 0,
       adminBank: 5000,
       totalBayar: 5000,

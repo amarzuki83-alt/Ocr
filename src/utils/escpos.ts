@@ -85,6 +85,27 @@ export function isTokenReceipt(data: ReceiptData): boolean {
 }
 
 /**
+ * Detects if the receipt is for Kirim Uang / Transfer Bank
+ */
+export function isTransferReceipt(data: ReceiptData): boolean {
+  const header = (data.headerTitle || '').toUpperCase();
+  const sub = (data.subHeader || '').toUpperCase();
+  const hasTransferExtra = (data.extraFields || []).some((f) => 
+    /TRANSFER|KIRIM UANG|REKENING|BANK/i.test(f.label) || /transfer|rekening|bank/i.test(f.id)
+  );
+  return Boolean(
+    header.includes('TRANSFER') ||
+    header.includes('KIRIM UANG') ||
+    sub.includes('TRANSFER') ||
+    sub.includes('KIRIM UANG') ||
+    Boolean(data.bankTujuan) ||
+    Boolean(data.noRekening) ||
+    Boolean(data.namaPenerima) ||
+    hasTransferExtra
+  );
+}
+
+/**
  * Retrieves the 20-digit token string from dedicated field or extraFields
  */
 export function getStroomToken(data: ReceiptData): string {
@@ -219,10 +240,17 @@ export function generatePlainTextReceipt(data: ReceiptData, paperSize: PaperSize
   // Customer info
   const isBpjs = isBpjsReceipt(data);
   const isToken = isTokenReceipt(data);
+  const isTransfer = isTransferReceipt(data);
   const tokenValue = getStroomToken(data);
   const kwhValue = getReceiptKwh(data);
 
-  if (isBpjs) {
+  if (isTransfer) {
+    if (data.bankTujuan) lines.push(formatTwoColumns('BANK TUJUAN', data.bankTujuan.toUpperCase(), width));
+    lines.push(formatTwoColumns('NO REKENING', data.noRekening || data.idPel || '-', width));
+    lines.push(formatTwoColumns('PENERIMA', (data.namaPenerima || data.nama || '-').toUpperCase(), width));
+    if (data.namaPengirim) lines.push(formatTwoColumns('SUMBER DANA', data.namaPengirim.toUpperCase(), width));
+    lines.push(formatTwoColumns('STATUS', (data.statusTransaksi || 'BERHASIL / SUKSES').toUpperCase(), width));
+  } else if (isBpjs) {
     lines.push(formatTwoColumns('NO POLIS', data.noPolis || data.idPel || '-', width));
     if (data.nama) lines.push(formatTwoColumns('NAMA', data.nama, width));
     lines.push(formatTwoColumns('JML PESERTA', data.jmlPeserta || '1 ORANG', width));
@@ -265,10 +293,10 @@ export function generatePlainTextReceipt(data: ReceiptData, paperSize: PaperSize
     }
   }
 
-  // Financials: For Token Listrik, "RP TAG PLN" is changed to "RP BAYAR", for BPJS "RP TAGIHAN"
+  // Financials: For Transfer "NOMINAL TRF", for Token Listrik "RP BAYAR", for BPJS "RP TAGIHAN"
   const adminFee = data.adminBank !== undefined && data.adminBank > 0 ? data.adminBank : 5000;
   const total = data.totalBayar || ((data.tagihan || 0) + adminFee);
-  const tagihanLabel = isToken ? 'RP BAYAR' : isBpjs ? 'RP TAGIHAN' : 'RP TAG PLN';
+  const tagihanLabel = isTransfer ? 'NOMINAL TRF' : isToken ? 'RP BAYAR' : isBpjs ? 'RP TAGIHAN' : 'RP TAG PLN';
   lines.push(formatTwoColumns(tagihanLabel, formatRupiah(data.tagihan), width));
   lines.push(formatTwoColumns('ADMIN BANK', formatRupiah(adminFee), width));
 
@@ -379,10 +407,19 @@ export function buildEscPosBuffer(data: ReceiptData, paperSize: PaperSize = '58m
   // 4. Customer Info
   const isBpjs = isBpjsReceipt(data);
   const isToken = isTokenReceipt(data);
+  const isTransfer = isTransferReceipt(data);
   const tokenValue = getStroomToken(data);
   const kwhValue = getReceiptKwh(data);
 
-  if (isBpjs) {
+  if (isTransfer) {
+    if (data.bankTujuan) addText(formatTwoColumns('BANK TUJUAN', data.bankTujuan.toUpperCase(), width) + '\n');
+    addBytes(ESC_POS.BOLD_ON);
+    addText(formatTwoColumns('NO REKENING', data.noRekening || data.idPel || '-', width) + '\n');
+    addText(formatTwoColumns('PENERIMA', (data.namaPenerima || data.nama || '-').toUpperCase(), width) + '\n');
+    addBytes(ESC_POS.BOLD_OFF);
+    if (data.namaPengirim) addText(formatTwoColumns('SUMBER DANA', data.namaPengirim.toUpperCase(), width) + '\n');
+    addText(formatTwoColumns('STATUS', (data.statusTransaksi || 'BERHASIL / SUKSES').toUpperCase(), width) + '\n');
+  } else if (isBpjs) {
     addBytes(ESC_POS.BOLD_ON);
     addText(formatTwoColumns('NO POLIS', data.noPolis || data.idPel || '-', width) + '\n');
     addBytes(ESC_POS.BOLD_OFF);
@@ -440,10 +477,10 @@ export function buildEscPosBuffer(data: ReceiptData, paperSize: PaperSize = '58m
     }
   }
 
-  // 5. Billing Info: For Token Listrik, "RP TAG PLN" is changed to "RP BAYAR", for BPJS "RP TAGIHAN"
+  // 5. Billing Info: For Transfer "NOMINAL TRF", for Token Listrik "RP BAYAR", for BPJS "RP TAGIHAN"
   const escposAdminFee = data.adminBank !== undefined && data.adminBank > 0 ? data.adminBank : 5000;
   const escposTotal = data.totalBayar || ((data.tagihan || 0) + escposAdminFee);
-  const escposTagihanLabel = isToken ? 'RP BAYAR' : isBpjs ? 'RP TAGIHAN' : 'RP TAG PLN';
+  const escposTagihanLabel = isTransfer ? 'NOMINAL TRF' : isToken ? 'RP BAYAR' : isBpjs ? 'RP TAGIHAN' : 'RP TAG PLN';
   addText(formatTwoColumns(escposTagihanLabel, formatRupiah(data.tagihan), width) + '\n');
   addText(formatTwoColumns('ADMIN BANK', formatRupiah(escposAdminFee), width) + '\n');
 

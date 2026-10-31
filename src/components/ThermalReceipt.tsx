@@ -352,9 +352,9 @@ export const ThermalReceipt: React.FC<ThermalReceiptProps> = ({
             </div>
           </div>
 
-          {/* Disclaimer / Footer Notes (Tepat Satu Baris) */}
-          <div className="pt-2 text-center space-y-1 overflow-hidden">
-            <p className="text-[7.5px] sm:text-[8.5px] leading-tight text-slate-700 font-medium italic whitespace-nowrap overflow-hidden text-center tracking-tighter">
+          {/* Disclaimer / Footer Notes (Font Lebih Besar & Tebal) */}
+          <div className="pt-2 text-center space-y-1">
+            <p className="text-[9px] sm:text-[10px] leading-tight text-slate-950 font-bold whitespace-nowrap overflow-hidden text-center tracking-tight">
               {data.footerDisclaimer || 'Simpan struk ini sebagai bukti pembayaran'}
             </p>
 

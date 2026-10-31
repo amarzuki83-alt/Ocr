@@ -231,17 +231,40 @@ export function generateReceiptCanvas(data: ReceiptData, paperSize: PaperSize = 
   });
   y += 13;
 
-  // Footer Disclaimer (Wajib tepat SATU BARIS saja tanpa wrapping)
+  // Footer Disclaimer (Dibuat lebih besar dan tebal)
   ctx.textAlign = 'center';
-  ctx.font = is58
-    ? 'italic 7px "Courier Prime", "Courier New", Courier, monospace'
-    : 'italic 9px "Courier Prime", "Courier New", Courier, monospace';
-  ctx.fillStyle = '#18181b';
+  const disclaimerBaseSize = is58 ? 8.5 : 10.5;
+  ctx.font = `bold ${disclaimerBaseSize}px "Courier Prime", "Courier New", Courier, monospace`;
+  ctx.fillStyle = '#000000';
 
   const footerText = data.footerDisclaimer || 'Simpan struk ini sebagai bukti pembayaran';
   if (footerText) {
-    ctx.fillText(footerText, baseWidth / 2, y);
-    y += 11;
+    let activeSize = disclaimerBaseSize;
+    while (ctx.measureText(footerText).width > (baseWidth - (paddingX * 2)) && activeSize > 7.5) {
+      activeSize -= 0.25;
+      ctx.font = `bold ${activeSize}px "Courier Prime", "Courier New", Courier, monospace`;
+    }
+    const measuredW = ctx.measureText(footerText).width;
+    if (measuredW <= (baseWidth - (paddingX * 2))) {
+      ctx.fillText(footerText, baseWidth / 2, y);
+      y += 12;
+    } else {
+      const words = footerText.split(' ');
+      let line = '';
+      for (const w of words) {
+        if (ctx.measureText((line + ' ' + w).trim()).width <= (baseWidth - (paddingX * 2))) {
+          line = (line + ' ' + w).trim();
+        } else {
+          ctx.fillText(line, baseWidth / 2, y);
+          y += 11;
+          line = w;
+        }
+      }
+      if (line) {
+        ctx.fillText(line, baseWidth / 2, y);
+        y += 11;
+      }
+    }
   }
 
   const greetingText = data.footerGreeting !== undefined ? data.footerGreeting : 'Terimakasih';

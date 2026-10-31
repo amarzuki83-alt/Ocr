@@ -458,8 +458,9 @@ export function buildEscPosBuffer(data: ReceiptData, paperSize: PaperSize = '58m
   addText(formatTwoColumns('TOTAL BAYAR', escFormattedTotal, width) + '\n');
   addBytes(ESC_POS.BOLD_OFF);
 
-  // 6. Disclaimer & Footer
+  // 6. Disclaimer & Footer (Dibuat tebal / Bold)
   addBytes(ESC_POS.ALIGN_CENTER);
+  addBytes(ESC_POS.BOLD_ON);
   const escDisclaimerStr = data.footerDisclaimer || 'Simpan struk ini sebagai bukti pembayaran';
   if (escDisclaimerStr) {
     const words = escDisclaimerStr.split(' ');
@@ -474,6 +475,7 @@ export function buildEscPosBuffer(data: ReceiptData, paperSize: PaperSize = '58m
     }
     if (currentLine) addText(centerText(currentLine));
   }
+  addBytes(ESC_POS.BOLD_OFF);
 
   const escGreetingStr = data.footerGreeting !== undefined ? data.footerGreeting : 'Terimakasih';
   if (escGreetingStr) {

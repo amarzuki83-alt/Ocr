@@ -57,19 +57,22 @@ export function generateReceiptCanvas(data: ReceiptData, paperSize: PaperSize = 
       : 'bold 9.5px "Courier Prime", "Courier New", Courier, monospace';
     ctx.fillStyle = '#000000';
     ctx.fillText(alamatVal, baseWidth / 2, y);
-    y += 11;
+    y += 10;
   }
 
-  // Header Baris 2: Judul Struk (Rapat mendekati garis putus-putus)
-  y += 2;
+  // Garis putus-putus DI ATAS judul struk (sesuai permintaan user)
+  drawDashedLine(ctx, paddingX, baseWidth - paddingX, y, 4, '#000000', 1.5);
+  y += 10;
+
+  // Header Baris 2: Judul Struk
   ctx.font = is58
     ? 'bold 8.5px "Courier Prime", "Courier New", Courier, monospace'
     : 'bold 11px "Courier Prime", "Courier New", Courier, monospace';
   ctx.fillStyle = '#000000';
   ctx.fillText((data.headerTitle || 'STRUK PEMBAYARAN TAGIHAN LISTRIK').toUpperCase(), baseWidth / 2, y);
-  y += 8; // Rapat dan dekat ke garis putus-putus
+  y += 7;
 
-  // Double divider
+  // Garis putus-putus DI BAWAH judul struk
   drawDashedLine(ctx, paddingX, baseWidth - paddingX, y, 4, '#000000', 1.5);
   y += 13;
 
@@ -153,26 +156,27 @@ export function generateReceiptCanvas(data: ReceiptData, paperSize: PaperSize = 
         fontSize: is58 ? 9.5 : 11.5,
         labelColor: '#000000',
       });
-      y += 14;
+      y += 13;
 
-      // Prominent enlarged 20-digit token box (high contrast, bold font)
+      // Prominent enlarged 20-digit token box (high contrast, ultra-bold font)
       const tokenFormatted = formatToken20(tokenValue);
-      const boxH = is58 ? 24 : 28;
+      const boxH = is58 ? 27 : 33;
       const boxW = baseWidth - (paddingX * 2);
 
       ctx.fillStyle = '#ffffff';
-      ctx.fillRect(paddingX, y - 16, boxW, boxH);
+      ctx.fillRect(paddingX, y - 18, boxW, boxH);
       ctx.strokeStyle = '#000000';
       ctx.lineWidth = 1.5;
-      ctx.strokeRect(paddingX, y - 16, boxW, boxH);
+      ctx.strokeRect(paddingX, y - 18, boxW, boxH);
 
       ctx.textAlign = 'center';
+      // Perbesar angka token stroom secara maksimal dan tegas
       ctx.font = is58
-        ? 'bold 9.5px "Courier Prime", "Courier New", Courier, monospace'
-        : 'bold 12px "Courier Prime", "Courier New", Courier, monospace';
+        ? '900 12.5px "Courier Prime", "Courier New", Courier, monospace'
+        : '900 16px "Courier Prime", "Courier New", Courier, monospace';
       ctx.fillStyle = '#000000';
-      ctx.fillText(tokenFormatted, baseWidth / 2, y + 1);
-      y += 16;
+      ctx.fillText(tokenFormatted, baseWidth / 2, y + 1.5);
+      y += 17;
 
       drawDashedLine(ctx, paddingX, baseWidth - paddingX, y, 4, '#000000', 1.5);
       y += 12;
@@ -396,9 +400,10 @@ export async function shareReceiptToWhatsApp(
     const totalBayarVal = data.totalBayar || ((data.tagihan || 0) + adminBankVal);
 
     const captionLines: string[] = [
-      `*${(data.headerTitle || (waIsBpjs ? 'STRUK PEMBAYARAN IURAN BPJS' : 'STRUK PEMBAYARAN TAGIHAN LISTRIK')).toUpperCase()}*`,
-      `*${data.loket || 'LOKET PPOB ATHAR DIGITAL'}*`,
+      `*LOKET PPOB ATHAR DIGITAL*`,
       `*${data.alamat || 'Jl. Raya Bapuhbandung Glagah'}*`,
+      `---------------------------------`,
+      `*${(data.headerTitle || (waIsBpjs ? 'STRUK PEMBAYARAN IURAN BPJS' : 'STRUK PEMBAYARAN TAGIHAN LISTRIK')).toUpperCase()}*`,
       `---------------------------------`,
     ];
 

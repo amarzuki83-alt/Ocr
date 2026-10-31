@@ -164,21 +164,26 @@ export const ThermalReceipt: React.FC<ThermalReceiptProps> = ({
               Alamat: Jl. Raya Bapuhbandung Glagah (Di bawah nama loket)
               Baris 2: STRUK PEMBAYARAN TAGIHAN LISTRIK / TOKEN / BPJS
           */}
-          <div className="text-center pb-2">
+          <div className="text-center pb-1">
             <h2 className="text-xs sm:text-sm font-extrabold tracking-tight text-slate-950 uppercase">
               LOKET PPOB ATHAR DIGITAL
             </h2>
             {(data.alamat || 'Jl. Raya Bapuhbandung Glagah') && (
-              <p className="text-[10.5px] sm:text-xs font-bold text-slate-950 tracking-normal mt-0.5">
+              <p className="text-[10px] sm:text-[11px] font-bold text-slate-950 tracking-normal mt-0.5">
                 {data.alamat || 'Jl. Raya Bapuhbandung Glagah'}
               </p>
             )}
-            <h3 className="text-[11px] sm:text-xs font-bold text-slate-800 uppercase mt-2 mb-0.5 tracking-wide">
+
+            {/* Garis putus-putus DI ATAS judul struk */}
+            <div className="border-b-2 border-dashed border-slate-800 my-1.5" />
+
+            <h3 className="text-[10.5px] sm:text-xs font-bold text-slate-900 uppercase my-1 tracking-wide">
               {data.headerTitle || 'STRUK PEMBAYARAN TAGIHAN LISTRIK'}
             </h3>
           </div>
 
-          <div className="border-b-2 border-dashed border-slate-800 mt-1 mb-2" />
+          {/* Garis putus-putus DI BAWAH judul struk */}
+          <div className="border-b-2 border-dashed border-slate-800 mb-2" />
 
           {/* Transaction Metadata: Format dua kolom dengan pemisah titik dua */}
           <div className="space-y-1 text-[11px] sm:text-xs">
@@ -294,7 +299,7 @@ export const ThermalReceipt: React.FC<ThermalReceiptProps> = ({
                       <span className="text-slate-900 font-extrabold text-center">:</span>
                       <span className="text-slate-500 text-[9px] italic">20 Digit Token PLN</span>
                     </div>
-                    <div className="text-sm sm:text-lg font-black font-mono tracking-wider text-slate-950 py-1 px-1.5 bg-white border border-slate-300 rounded shadow-inner select-all">
+                    <div className="text-sm sm:text-base font-black font-mono tracking-wider text-slate-950 py-1.5 px-1 bg-white border-2 border-slate-900 rounded shadow-inner select-all">
                       {formatToken20(tokenValue)}
                     </div>
                   </div>

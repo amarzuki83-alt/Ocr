@@ -207,6 +207,7 @@ export function generatePlainTextReceipt(data: ReceiptData, paperSize: PaperSize
   lines.push(center(data.loket || 'LOKET PPOB ATHAR DIGITAL'));
   const alamatText = data.alamat || 'Jl. Raya Bapuhbandung Glagah';
   if (alamatText) lines.push(center(alamatText));
+  lines.push(divider); // Garis putus-putus diatas judul struk
   if (data.headerTitle) lines.push(center(data.headerTitle));
   if (data.subHeader) lines.push(center(data.subHeader));
   lines.push(doubleDivider);
@@ -355,6 +356,9 @@ export function buildEscPosBuffer(data: ReceiptData, paperSize: PaperSize = '58m
     addText(alamatVal + '\n');
     addBytes(ESC_POS.BOLD_OFF);
   }
+
+  // Garis putus-putus DI ATAS judul struk
+  addText(divider);
 
   // Baris 2: Judul Struk
   addBytes(ESC_POS.BOLD_ON);

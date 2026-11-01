@@ -117,8 +117,15 @@ export default function App() {
   const handleOcrScanComplete = (parsed: Partial<ReceiptData>, rawText: string) => {
     const isIndihomeScan = (parsed.headerTitle || '').includes('INDIHOME') || (parsed.headerTitle || '').includes('TELKOM') || Boolean(parsed.noTelkom) || Boolean(parsed.produk);
     const isTransferScan = !isIndihomeScan && ((parsed.headerTitle || '').includes('KIRIM') || (parsed.headerTitle || '').includes('TRANSFER') || Boolean(parsed.bankTujuan) || Boolean(parsed.noRekening) || Boolean(parsed.namaPenerima) || Boolean(parsed.namaPengirim));
-    const isTokenScan = !isIndihomeScan && !isTransferScan && ((parsed.headerTitle || '').includes('TOKEN') || Boolean(parsed.stroomToken));
-    const isBpjsScan = !isIndihomeScan && !isTransferScan && ((parsed.headerTitle || '').includes('BPJS') || Boolean(parsed.noPolis) || Boolean(parsed.jmlPeserta));
+    const isTokenScan = !isIndihomeScan && !isTransferScan && (
+      (parsed.headerTitle || '').includes('TOKEN') ||
+      (parsed.headerTitle || '').includes('PRABAYAR') ||
+      (parsed.headerTitle || '').includes('PREPAID') ||
+      Boolean(parsed.stroomToken) ||
+      Boolean(parsed.kwh)
+    );
+    const isBpjsScan = !isIndihomeScan && !isTransferScan && !isTokenScan && ((parsed.headerTitle || '').includes('BPJS') || Boolean(parsed.noPolis) || Boolean(parsed.jmlPeserta));
+
     setReceiptData((prev) => {
       const cleanExtra = (parsed.extraFields || prev.extraFields || []).filter((f) => 
         !isTokenScan || (!/PPJ/i.test(f.label) && !/ppj/i.test(f.id) && !/TOKEN|STROOM/i.test(f.label) && !/token/i.test(f.id))
@@ -144,15 +151,18 @@ export default function App() {
         statusTransaksi: parsed.statusTransaksi || 'BERHASIL / SUKSES',
         blnThn: (isTokenScan || isTransferScan) ? '' : (parsed.blnThn !== undefined ? parsed.blnThn : prev.blnThn),
         standMeter: (isTokenScan || isBpjsScan || isTransferScan || isIndihomeScan) ? '' : (parsed.standMeter !== undefined ? parsed.standMeter : prev.standMeter),
-        tarifDaya: (isBpjsScan || isTransferScan || isIndihomeScan) ? '' : (parsed.tarifDaya || prev.tarifDaya),
+        // Pastikan tarif/daya dan kwh hasil upload diprioritaskan
+        tarifDaya: (isBpjsScan || isTransferScan || isIndihomeScan)
+          ? ''
+          : (parsed.tarifDaya || (isTokenScan ? 'R1M / 1300 VA' : (prev.tarifDaya || 'R1 / 900 VA'))),
         noPolis: parsed.noPolis || prev.noPolis || '',
         jmlPeserta: parsed.jmlPeserta || prev.jmlPeserta || '',
         periode: parsed.periode || prev.periode || '',
-        kwh: isTokenScan ? (parsed.kwh !== undefined ? parsed.kwh : (prev.kwh || '')) : (parsed.kwh || prev.kwh || ''),
+        kwh: isTokenScan ? (parsed.kwh || prev.kwh || '') : '',
         // Requirement: Pertahankan nama loket di semua struk menjadi LOKET PPOB ATHAR DIGITAL
         loket: 'LOKET PPOB ATHAR DIGITAL',
         alamat: parsed.alamat || prev.alamat || 'Jl. Raya Bapuhbandung Glagah',
-        headerTitle: parsed.headerTitle || (isIndihomeScan ? 'STRUK PEMBAYARAN TAGIHAN INDIHOME' : isTransferScan ? 'STRUK TRANSAKSI KIRIM UANG' : isBpjsScan ? 'STRUK PEMBAYARAN IURAN BPJS' : isTokenScan ? 'STRUK PEMBELIAN TOKEN LISTRIK' : 'STRUK PEMBAYARAN TAGIHAN LISTRIK'),
+        headerTitle: parsed.headerTitle || (isIndihomeScan ? 'STRUK PEMBAYARAN TAGIHAN INDIHOME' : isTransferScan ? 'STRUK TRANSAKSI KIRIM UANG' : isBpjsScan ? 'STRUK PEMBAYARAN IURAN BPJS' : isTokenScan ? 'STRUK PEMBELIAN LISTRIK PRABAYAR' : 'STRUK PEMBAYARAN TAGIHAN LISTRIK'),
         footerDisclaimer: parsed.footerDisclaimer || 'Simpan struk ini sebagai bukti pembayaran',
         footerGreeting: parsed.footerGreeting || 'Terimakasih',
         extraFields: cleanExtra,

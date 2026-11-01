@@ -86,10 +86,10 @@ export const OcrScanner: React.FC<OcrScannerProps> = ({
         },
       });
 
-      // Set PSM 6 (Uniform Block) and whitelist to prevent misrecognition on thermal receipts
+      // Set PSM 6 (Uniform Block) and whitelist to prevent misrecognition on thermal receipts and mobile screenshots
       await worker.setParameters({
         tessedit_pageseg_mode: PSM.SINGLE_BLOCK, // PSM 6: Assume a single uniform block of text
-        tessedit_char_whitelist: '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz .,:/()-+=%#',
+        tessedit_char_whitelist: "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz .,:/()-+=%#'\"*",
       });
 
       // 3. Recognize text

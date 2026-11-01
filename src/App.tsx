@@ -151,14 +151,14 @@ export default function App() {
         statusTransaksi: parsed.statusTransaksi || 'BERHASIL / SUKSES',
         blnThn: (isTokenScan || isTransferScan) ? '' : (parsed.blnThn !== undefined ? parsed.blnThn : prev.blnThn),
         standMeter: (isTokenScan || isBpjsScan || isTransferScan || isIndihomeScan) ? '' : (parsed.standMeter !== undefined ? parsed.standMeter : prev.standMeter),
-        // Pastikan tarif/daya dan kwh hasil upload diprioritaskan
+        // Pastikan tarif/daya dan kwh hasil upload strictly sesuai gambar yang diupload
         tarifDaya: (isBpjsScan || isTransferScan || isIndihomeScan)
           ? ''
-          : (parsed.tarifDaya || (isTokenScan ? 'R1M / 1300 VA' : (prev.tarifDaya || 'R1 / 900 VA'))),
+          : (parsed.tarifDaya !== undefined && parsed.tarifDaya !== '' ? parsed.tarifDaya : (prev.tarifDaya || '')),
         noPolis: parsed.noPolis || prev.noPolis || '',
         jmlPeserta: parsed.jmlPeserta || prev.jmlPeserta || '',
         periode: parsed.periode || prev.periode || '',
-        kwh: isTokenScan ? (parsed.kwh || prev.kwh || '') : '',
+        kwh: isTokenScan ? (parsed.kwh !== undefined ? parsed.kwh : '') : '',
         // Requirement: Pertahankan nama loket di semua struk menjadi LOKET PPOB ATHAR DIGITAL
         loket: 'LOKET PPOB ATHAR DIGITAL',
         alamat: parsed.alamat || prev.alamat || 'Jl. Raya Bapuhbandung Glagah',

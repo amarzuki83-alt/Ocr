@@ -120,7 +120,7 @@ export const ReceiptEditor: React.FC<ReceiptEditorProps> = ({
   const handleSelectTokenType = () => {
     const defaultTokenAdmin = 5000; // Requirement: Admin bank token listrik jadikan di Rp 5000
     const currentTagihan = data.tagihan || 100000;
-    const initialKwh = data.kwh || calculateKwh(currentTagihan, data.tarifDaya || 'R1M / 1300 VA');
+    const initialKwh = data.kwh || '';
     onChange({
       ...data,
       loket: data.loket || 'LOKET PPOB ATHAR DIGITAL',
@@ -198,18 +198,10 @@ export const ReceiptEditor: React.FC<ReceiptEditorProps> = ({
     handleFieldChange('stroomToken', formatted);
   };
 
-  const handleRecalculateKwh = (customTagihan?: number, customTarif?: string) => {
-    const nominal = customTagihan !== undefined ? customTagihan : data.tagihan || 100000;
-    const tarif = customTarif !== undefined ? customTarif : data.tarifDaya || 'R1M / 1300 VA';
-    const computed = calculateKwh(nominal, tarif);
-    handleFieldChange('kwh', computed);
-  };
-
   const handleSelectTariffPreset = (tarif: string) => {
     onChange({
       ...data,
       tarifDaya: tarif,
-      kwh: data.kwh || calculateKwh(data.tagihan || 100000, tarif),
     });
   };
 
@@ -224,10 +216,6 @@ export const ReceiptEditor: React.FC<ReceiptEditorProps> = ({
         updated.adminBank = 5000;
       }
       updated.totalBayar = tag + (updated.adminBank || adm);
-      // Auto re-estimate kWh when nominal tagihan changes ONLY if kwh is currently empty
-      if (isToken && field === 'tagihan' && !data.kwh) {
-        updated.kwh = calculateKwh(tag, updated.tarifDaya || 'R1 / 900 VA');
-      }
     }
 
     onChange(updated);
@@ -794,20 +782,9 @@ export const ReceiptEditor: React.FC<ReceiptEditorProps> = ({
             {/* Dedicated Jumlah kWh input for Token Listrik */}
             {isToken && (
               <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="block text-xs font-semibold text-amber-300">
-                    Jumlah kWh (Kilowatt-Hour)
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => handleRecalculateKwh()}
-                    title="Hitung ulang kWh berdasarkan Rp Bayar & Tarif PLN"
-                    className="flex items-center gap-1 text-[11px] text-cyan-400 hover:text-cyan-300 font-semibold active:scale-95 transition"
-                  >
-                    <RefreshCw className="w-3 h-3" />
-                    <span>Hitung Otomatis</span>
-                  </button>
-                </div>
+                <label className="block text-xs font-semibold text-amber-300 mb-1">
+                  Jumlah kWh (Kilowatt-Hour)
+                </label>
                 <div className="relative">
                   <input
                     type="text"
@@ -818,7 +795,7 @@ export const ReceiptEditor: React.FC<ReceiptEditorProps> = ({
                   />
                 </div>
                 <p className="text-[10px] text-slate-400 mt-1">
-                  Ketik langsung sesuai angka kWh di struk resmi, atau klik tombol Hitung Otomatis.
+                  Sesuai angka kWh pada struk/gambar yang diupload atau diisi manual (tanpa hitung otomatis).
                 </p>
               </div>
             )}

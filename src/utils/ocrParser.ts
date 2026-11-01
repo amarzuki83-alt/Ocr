@@ -241,7 +241,7 @@ export function extractDaya(raw: string): string {
   // Normalize thousand dots & commas (e.g. 1.300 -> 1300, 2.200 -> 2200, 3.500 -> 3500)
   str = str.replace(/(\d{1,2})[.,](\d{3})/g, '$1$2');
 
-  // Fix OCR confusion between letter O/o and digit 0, and letter l/I/! and 1
+  // Fix OCR confusion between letter O/o and digit 0 inside or around numbers
   str = str.replace(/13[Oo0]{2}/g, '1300')
            .replace(/22[Oo0]{2}/g, '2200')
            .replace(/35[Oo0]{2}/g, '3500')
@@ -254,16 +254,31 @@ export function extractDaya(raw: string): string {
            .replace(/[Il|!]300/g, '1300')
            .replace(/[Il|!]3[Oo0]{2}/g, '1300');
 
-  // Match standard Indonesian PLN Daya numbers, allowing leading zeros (e.g. 000002200 VA, 000001300, 2200 VA, 1300 VA)
-  const standardMatch = str.match(/(?:^|[^\d])0*(450|900|1300|2200|3500|4400|5500|6600|7700|10600|11000|13200|16500|22000|33000|41500)(?:\s*VA|\b)/i);
+  // Convert any sequences of O/o after slash, colon, or whitespace followed by digits to 0
+  // e.g. /000000900, /OOOOOO900, O00000900 -> /000000900
+  str = str.replace(/([/\\|:\s])[0Oo]+(?=[1-9])/g, (match, prefix) => {
+    return prefix + match.slice(1).replace(/[Oo]/g, '0');
+  });
+
+  // Match standard Indonesian PLN Daya numbers, allowing leading zeros/O (e.g. 000000900 VA, 000002200 VA, 000001300, 2200 VA, 900 VA, 450 VA)
+  const standardMatch = str.match(/(?:^|[^\d\w])[0Oo]*(450|900|1300|2200|3500|4400|5500|6600|7700|10600|11000|13200|16500|22000|33000|41500)(?:\s*VA|\b)/i);
   if (standardMatch) {
     return `${standardMatch[1]} VA`;
   }
 
-  // Fallback: match any 3 to 5 digits (allowing leading zeros) followed optionally by VA/W/WATT/VOLT
-  const fallbackMatch = str.match(/(?:^|[^\d])0*([1-9]\d{2,4})\s*(?:VA|WATT|VOLT|W)\b/i);
-  if (fallbackMatch) {
-    return `${fallbackMatch[1]} VA`;
+  // Fallback 1: match any 3 to 5 digits followed optionally by VA/W/WATT/VOLT
+  const fallbackVaMatch = str.match(/(?:^|[^\d\w])[0Oo]*([1-9]\d{2,4})\s*(?:VA|WATT|VOLT|W)\b/i);
+  if (fallbackVaMatch) {
+    return `${fallbackVaMatch[1]} VA`;
+  }
+
+  // Fallback 2: match 900, 450, 1300, 2200 anywhere if raw has 000000900 or similar
+  const zeroPaddedMatch = str.match(/[0Oo]{2,}([1-9][0-9Oo]{2,4})\b/);
+  if (zeroPaddedMatch) {
+    const val = zeroPaddedMatch[1].replace(/[Oo]/g, '0');
+    if (['450', '900', '1300', '2200', '3500', '4400', '5500', '6600', '7700'].includes(val)) {
+      return `${val} VA`;
+    }
   }
 
   return '';
@@ -352,6 +367,7 @@ export function extractTarif(raw: string): string {
  * Normalizes PLN Tariff & Power Daya to official Indonesian PLN standards.
  * Guaranteed zero mistake from phone gallery photos, thermal receipts, & app screenshots.
  * Examples:
+ * - "R1M /000000900 VA" -> "R1M / 900 VA"
  * - "B1 /000002200 VA" -> "B1 / 2200 VA"
  * - "B1 / 2200 VA" -> "B1 / 2200 VA"
  * - "R1M/1300VA" -> "R1M / 1300 VA"
@@ -364,9 +380,9 @@ export function cleanTarifDaya(raw: string): string {
   let str = raw.trim();
 
   // If already clean and matches standard format "XXX / YYY VA", return formatted
-  const cleanMatch = str.match(/^([A-Z0-9]+)\s*[/]\s*0*(\d{3,5}\s*VA)$/i);
+  const cleanMatch = str.match(/^([A-Z0-9]+)\s*[/\\|:]\s*[0Oo]*(\d{3,5}\s*VA)$/i);
   if (cleanMatch) {
-    return `${cleanMatch[1].toUpperCase()} / ${cleanMatch[2].toUpperCase().replace(/^0+/, '')}`;
+    return `${cleanMatch[1].toUpperCase()} / ${cleanMatch[2].toUpperCase().replace(/^[0Oo]+/, '')}`;
   }
 
   // Remove leading labels if mistakenly passed into raw
@@ -397,12 +413,12 @@ export function cleanTarifDaya(raw: string): string {
 
   // If only Tariff was found, check if any number in the string can serve as Daya
   if (tarif && !daya) {
-    const numMatch = str.match(/(?:^|[^\d])0*([1-9]\d{2,4})/);
+    const numMatch = str.match(/(?:^|[^\d\w])[0Oo]*([1-9][0-9Oo]{2,4})/);
     if (numMatch) {
-      const extracted = extractDaya(numMatch[1]);
+      const cleanNum = numMatch[1].replace(/[Oo]/g, '0');
+      const extracted = extractDaya(cleanNum);
       if (extracted) return `${tarif} / ${extracted}`;
     }
-    // Return pure tariff without arbitrary default
     return tarif;
   }
 
@@ -451,6 +467,10 @@ export function extractTarifDayaFromText(text: string, lines: string[]): string 
         }
       }
       if (val) {
+        // If line has tarif but no daya, check if next line has daya (e.g. line 1: R1M, line 2: 000000900 VA)
+        if (extractTarif(val) && !extractDaya(val) && i + 1 < lines.length && !/IDPEL|NAMA|RP|TAG|ADMIN|TOTAL|STAND|BLN|REF/i.test(lines[i + 1])) {
+          val = `${val} / ${lines[i + 1].trim()}`;
+        }
         const cleaned = cleanTarifDaya(val);
         if (cleaned && cleaned.includes('/')) {
           return cleaned;
@@ -465,20 +485,12 @@ export function extractTarifDayaFromText(text: string, lines: string[]): string 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     if (!foundTarif) {
-      const tMatch = line.match(/(?:TARIF|TRF|TARIP|GOLONGAN)\s*[:.]?\s*(.*)/i);
-      if (tMatch && !/DAYA/i.test(line)) {
-        let tVal = tMatch[1].trim();
-        if (!tVal && i + 1 < lines.length) tVal = lines[i + 1].trim();
-        foundTarif = extractTarif(tVal);
-      }
+      const t = extractTarif(line);
+      if (t) foundTarif = t;
     }
     if (!foundDaya) {
-      const dMatch = line.match(/(?:DAYA|DAVA|DAY4|KAPASITAS)\s*[:.]?\s*(.*)/i);
-      if (dMatch && !/TARIF/i.test(line)) {
-        let dVal = dMatch[1].trim();
-        if (!dVal && i + 1 < lines.length) dVal = lines[i + 1].trim();
-        foundDaya = extractDaya(dVal);
-      }
+      const d = extractDaya(line);
+      if (d) foundDaya = d;
     }
   }
   if (foundTarif && foundDaya) {
@@ -490,9 +502,9 @@ export function extractTarifDayaFromText(text: string, lines: string[]): string 
     }
   }
 
-  // Strategy 3: Global pattern scan across text (e.g. "B1 /000002200 VA", "B1/2200", "R1M/1300VA", "R1T/900")
-  const globalMatch = text.match(/\b([RBITMSP]\s*[-_]?[1-3Il|!]\s*(?:MT|TM|M|T)?)\s*[/\\-|\s]\s*0*(\d{1,2}[.,]?\d{3}|[49]\d{2}|[49][Oo0]{2}|1[3Oo0]{3}|2[2Oo0]{3})\s*(?:VA|WATT|VOLT|W)?\b/i) ||
-                      text.match(/\b0*(\d{1,2}[.,]?\d{3}|[49]\d{2}|[49][Oo0]{2}|1[3Oo0]{3}|2[2Oo0]{3})\s*(?:VA)?\s*[/\\-|\s]\s*([RBITMSP]\s*[-_]?[1-3Il|!]\s*(?:MT|TM|M|T)?)\b/i);
+  // Strategy 3: Global pattern scan across text (e.g. "R1M /000000900 VA", "B1 /000002200 VA", "B1/2200", "R1M/1300VA", "R1T/900")
+  const globalMatch = text.match(/\b([RBITMSP]\s*[-_]?[1-3Il|!]\s*(?:MT|TM|M|T)?)\s*[/\\|:\s]\s*[0Oo]*(\d{1,2}[.,]?\d{3}|[49]\d{2}|[49][Oo0]{2}|1[3Oo0]{3}|2[2Oo0]{3})\s*(?:VA|WATT|VOLT|W)?\b/i) ||
+                      text.match(/\b[0Oo]*(\d{1,2}[.,]?\d{3}|[49]\d{2}|[49][Oo0]{2}|1[3Oo0]{3}|2[2Oo0]{3})\s*(?:VA)?\s*[/\\|:\s]\s*([RBITMSP]\s*[-_]?[1-3Il|!]\s*(?:MT|TM|M|T)?)\b/i);
   if (globalMatch) {
     return cleanTarifDaya(`${globalMatch[1]} / ${globalMatch[2]}`);
   }
@@ -1017,7 +1029,19 @@ export function parseReceiptFromOcr(ocrText: string): Partial<ReceiptData> {
       if (anyTarif && anyDaya) {
         parsed.tarifDaya = `${anyTarif} / ${anyDaya}`;
       } else if (anyTarif) {
-        parsed.tarifDaya = anyTarif;
+        // Look near anyTarif or in text for Daya numbers (e.g. R1M / 000000900 VA)
+        const nearbyMatch = text.match(/(?:R1M|R1MT|R1T|R1|R2|B1|B2|I1|S1|P1)[\s/\\|:._-]*[0Oo]*([1-9][0-9Oo]{2,4})\b/i) ||
+                            text.match(/[0Oo]*([1-9][0-9Oo]{2,4})\s*(?:VA|WATT|VOLT)?\b/i);
+        if (nearbyMatch) {
+          const d = extractDaya(nearbyMatch[1]);
+          if (d) {
+            parsed.tarifDaya = `${anyTarif} / ${d}`;
+          } else {
+            parsed.tarifDaya = anyTarif;
+          }
+        } else {
+          parsed.tarifDaya = anyTarif;
+        }
       } else if (anyDaya) {
         parsed.tarifDaya = anyDaya;
       } else {

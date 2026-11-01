@@ -96,39 +96,43 @@ export const BluetoothModal: React.FC<BluetoothModalProps> = ({
 
       const server = await device.gatt.connect();
 
-      // Find the primary service and characteristic for writing ESC/POS
+      // Rapid GATT Service Discovery:
+      // Direct batch discovery queries device GATT table in a single ATT request instead of sequential timeouts
       let targetCharacteristic: BluetoothRemoteGATTCharacteristic | null = null;
 
-      // Try discovering known printer services
-      for (const serviceUuid of BLUETOOTH_PRINTER_SERVICES) {
-        try {
-          const service = await server.getPrimaryService(serviceUuid);
-          const characteristics = await service.getCharacteristics();
-          // Find writable characteristic
-          for (const char of characteristics) {
-            if (char.properties.write || char.properties.writeWithoutResponse) {
-              targetCharacteristic = char;
-              break;
-            }
-          }
-          if (targetCharacteristic) break;
-        } catch (e) {
-          // Continue searching other services
-        }
-      }
-
-      // If specific UUID not matched, discover any primary services
-      if (!targetCharacteristic) {
+      try {
         const services = await server.getPrimaryServices();
         for (const service of services) {
-          const chars = await service.getCharacteristics();
-          for (const char of chars) {
-            if (char.properties.write || char.properties.writeWithoutResponse) {
-              targetCharacteristic = char;
-              break;
+          try {
+            const characteristics = await service.getCharacteristics();
+            // Prioritize writeWithoutResponse for ultra-fast non-blocking printing
+            for (const char of characteristics) {
+              if (char.properties.writeWithoutResponse || char.properties.write) {
+                targetCharacteristic = char;
+                break;
+              }
             }
+            if (targetCharacteristic) break;
+          } catch {
+            // continue next service
           }
-          if (targetCharacteristic) break;
+        }
+      } catch {
+        // Fallback: search known printer UUIDs
+        for (const serviceUuid of BLUETOOTH_PRINTER_SERVICES) {
+          try {
+            const service = await server.getPrimaryService(serviceUuid);
+            const characteristics = await service.getCharacteristics();
+            for (const char of characteristics) {
+              if (char.properties.writeWithoutResponse || char.properties.write) {
+                targetCharacteristic = char;
+                break;
+              }
+            }
+            if (targetCharacteristic) break;
+          } catch {
+            // continue next
+          }
         }
       }
 

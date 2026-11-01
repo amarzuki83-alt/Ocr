@@ -600,8 +600,16 @@ export async function sendBufferToCharacteristic(
   buffer: Uint8Array,
   onProgress?: (percent: number) => void
 ): Promise<void> {
-  const CHUNK_SIZE = 64; // Safe chunk size for Bluetooth LE / SPP buffers
+  // Support writeWithoutResponse for ultra-fast, zero-wait Bluetooth printing
+  const canWriteWithoutResponse = Boolean(
+    characteristic.properties.writeWithoutResponse && 
+    typeof (characteristic as any).writeValueWithoutResponse === 'function'
+  );
+
+  // Modern thermal printers comfortably accept 128 bytes per packet on BLE
+  const CHUNK_SIZE = canWriteWithoutResponse ? 128 : 64;
   const totalChunks = Math.ceil(buffer.length / CHUNK_SIZE);
+  const interChunkDelay = canWriteWithoutResponse ? 8 : 25;
 
   for (let i = 0; i < totalChunks; i++) {
     const start = i * CHUNK_SIZE;
@@ -609,8 +617,9 @@ export async function sendBufferToCharacteristic(
     const chunk = buffer.subarray(start, end);
     const chunkData = new Uint8Array(chunk).buffer as ArrayBuffer;
 
-    // Try writeValueWithResponse, or fallback to writeValue
-    if (characteristic.writeValueWithResponse) {
+    if (canWriteWithoutResponse) {
+      await (characteristic as any).writeValueWithoutResponse(chunkData);
+    } else if (characteristic.writeValueWithResponse) {
       await characteristic.writeValueWithResponse(chunkData);
     } else {
       await characteristic.writeValue(chunkData);
@@ -620,7 +629,8 @@ export async function sendBufferToCharacteristic(
       onProgress(Math.round(((i + 1) / totalChunks) * 100));
     }
 
-    // Small delay between chunks to let printer buffer process
-    await new Promise((resolve) => setTimeout(resolve, 35));
+    if (interChunkDelay > 0 && i < totalChunks - 1) {
+      await new Promise((resolve) => setTimeout(resolve, interChunkDelay));
+    }
   }
 }

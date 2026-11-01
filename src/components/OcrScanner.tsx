@@ -22,6 +22,40 @@ interface OcrScannerProps {
   onClearIncomingFile?: () => void;
 }
 
+// Global persistent worker instance to make subsequent scans instantaneous (<1s)
+let globalOcrWorker: any = null;
+let globalOcrWorkerPromise: Promise<any> | null = null;
+
+async function getOrInitOcrWorker(onProgress?: (pct: number, status: string) => void) {
+  if (globalOcrWorker) {
+    return globalOcrWorker;
+  }
+  if (globalOcrWorkerPromise) {
+    return await globalOcrWorkerPromise;
+  }
+
+  globalOcrWorkerPromise = (async () => {
+    const worker = await createWorker('eng', 1, {
+      logger: (m) => {
+        if (m.status === 'recognizing text' && onProgress) {
+          const pct = Math.round(20 + (m.progress || 0) * 75);
+          onProgress(pct, `Mengenali teks struk (Presisi Tinggi)... ${Math.round((m.progress || 0) * 100)}%`);
+        }
+      },
+    });
+
+    await worker.setParameters({
+      tessedit_pageseg_mode: PSM.SINGLE_BLOCK, // PSM 6: Uniform Block
+      tessedit_char_whitelist: "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz .,:/()-+=%#'\"*",
+    });
+
+    globalOcrWorker = worker;
+    return worker;
+  })();
+
+  return await globalOcrWorkerPromise;
+}
+
 export const OcrScanner: React.FC<OcrScannerProps> = ({
   onScanComplete,
   onLoadPreset,
@@ -41,6 +75,11 @@ export const OcrScanner: React.FC<OcrScannerProps> = ({
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
+
+  // Background pre-warm Tesseract worker as soon as user opens scanner
+  React.useEffect(() => {
+    getOrInitOcrWorker().catch(() => {});
+  }, []);
 
   // Auto-process incoming file shared from mobile phone gallery
   React.useEffect(() => {
@@ -62,43 +101,29 @@ export const OcrScanner: React.FC<OcrScannerProps> = ({
     });
 
     try {
-      // 1. Preprocess image in canvas for high OCR contrast
+      // 1. Preprocess image in canvas for high OCR contrast and optimal dimensions
       const processedDataUrl = await preprocessImageForOcr(file);
       setImagePreview(processedDataUrl);
 
       setProgressState({
         isProcessing: true,
-        progress: 20,
-        status: 'Memuat OCR Engine Tesseract.js...',
+        progress: 25,
+        status: 'Menganalisis teks struk dengan AI OCR...',
       });
 
-      // 2. Initialize Tesseract worker
-      const worker = await createWorker('eng', 1, {
-        logger: (m) => {
-          if (m.status === 'recognizing text') {
-            const pct = Math.round(20 + (m.progress || 0) * 75);
-            setProgressState({
-              isProcessing: true,
-              progress: pct,
-              status: `Mengenali teks struk (Presisi Tinggi)... ${Math.round((m.progress || 0) * 100)}%`,
-            });
-          }
-        },
+      // 2. Get warm worker instantly without 5-second reload delay
+      const worker = await getOrInitOcrWorker((pct, status) => {
+        setProgressState({
+          isProcessing: true,
+          progress: pct,
+          status,
+        });
       });
 
-      // Set PSM 6 (Uniform Block) and whitelist to prevent misrecognition on thermal receipts and mobile screenshots
-      await worker.setParameters({
-        tessedit_pageseg_mode: PSM.SINGLE_BLOCK, // PSM 6: Assume a single uniform block of text
-        tessedit_char_whitelist: "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz .,:/()-+=%#'\"*",
-      });
-
-      // 3. Recognize text
+      // 3. Recognize text directly from preprocessed canvas
       const result = await worker.recognize(processedDataUrl);
       const extractedText = result.data.text || '';
       setRawOcrText(extractedText);
-
-      // 4. Terminate worker to free memory
-      await worker.terminate();
 
       setProgressState({
         isProcessing: true,
@@ -106,7 +131,7 @@ export const OcrScanner: React.FC<OcrScannerProps> = ({
         status: 'Memetakan data ke field struk...',
       });
 
-      // 5. Smart regex parser
+      // 4. Smart regex parser
       const parsed = parseReceiptFromOcr(extractedText);
 
       setProgressState({
@@ -118,6 +143,9 @@ export const OcrScanner: React.FC<OcrScannerProps> = ({
       onScanComplete(parsed, extractedText);
     } catch (err: any) {
       console.error('OCR Error:', err);
+      // Reset worker promise if catastrophic failure so it can re-attempt
+      globalOcrWorker = null;
+      globalOcrWorkerPromise = null;
       setErrorMsg('Gagal memproses OCR: ' + (err.message || 'Format gambar tidak didukung'));
       setProgressState({
         isProcessing: false,

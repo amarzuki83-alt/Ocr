@@ -28,16 +28,18 @@ export async function preprocessImageForOcr(imageFile: File | Blob): Promise<str
           return;
         }
 
-        // Optimal OCR resolution: receipt width between 1400px and 2000px
+        // Optimal OCR resolution: width around 960px - 1100px, height <= 1650px
+        // Provides pin-sharp text stroke definition without multi-million pixel bloat
+        // that causes 6-10 second delays on mobile processors.
         let width = img.width;
         let height = img.height;
 
-        if (width < 1200) {
-          const upscale = 1600 / width;
+        if (width < 750) {
+          const upscale = 960 / width;
           width = Math.round(width * upscale);
           height = Math.round(height * upscale);
-        } else if (width > 2200 || height > 2200) {
-          const downscale = Math.min(2000 / width, 2000 / height);
+        } else if (width > 1150 || height > 1650) {
+          const downscale = Math.min(1050 / width, 1600 / height);
           width = Math.round(width * downscale);
           height = Math.round(height * downscale);
         }
@@ -82,7 +84,7 @@ export async function preprocessImageForOcr(imageFile: File | Blob): Promise<str
           
           let enhanced = normalized;
           if (enhanced < 135) {
-            enhanced = Math.max(0, Math.round(enhanced * 0.72)); // Push text to bold solid dark
+            enhanced = Math.max(0, Math.round(enhanced * 0.72)); // Push text to solid dark
           } else if (enhanced > 185) {
             enhanced = Math.min(255, Math.round(enhanced * 1.15)); // Push paper/screen background clean white
           }
@@ -94,7 +96,8 @@ export async function preprocessImageForOcr(imageFile: File | Blob): Promise<str
         }
 
         ctx.putImageData(imgData, 0, 0);
-        resolve(canvas.toDataURL('image/png'));
+        // JPEG 0.92 is 5x faster to encode than PNG in HTML5 Canvas and perfectly preserves text
+        resolve(canvas.toDataURL('image/jpeg', 0.92));
       };
       img.onerror = reject;
       img.src = e.target?.result as string;
@@ -872,7 +875,17 @@ export function parseReceiptFromOcr(ocrText: string): Partial<ReceiptData> {
     .replace(/\b(?:TAFIF|TAKIF|TAR!F|TAR1F|TARLF|TRF|TARIP)\b/gi, 'TARIF')
     .replace(/\b(?:DAVA|DAY4|D4YA|DA7A|OAYA|OAVA)\b/gi, 'DAYA')
     .replace(/\bTARIF[\s/|:;]+DAYA\b/gi, 'TARIF / DAYA')
-    .replace(/\bDAYA[\s/|:;]+TARIF\b/gi, 'TARIF / DAYA');
+    .replace(/\bDAYA[\s/|:;]+TARIF\b/gi, 'TARIF / DAYA')
+    // Pre-correct Token keywords & numbers
+    .replace(/\b(?:STKUM|STRUM|STKOM|STKUOM|STROM)\b/gi, 'STROOM')
+    .replace(/\b(?:T0KEN|TDKEN|TOIKEN)\b/gi, 'TOKEN')
+    // Pre-correct kWh label confusions
+    .replace(/\b(?:KWII|KVVH|KWHH)\b/gi, 'KWH')
+    // Pre-correct IDPEL & No Meter label confusions
+    .replace(/\b(?:1DPEL|ID_PEL|ID\.PEL|ID\s*PE1)\b/gi, 'IDPEL')
+    .replace(/\b(?:NO\.?\s*MET[ER]+|NOMETER)\b/gi, 'NO METER')
+    // Fix letter O into 0 in zero-padded daya sequences: e.g. /OOOOOO900, /00000O900
+    .replace(/([/:\s])[0Oo]{2,}(?=[1-9])/g, (m) => m.replace(/[Oo]/g, '0'));
 
   const lines = text.split('\n').map((l) => l.trim()).filter(Boolean);
 

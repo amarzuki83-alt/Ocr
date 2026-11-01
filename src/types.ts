@@ -14,8 +14,8 @@ export interface ReceiptData {
   noPolis?: string;
   nama: string;
   jmlPeserta?: string;
-  tarifDaya: string;
-  standMeter: string;
+  tarifDaya?: string;
+  standMeter?: string;
   blnThn: string;
   periode?: string;
   stroomToken?: string;
@@ -29,6 +29,8 @@ export interface ReceiptData {
   footerGreeting: string;
   extraFields: ExtraReceiptField[];
   customNote?: string;
+  produk?: string;
+  noTelkom?: string;
   bankTujuan?: string;
   noRekening?: string;
   namaPenerima?: string;

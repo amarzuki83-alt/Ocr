@@ -85,23 +85,41 @@ export function isTokenReceipt(data: ReceiptData): boolean {
 }
 
 /**
- * Detects if the receipt is for Kirim Uang / Transfer Bank
+ * Detects if the receipt is for Tagihan IndiHome / Telkom
+ */
+export function isIndihomeReceipt(data: ReceiptData): boolean {
+  const header = (data.headerTitle || '').toUpperCase();
+  const sub = (data.subHeader || '').toUpperCase();
+  const prod = (data.produk || '').toUpperCase();
+  const hasIndihomeExtra = (data.extraFields || []).some((f) => 
+    /INDIHOME|TELKOM|SPEEDY/i.test(f.label) || /indihome|telkom|speedy/i.test(f.id)
+  );
+  return Boolean(
+    header.includes('INDIHOME') ||
+    header.includes('TELKOM') ||
+    header.includes('SPEEDY') ||
+    sub.includes('INDIHOME') ||
+    sub.includes('TELKOM') ||
+    prod.includes('INDIHOME') ||
+    prod.includes('TELKOM') ||
+    Boolean(data.noTelkom) ||
+    hasIndihomeExtra
+  );
+}
+
+/**
+ * Detects if the receipt is for Kirim Uang / Transfer Bank (legacy fallback)
  */
 export function isTransferReceipt(data: ReceiptData): boolean {
   const header = (data.headerTitle || '').toUpperCase();
   const sub = (data.subHeader || '').toUpperCase();
-  const hasTransferExtra = (data.extraFields || []).some((f) => 
-    /TRANSFER|KIRIM UANG|REKENING|BANK/i.test(f.label) || /transfer|rekening|bank/i.test(f.id)
-  );
   return Boolean(
     header.includes('TRANSFER') ||
     header.includes('KIRIM UANG') ||
     sub.includes('TRANSFER') ||
     sub.includes('KIRIM UANG') ||
     Boolean(data.bankTujuan) ||
-    Boolean(data.noRekening) ||
-    Boolean(data.namaPenerima) ||
-    hasTransferExtra
+    Boolean(data.noRekening)
   );
 }
 
@@ -240,11 +258,17 @@ export function generatePlainTextReceipt(data: ReceiptData, paperSize: PaperSize
   // Customer info
   const isBpjs = isBpjsReceipt(data);
   const isToken = isTokenReceipt(data);
+  const isIndihome = isIndihomeReceipt(data);
   const isTransfer = isTransferReceipt(data);
   const tokenValue = getStroomToken(data);
   const kwhValue = getReceiptKwh(data);
 
-  if (isTransfer) {
+  if (isIndihome) {
+    lines.push(formatTwoColumns('NO TELKOM / IDPEL', data.noTelkom || data.idPel || '-', width));
+    if (data.nama) lines.push(formatTwoColumns('NAMA', data.nama.toUpperCase(), width));
+    lines.push(formatTwoColumns('BLN / THN', data.blnThn || data.periode || 'OKT 2026', width));
+    if (data.produk) lines.push(formatTwoColumns('PRODUK', data.produk.toUpperCase(), width));
+  } else if (isTransfer) {
     if (data.bankTujuan) lines.push(formatTwoColumns('BANK TUJUAN', data.bankTujuan.toUpperCase(), width));
     lines.push(formatTwoColumns('NO REKENING', data.noRekening || data.idPel || '-', width));
     lines.push(formatTwoColumns('PENERIMA', (data.namaPenerima || data.nama || '-').toUpperCase(), width));
@@ -293,10 +317,10 @@ export function generatePlainTextReceipt(data: ReceiptData, paperSize: PaperSize
     }
   }
 
-  // Financials: For Transfer "NOMINAL TRF", for Token Listrik "RP BAYAR", for BPJS "RP TAGIHAN"
+  // Financials: For IndiHome "RP TAG TELKOM", for Transfer "NOMINAL TRF", for Token Listrik "RP BAYAR", for BPJS "RP TAGIHAN"
   const adminFee = data.adminBank !== undefined && data.adminBank > 0 ? data.adminBank : 5000;
   const total = data.totalBayar || ((data.tagihan || 0) + adminFee);
-  const tagihanLabel = isTransfer ? 'NOMINAL TRF' : isToken ? 'RP BAYAR' : isBpjs ? 'RP TAGIHAN' : 'RP TAG PLN';
+  const tagihanLabel = isIndihome ? 'RP TAG TELKOM' : isTransfer ? 'NOMINAL TRF' : isToken ? 'RP BAYAR' : isBpjs ? 'RP TAGIHAN' : 'RP TAG PLN';
   lines.push(formatTwoColumns(tagihanLabel, formatRupiah(data.tagihan), width));
   lines.push(formatTwoColumns('ADMIN BANK', formatRupiah(adminFee), width));
 
@@ -407,11 +431,19 @@ export function buildEscPosBuffer(data: ReceiptData, paperSize: PaperSize = '58m
   // 4. Customer Info
   const isBpjs = isBpjsReceipt(data);
   const isToken = isTokenReceipt(data);
+  const isIndihome = isIndihomeReceipt(data);
   const isTransfer = isTransferReceipt(data);
   const tokenValue = getStroomToken(data);
   const kwhValue = getReceiptKwh(data);
 
-  if (isTransfer) {
+  if (isIndihome) {
+    addBytes(ESC_POS.BOLD_ON);
+    addText(formatTwoColumns('NO TELKOM/IDPEL', data.noTelkom || data.idPel || '-', width) + '\n');
+    if (data.nama) addText(formatTwoColumns('NAMA', data.nama.toUpperCase(), width) + '\n');
+    addBytes(ESC_POS.BOLD_OFF);
+    addText(formatTwoColumns('BLN / THN', data.blnThn || data.periode || 'OKT 2026', width) + '\n');
+    if (data.produk) addText(formatTwoColumns('PRODUK', data.produk.toUpperCase(), width) + '\n');
+  } else if (isTransfer) {
     if (data.bankTujuan) addText(formatTwoColumns('BANK TUJUAN', data.bankTujuan.toUpperCase(), width) + '\n');
     addBytes(ESC_POS.BOLD_ON);
     addText(formatTwoColumns('NO REKENING', data.noRekening || data.idPel || '-', width) + '\n');
@@ -477,10 +509,10 @@ export function buildEscPosBuffer(data: ReceiptData, paperSize: PaperSize = '58m
     }
   }
 
-  // 5. Billing Info: For Transfer "NOMINAL TRF", for Token Listrik "RP BAYAR", for BPJS "RP TAGIHAN"
+  // 5. Billing Info: For IndiHome "RP TAG TELKOM", for Transfer "NOMINAL TRF", for Token Listrik "RP BAYAR", for BPJS "RP TAGIHAN"
   const escposAdminFee = data.adminBank !== undefined && data.adminBank > 0 ? data.adminBank : 5000;
   const escposTotal = data.totalBayar || ((data.tagihan || 0) + escposAdminFee);
-  const escposTagihanLabel = isTransfer ? 'NOMINAL TRF' : isToken ? 'RP BAYAR' : isBpjs ? 'RP TAGIHAN' : 'RP TAG PLN';
+  const escposTagihanLabel = isIndihome ? 'RP TAG TELKOM' : isTransfer ? 'NOMINAL TRF' : isToken ? 'RP BAYAR' : isBpjs ? 'RP TAGIHAN' : 'RP TAG PLN';
   addText(formatTwoColumns(escposTagihanLabel, formatRupiah(data.tagihan), width) + '\n');
   addText(formatTwoColumns('ADMIN BANK', formatRupiah(escposAdminFee), width) + '\n');
 

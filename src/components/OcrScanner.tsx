@@ -174,10 +174,10 @@ export const OcrScanner: React.FC<OcrScannerProps> = ({
           </button>
           <button
             type="button"
-            onClick={() => onLoadPreset(SAMPLE_PRESETS.kirimUang)}
-            className="px-2.5 py-1 text-xs font-medium rounded-lg bg-slate-700 hover:bg-slate-600 text-purple-300 border border-slate-600 transition active:scale-95"
+            onClick={() => onLoadPreset(SAMPLE_PRESETS.indihome || SAMPLE_PRESETS.kirimUang)}
+            className="px-2.5 py-1 text-xs font-medium rounded-lg bg-slate-700 hover:bg-slate-600 text-rose-300 border border-slate-600 transition active:scale-95"
           >
-            Kirim Uang
+            IndiHome
           </button>
         </div>
       </div>

@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { ReceiptData, PaperSize } from '../types';
-import { formatRupiah, isTokenReceipt, isBpjsReceipt, isTransferReceipt, getStroomToken, formatToken20, getReceiptKwh } from '../utils/escpos';
+import { formatRupiah, isTokenReceipt, isBpjsReceipt, isIndihomeReceipt, isTransferReceipt, getStroomToken, formatToken20, getReceiptKwh } from '../utils/escpos';
 import { generateReceiptCanvas, shareReceiptToWhatsApp } from '../utils/receiptCanvas';
 import { 
   Copy, 
@@ -72,6 +72,7 @@ export const ThermalReceipt: React.FC<ThermalReceiptProps> = ({
   const is58 = paperSize === '58mm';
   const isToken = isTokenReceipt(data);
   const isBpjs = isBpjsReceipt(data);
+  const isIndihome = isIndihomeReceipt(data);
   const isTransfer = isTransferReceipt(data);
   const tokenValue = getStroomToken(data);
   const kwhValue = getReceiptKwh(data);
@@ -179,7 +180,7 @@ export const ThermalReceipt: React.FC<ThermalReceiptProps> = ({
             <div className="border-b-2 border-dashed border-slate-800 my-1.5" />
 
             <h3 className="text-[10.5px] sm:text-xs font-bold text-slate-900 uppercase my-1 tracking-wide">
-              {data.headerTitle || (isTransfer ? 'STRUK TRANSAKSI KIRIM UANG' : isBpjs ? 'STRUK PEMBAYARAN IURAN BPJS' : isToken ? 'STRUK PEMBELIAN LISTRIK PRABAYAR' : 'STRUK PEMBAYARAN TAGIHAN LISTRIK')}
+              {data.headerTitle || (isIndihome ? 'STRUK PEMBAYARAN TAGIHAN INDIHOME' : isTransfer ? 'STRUK TRANSAKSI KIRIM UANG' : isBpjs ? 'STRUK PEMBAYARAN IURAN BPJS' : isToken ? 'STRUK PEMBELIAN LISTRIK PRABAYAR' : 'STRUK PEMBAYARAN TAGIHAN LISTRIK')}
             </h3>
           </div>
 
@@ -206,7 +207,39 @@ export const ThermalReceipt: React.FC<ThermalReceiptProps> = ({
 
           {/* Customer / Transaction Details: Format dua kolom dengan pemisah titik dua */}
           <div className="space-y-1 text-[11px] sm:text-xs">
-            {isTransfer ? (
+            {isIndihome ? (
+              <>
+                <div className={`grid ${is58 ? 'grid-cols-[74px_10px_1fr]' : 'grid-cols-[98px_12px_1fr]'} items-baseline`}>
+                  <span className="text-slate-700 font-semibold">NO TELKOM / IDPEL</span>
+                  <span className="text-slate-900 font-bold text-center">:</span>
+                  <span className="text-slate-950 font-bold tracking-wider text-left">{data.noTelkom || data.idPel || '-'}</span>
+                </div>
+
+                {data.nama && (
+                  <div className={`grid ${is58 ? 'grid-cols-[74px_10px_1fr]' : 'grid-cols-[98px_12px_1fr]'} items-baseline`}>
+                    <span className="text-slate-700 font-semibold">NAMA</span>
+                    <span className="text-slate-900 font-bold text-center">:</span>
+                    <span className="text-slate-950 font-bold uppercase text-left truncate">{data.nama}</span>
+                  </div>
+                )}
+
+                {data.blnThn && (
+                  <div className={`grid ${is58 ? 'grid-cols-[74px_10px_1fr]' : 'grid-cols-[98px_12px_1fr]'} items-baseline`}>
+                    <span className="text-slate-600 font-medium">BLN / THN</span>
+                    <span className="text-slate-900 font-bold text-center">:</span>
+                    <span className="text-slate-900 font-semibold text-left">{data.blnThn}</span>
+                  </div>
+                )}
+
+                {data.produk && (
+                  <div className={`grid ${is58 ? 'grid-cols-[74px_10px_1fr]' : 'grid-cols-[98px_12px_1fr]'} items-baseline`}>
+                    <span className="text-slate-600 font-medium">PRODUK</span>
+                    <span className="text-slate-900 font-bold text-center">:</span>
+                    <span className="text-slate-900 font-semibold uppercase text-left truncate">{data.produk}</span>
+                  </div>
+                )}
+              </>
+            ) : isTransfer ? (
               <>
                 {data.bankTujuan && (
                   <div className={`grid ${is58 ? 'grid-cols-[74px_10px_1fr]' : 'grid-cols-[98px_12px_1fr]'} items-baseline`}>
@@ -365,10 +398,10 @@ export const ThermalReceipt: React.FC<ThermalReceiptProps> = ({
             })}
           </div>
 
-          {/* Financial Calculation Section: For Kirim Uang "NOMINAL TRF", Token Listrik "RP BAYAR", BPJS "RP TAGIHAN" */}
+          {/* Financial Calculation Section: For IndiHome "RP TAG TELKOM", For Kirim Uang "NOMINAL TRF", Token Listrik "RP BAYAR", BPJS "RP TAGIHAN" */}
           <div className="space-y-1 text-[11px] sm:text-xs">
             <div className={`grid ${is58 ? 'grid-cols-[74px_10px_1fr]' : 'grid-cols-[98px_12px_1fr]'} items-baseline`}>
-              <span className="text-slate-600 font-medium">{isTransfer ? 'NOMINAL TRF' : isToken ? 'RP BAYAR' : isBpjs ? 'RP TAGIHAN' : 'RP TAG PLN'}</span>
+              <span className="text-slate-600 font-medium">{isIndihome ? 'RP TAG TELKOM' : isTransfer ? 'NOMINAL TRF' : isToken ? 'RP BAYAR' : isBpjs ? 'RP TAGIHAN' : 'RP TAG PLN'}</span>
               <span className="text-slate-900 font-bold text-center">:</span>
               <span className="text-slate-900 font-semibold text-left">{formatRupiah(data.tagihan)}</span>
             </div>

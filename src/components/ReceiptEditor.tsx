@@ -1,6 +1,6 @@
 import React from 'react';
 import { ReceiptData, ExtraReceiptField } from '../types';
-import { isTokenReceipt, isBpjsReceipt, isTransferReceipt, getStroomToken, formatToken20, getReceiptKwh, calculateKwh } from '../utils/escpos';
+import { isTokenReceipt, isBpjsReceipt, isIndihomeReceipt, isTransferReceipt, getStroomToken, formatToken20, getReceiptKwh, calculateKwh } from '../utils/escpos';
 import { cleanTarifDaya } from '../utils/ocrParser';
 import { 
   Building2, 
@@ -20,7 +20,8 @@ import {
   Sparkles,
   Info,
   Gauge,
-  ArrowRightLeft
+  ArrowRightLeft,
+  Wifi
 } from 'lucide-react';
 
 interface ReceiptEditorProps {
@@ -40,9 +41,46 @@ export const ReceiptEditor: React.FC<ReceiptEditorProps> = ({
 }) => {
   const isToken = isTokenReceipt(data);
   const isBpjs = isBpjsReceipt(data);
+  const isIndihome = isIndihomeReceipt(data);
   const isTransfer = isTransferReceipt(data);
   const currentToken = getStroomToken(data);
   const currentKwh = getReceiptKwh(data);
+
+  // Switch to Tagihan IndiHome / Telkom
+  const handleSelectIndihomeType = () => {
+    const defaultIndihomeAdmin = 5000;
+    const currentTagihan = data.tagihan || 315000;
+    onChange({
+      ...data,
+      loket: data.loket || 'LOKET PPOB ATHAR DIGITAL',
+      alamat: data.alamat || 'Jl. Raya Bapuhbandung Glagah',
+      headerTitle: 'STRUK PEMBAYARAN TAGIHAN INDIHOME',
+      idPel: data.idPel || data.noTelkom || '122409876543',
+      noTelkom: data.noTelkom || data.idPel || '122409876543',
+      nama: data.nama || 'BAMBANG SETIAWAN',
+      blnThn: data.blnThn || 'OKT 2026',
+      produk: data.produk || 'INDIHOME INTERNET 30 MBPS',
+      tagihan: currentTagihan,
+      adminBank: defaultIndihomeAdmin,
+      totalBayar: autoCalculate ? currentTagihan + defaultIndihomeAdmin : (data.totalBayar || currentTagihan + defaultIndihomeAdmin),
+      footerDisclaimer: 'Simpan struk ini sebagai bukti pembayaran',
+      footerGreeting: 'Terimakasih',
+      noMeter: '',
+      noPolis: '',
+      jmlPeserta: '',
+      periode: '',
+      standMeter: '',
+      tarifDaya: '',
+      stroomToken: '',
+      kwh: '',
+      bankTujuan: '',
+      noRekening: '',
+      namaPenerima: '',
+      namaPengirim: '',
+      statusTransaksi: '',
+      extraFields: [],
+    });
+  };
 
   // Switch to Kirim Uang / Transfer Bank
   const handleSelectTransferType = () => {
@@ -271,7 +309,7 @@ export const ReceiptEditor: React.FC<ReceiptEditorProps> = ({
             type="button"
             onClick={handleSelectPostpaidType}
             className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 active:scale-95 ${
-              !isToken && !isBpjs && !isTransfer
+              !isToken && !isBpjs && !isIndihome && !isTransfer
                 ? 'bg-cyan-600 text-white shadow-md'
                 : 'bg-slate-800 text-slate-400 hover:text-white border border-slate-700'
             }`}
@@ -305,15 +343,15 @@ export const ReceiptEditor: React.FC<ReceiptEditorProps> = ({
           </button>
           <button
             type="button"
-            onClick={handleSelectTransferType}
+            onClick={handleSelectIndihomeType}
             className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 active:scale-95 ${
-              isTransfer
-                ? 'bg-purple-600 text-white shadow-md ring-1 ring-purple-400'
+              isIndihome
+                ? 'bg-rose-600 text-white shadow-md ring-1 ring-rose-400'
                 : 'bg-slate-800 text-slate-400 hover:text-white border border-slate-700'
             }`}
           >
-            <ArrowRightLeft className="w-3.5 h-3.5 text-purple-300" />
-            <span>Kirim Uang / Transfer</span>
+            <Wifi className="w-3.5 h-3.5 text-rose-300" />
+            <span>Tagihan IndiHome</span>
           </button>
         </div>
       </div>
@@ -367,14 +405,89 @@ export const ReceiptEditor: React.FC<ReceiptEditorProps> = ({
         </div>
       </div>
 
-      {/* 2. Informasi Pelanggan & Daya / BPJS / Kirim Uang */}
+      {/* 2. Informasi Pelanggan & Layanan (PLN / BPJS / IndiHome / Kirim Uang) */}
       <div className="space-y-3 pt-2 border-t border-slate-700/60">
         <div className="flex items-center gap-2 text-xs font-bold text-amber-400 uppercase tracking-wider">
           <User className="w-3.5 h-3.5" />
-          <span>{isTransfer ? 'Informasi Kirim Uang & Rekening Bank' : isBpjs ? 'Informasi Kepesertaan BPJS' : 'Informasi Pelanggan & Stand Meter'}</span>
+          <span>{isIndihome ? 'Informasi Pelanggan & Paket IndiHome' : isTransfer ? 'Informasi Kirim Uang & Rekening Bank' : isBpjs ? 'Informasi Kepesertaan BPJS' : 'Informasi Pelanggan & Stand Meter'}</span>
         </div>
 
-        {isTransfer ? (
+        {isIndihome ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-rose-300 mb-1">
+                No Telkom / No Internet (IDPEL 12 Digit) <span className="text-rose-400">*</span>
+              </label>
+              <input
+                type="text"
+                value={data.noTelkom || data.idPel || ''}
+                onChange={(e) => {
+                  handleFieldChange('noTelkom', e.target.value);
+                  handleFieldChange('idPel', e.target.value);
+                }}
+                placeholder="Contoh: 122409876543"
+                className="w-full bg-slate-900 border border-rose-500/60 rounded-lg px-3 py-2 text-sm font-mono text-rose-200 focus:outline-none focus:border-rose-400 transition"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-300 mb-1">
+                Nama Pelanggan <span className="text-rose-400">*</span>
+              </label>
+              <input
+                type="text"
+                value={data.nama || ''}
+                onChange={(e) => handleFieldChange('nama', e.target.value)}
+                placeholder="Contoh: BAMBANG SETIAWAN"
+                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm font-bold text-white focus:outline-none focus:border-rose-500 transition"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-300 mb-1">
+                Periode Tagihan (BLN / THN)
+              </label>
+              <input
+                type="text"
+                value={data.blnThn || ''}
+                onChange={(e) => handleFieldChange('blnThn', e.target.value)}
+                placeholder="Contoh: OKT 2026"
+                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-rose-500 transition"
+              />
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-xs font-semibold text-slate-300">
+                  Paket Layanan / Produk
+                </label>
+                <div className="flex items-center gap-1 text-[10px] flex-wrap">
+                  {['30 MBPS', '50 MBPS', '100 MBPS', '2P PHONE+NET'].map((pkg) => (
+                    <button
+                      key={pkg}
+                      type="button"
+                      onClick={() => handleFieldChange('produk', `INDIHOME INTERNET ${pkg}`)}
+                      className={`px-1.5 py-0.5 rounded transition ${
+                        (data.produk || '').includes(pkg)
+                          ? 'bg-rose-600 text-white font-bold'
+                          : 'bg-slate-800 text-slate-300 hover:text-white border border-slate-700'
+                      }`}
+                    >
+                      {pkg}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <input
+                type="text"
+                value={data.produk || ''}
+                onChange={(e) => handleFieldChange('produk', e.target.value)}
+                placeholder="Contoh: INDIHOME INTERNET 30 MBPS"
+                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-rose-500 transition"
+              />
+            </div>
+          </div>
+        ) : isTransfer ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <div className="flex items-center justify-between mb-1">
@@ -801,9 +914,42 @@ export const ReceiptEditor: React.FC<ReceiptEditorProps> = ({
           <div>
             <div className="flex items-center justify-between mb-1">
               <label className="block text-xs font-medium text-slate-300">
-                {isTransfer ? 'NOMINAL TRF (Transfer)' : isToken ? 'RP BAYAR (Nominal Token)' : isBpjs ? 'RP TAGIHAN (Iuran BPJS)' : 'RP TAG PLN (Tagihan Murni)'}
+                {isIndihome ? 'RP TAG TELKOM (Tagihan IndiHome)' : isTransfer ? 'NOMINAL TRF (Transfer)' : isToken ? 'RP BAYAR (Nominal Token)' : isBpjs ? 'RP TAGIHAN (Iuran BPJS)' : 'RP TAG PLN (Tagihan Murni)'}
               </label>
-              {isTransfer ? (
+              {isIndihome ? (
+                <div className="flex gap-1 text-[10px]">
+                  <button
+                    type="button"
+                    onClick={() => handleFieldChange('tagihan', 250000)}
+                    className="px-1.5 py-0.5 rounded bg-slate-700 hover:bg-slate-600 text-slate-200"
+                  >
+                    250k
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleFieldChange('tagihan', 315000)}
+                    className={`px-1.5 py-0.5 rounded font-bold ${
+                      data.tagihan === 315000 ? 'bg-rose-600 text-white ring-1 ring-rose-400' : 'bg-slate-700 hover:bg-slate-600 text-slate-200'
+                    }`}
+                  >
+                    315k
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleFieldChange('tagihan', 375000)}
+                    className="px-1.5 py-0.5 rounded bg-slate-700 hover:bg-slate-600 text-slate-200"
+                  >
+                    375k
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleFieldChange('tagihan', 450000)}
+                    className="px-1.5 py-0.5 rounded bg-slate-700 hover:bg-slate-600 text-slate-200"
+                  >
+                    450k
+                  </button>
+                </div>
+              ) : isTransfer ? (
                 <div className="flex gap-1 text-[10px]">
                   <button
                     type="button"
@@ -877,7 +1023,7 @@ export const ReceiptEditor: React.FC<ReceiptEditorProps> = ({
                 type="number"
                 value={data.tagihan || ''}
                 onChange={(e) => handleFieldChange('tagihan', Number(e.target.value))}
-                placeholder={isTransfer ? "500000" : isToken ? "100000" : isBpjs ? "150000" : "324500"}
+                placeholder={isIndihome ? "315000" : isTransfer ? "500000" : isToken ? "100000" : isBpjs ? "150000" : "324500"}
                 className="w-full bg-slate-900 border border-slate-700 rounded-lg pl-9 pr-3 py-2 text-sm font-semibold text-white focus:outline-none focus:border-emerald-500 transition"
               />
             </div>
@@ -888,14 +1034,14 @@ export const ReceiptEditor: React.FC<ReceiptEditorProps> = ({
               <label className="block text-xs font-medium text-slate-300">
                 Admin Bank <span className="text-emerald-400 font-bold">(Otomatis: 5.000)</span>
               </label>
-              {isTransfer || isToken || isBpjs ? (
+              {isIndihome || isTransfer || isToken || isBpjs ? (
                 <div className="flex gap-1.5 text-[10px]">
                   <button
                     type="button"
                     onClick={() => handleAdminPreset(5000)}
                     className={`px-2 py-0.5 rounded font-bold transition ${
                       data.adminBank === 5000 || !data.adminBank
-                        ? (isTransfer ? 'bg-purple-600 text-white shadow-sm ring-1 ring-purple-400' : isBpjs ? 'bg-emerald-600 text-white shadow-sm ring-1 ring-emerald-400' : 'bg-amber-600 text-white shadow-sm ring-1 ring-amber-400')
+                        ? (isIndihome ? 'bg-rose-600 text-white shadow-sm ring-1 ring-rose-400' : isTransfer ? 'bg-purple-600 text-white shadow-sm ring-1 ring-purple-400' : isBpjs ? 'bg-emerald-600 text-white shadow-sm ring-1 ring-emerald-400' : 'bg-amber-600 text-white shadow-sm ring-1 ring-amber-400')
                         : 'bg-slate-700 hover:bg-slate-600 text-slate-200'
                     }`}
                   >
@@ -906,7 +1052,7 @@ export const ReceiptEditor: React.FC<ReceiptEditorProps> = ({
                     onClick={() => handleAdminPreset(10000)}
                     className={`px-2 py-0.5 rounded font-bold transition ${
                       data.adminBank === 10000
-                        ? (isTransfer ? 'bg-purple-600 text-white shadow-sm ring-1 ring-purple-400' : isBpjs ? 'bg-emerald-600 text-white shadow-sm ring-1 ring-emerald-400' : 'bg-amber-600 text-white shadow-sm ring-1 ring-amber-400')
+                        ? (isIndihome ? 'bg-rose-600 text-white shadow-sm ring-1 ring-rose-400' : isTransfer ? 'bg-purple-600 text-white shadow-sm ring-1 ring-purple-400' : isBpjs ? 'bg-emerald-600 text-white shadow-sm ring-1 ring-emerald-400' : 'bg-amber-600 text-white shadow-sm ring-1 ring-amber-400')
                         : 'bg-slate-700 hover:bg-slate-600 text-slate-200'
                     }`}
                   >

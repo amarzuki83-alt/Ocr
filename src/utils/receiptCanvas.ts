@@ -1,5 +1,5 @@
 import { ReceiptData, PaperSize } from '../types';
-import { formatRupiah, formatTwoColumns, isTokenReceipt, isBpjsReceipt, isTransferReceipt, getStroomToken, formatToken20, getReceiptKwh } from './escpos';
+import { formatRupiah, formatTwoColumns, isTokenReceipt, isBpjsReceipt, isIndihomeReceipt, isTransferReceipt, getStroomToken, formatToken20, getReceiptKwh } from './escpos';
 
 /**
  * Draws a high-resolution, authentic thermal receipt onto an HTML5 Canvas
@@ -17,6 +17,7 @@ export function generateReceiptCanvas(data: ReceiptData, paperSize: PaperSize = 
 
   const isToken = isTokenReceipt(data);
   const isBpjs = isBpjsReceipt(data);
+  const isIndihome = isIndihomeReceipt(data);
   const isTransfer = isTransferReceipt(data);
   const tokenValue = getStroomToken(data);
   const kwhValue = getReceiptKwh(data);
@@ -70,7 +71,9 @@ export function generateReceiptCanvas(data: ReceiptData, paperSize: PaperSize = 
     ? 'bold 8.5px "Courier Prime", "Courier New", Courier, monospace'
     : 'bold 11px "Courier Prime", "Courier New", Courier, monospace';
   ctx.fillStyle = '#000000';
-  const defaultHeaderTitle = isTransfer
+  const defaultHeaderTitle = isIndihome
+    ? 'STRUK PEMBAYARAN TAGIHAN INDIHOME'
+    : isTransfer
     ? 'STRUK TRANSAKSI KIRIM UANG'
     : isBpjs
     ? 'STRUK PEMBAYARAN IURAN BPJS'
@@ -106,7 +109,24 @@ export function generateReceiptCanvas(data: ReceiptData, paperSize: PaperSize = 
   y += 2;
 
   // Customer / Transaction details
-  if (isTransfer) {
+  if (isIndihome) {
+    // Struk Tagihan IndiHome / Telkom Details
+    const noTelkomVal = data.noTelkom || data.idPel || '-';
+    drawRowWithColon(ctx, 'NO TELKOM / IDPEL', noTelkomVal, xLabel, xColon, xValue, y, { boldValue: true, fontSize: valueFontSize });
+    y += 15;
+    if (data.nama) {
+      drawRowWithColon(ctx, 'NAMA', data.nama.toUpperCase(), xLabel, xColon, xValue, y, { boldValue: true, fontSize: valueFontSize });
+      y += 15;
+    }
+    if (data.blnThn) {
+      drawRowWithColon(ctx, 'BLN / THN', data.blnThn.toUpperCase(), xLabel, xColon, xValue, y, { fontSize: baseFontSize });
+      y += 14;
+    }
+    if (data.produk) {
+      drawRowWithColon(ctx, 'PRODUK', data.produk.toUpperCase(), xLabel, xColon, xValue, y, { fontSize: baseFontSize });
+      y += 14;
+    }
+  } else if (isTransfer) {
     // Struk Kirim Uang / Transfer Bank Details
     if (data.bankTujuan) {
       drawRowWithColon(ctx, 'BANK TUJUAN', data.bankTujuan.toUpperCase(), xLabel, xColon, xValue, y, { boldValue: true, fontSize: valueFontSize });
@@ -229,8 +249,8 @@ export function generateReceiptCanvas(data: ReceiptData, paperSize: PaperSize = 
 
   y += 2;
 
-  // Financials: For Kirim Uang "NOMINAL TRF", for Token Listrik "RP BAYAR", for BPJS "RP TAGIHAN", else "RP TAG PLN"
-  const tagihanLabel = isTransfer ? 'NOMINAL TRF' : isToken ? 'RP BAYAR' : isBpjs ? 'RP TAGIHAN' : 'RP TAG PLN';
+  // Financials: For IndiHome "RP TAG TELKOM", For Kirim Uang "NOMINAL TRF", for Token Listrik "RP BAYAR", for BPJS "RP TAGIHAN", else "RP TAG PLN"
+  const tagihanLabel = isIndihome ? 'RP TAG TELKOM' : isTransfer ? 'NOMINAL TRF' : isToken ? 'RP BAYAR' : isBpjs ? 'RP TAGIHAN' : 'RP TAG PLN';
   const adminBankVal = data.adminBank !== undefined && data.adminBank > 0 ? data.adminBank : 5000;
   const totalBayarVal = data.totalBayar || ((data.tagihan || 0) + adminBankVal);
 
@@ -446,6 +466,7 @@ export async function shareReceiptToWhatsApp(
     }
 
     // WhatsApp summary caption with two-column colon alignment
+    const waIsIndihome = isIndihomeReceipt(data);
     const waIsTransfer = isTransferReceipt(data);
     const waIsBpjs = isBpjsReceipt(data);
     const waIsToken = isTokenReceipt(data);
@@ -454,7 +475,9 @@ export async function shareReceiptToWhatsApp(
     const adminBankVal = data.adminBank !== undefined && data.adminBank > 0 ? data.adminBank : 5000;
     const totalBayarVal = data.totalBayar || ((data.tagihan || 0) + adminBankVal);
 
-    const waDefaultTitle = waIsTransfer
+    const waDefaultTitle = waIsIndihome
+      ? 'STRUK PEMBAYARAN TAGIHAN INDIHOME'
+      : waIsTransfer
       ? 'STRUK TRANSAKSI KIRIM UANG'
       : waIsBpjs
       ? 'STRUK PEMBAYARAN IURAN BPJS'
@@ -470,7 +493,14 @@ export async function shareReceiptToWhatsApp(
       `---------------------------------`,
     ];
 
-    if (waIsTransfer) {
+    if (waIsIndihome) {
+      captionLines.push(
+        `*NO TELKOM/IDPEL* : ${data.noTelkom || data.idPel || '-'}`,
+        `*NAMA*            : ${data.nama || '-'}`,
+        `*BLN/THN*         : ${data.blnThn || '-'}`,
+        `*PRODUK*          : ${data.produk || 'INDIHOME INTERNET'}`
+      );
+    } else if (waIsTransfer) {
       if (data.bankTujuan) captionLines.push(`*BANK TUJUAN*  : ${data.bankTujuan.toUpperCase()}`);
       if (data.noRekening) captionLines.push(`*NO REKENING*  : ${data.noRekening}`);
       const waPenerima = data.namaPenerima || data.nama;
@@ -510,7 +540,7 @@ export async function shareReceiptToWhatsApp(
 
     captionLines.push(
       `---------------------------------`,
-      `*${waIsTransfer ? 'NOMINAL TRF' : waIsToken ? 'RP BAYAR' : waIsBpjs ? 'RP TAGIHAN' : 'RP TAG PLN'}*  : ${formatRupiah(data.tagihan)}`,
+      `*${waIsIndihome ? 'RP TAG TELKOM' : waIsTransfer ? 'NOMINAL TRF' : waIsToken ? 'RP BAYAR' : waIsBpjs ? 'RP TAGIHAN' : 'RP TAG PLN'}*  : ${formatRupiah(data.tagihan)}`,
       `*ADMIN BANK*  : ${formatRupiah(adminBankVal)}`,
       `*TOTAL BAYAR* : ${formatRupiah(totalBayarVal)}`,
       `---------------------------------`,

@@ -823,10 +823,19 @@ export function parseReceiptFromOcr(ocrText: string): Partial<ReceiptData> {
   };
 
   // Header detection
-  const isTransferScan = /TRANSFER|KIRIM\s*UANG|REKENING\s*TUJUAN|NOMINAL\s*TRF|NOMINAL\s*TRANSFER|SUMBER\s*DANA|REK\s*SUMBER/i.test(text);
-  const isTokenScan = !isTransferScan && /TOKEN\s*LISTRIK|PRABAYAR|PREPAID|STROOM/i.test(text);
-  const isBpjsScan = !isTransferScan && /BPJS|KESEHATAN|KETENAGAKERJAAN/i.test(text);
-  if (isTransferScan) {
+  const isIndihomeScan = /INDIHOME|TELKOM|SPEEDY/i.test(text);
+  const isTransferScan = !isIndihomeScan && /TRANSFER|KIRIM\s*UANG|REKENING\s*TUJUAN|NOMINAL\s*TRF|NOMINAL\s*TRANSFER|SUMBER\s*DANA|REK\s*SUMBER/i.test(text);
+  const isTokenScan = !isIndihomeScan && !isTransferScan && /TOKEN\s*LISTRIK|PRABAYAR|PREPAID|STROOM/i.test(text);
+  const isBpjsScan = !isIndihomeScan && !isTransferScan && /BPJS|KESEHATAN|KETENAGAKERJAAN/i.test(text);
+  if (isIndihomeScan) {
+    parsed.headerTitle = 'STRUK PEMBAYARAN TAGIHAN INDIHOME';
+    parsed.tarifDaya = '';
+    parsed.standMeter = '';
+    parsed.stroomToken = '';
+    parsed.kwh = '';
+    parsed.footerDisclaimer = 'Simpan struk ini sebagai bukti pembayaran';
+    parsed.footerGreeting = 'Terimakasih';
+  } else if (isTransferScan) {
     parsed.headerTitle = 'STRUK TRANSAKSI KIRIM UANG';
     parsed.blnThn = '';
     parsed.standMeter = '';
@@ -850,8 +859,26 @@ export function parseReceiptFromOcr(ocrText: string): Partial<ReceiptData> {
   const alamatMatch = text.match(/(?:ALAMAT|JL[\s\.]*RAYA|JL[\s\.]*|JALAN)\s*[:.]?\s*([A-Za-z0-9\s\,\.\-]+)/i);
   if (alamatMatch && alamatMatch[1]) {
     const rawAlamat = alamatMatch[1].trim().split('\n')[0].substring(0, 40);
-    if (!/PEMBAYARAN|LISTRIK|PLN|BPJS|IDPEL|TRANSFER|KIRIM/i.test(rawAlamat)) {
+    if (!/PEMBAYARAN|LISTRIK|PLN|BPJS|IDPEL|TRANSFER|KIRIM|INDIHOME|TELKOM/i.test(rawAlamat)) {
       parsed.alamat = rawAlamat;
+    }
+  }
+
+  // IndiHome-specific fields extraction
+  if (isIndihomeScan) {
+    const telkomMatch = text.match(/(?:NO[\s/.]*TELKOM|NO[\s/.]*INTERNET|NO[\s/.]*TELP|IDPEL|NO[\s/.]*PELANGGAN)\s*[:.]?\s*([0-9OIlSBZ\s-]{10,14})/i) ||
+                        text.match(/\b(1[0-9OIlSBZ]{11})\b/);
+    if (telkomMatch && telkomMatch[1]) {
+      const cleanNum = cleanDigitSequence(telkomMatch[1]);
+      parsed.noTelkom = cleanNum;
+      parsed.idPel = cleanNum;
+    }
+
+    const produkMatch = text.match(/(?:PRODUK|PAKET|LAYANAN|KECEPATAN)\s*[:.]?\s*([A-Za-z0-9\s\+\-]+)/i);
+    if (produkMatch && produkMatch[1]) {
+      parsed.produk = produkMatch[1].trim().split('\n')[0].substring(0, 30);
+    } else {
+      parsed.produk = 'INDIHOME INTERNET 30 MBPS';
     }
   }
 
@@ -976,8 +1003,8 @@ export function parseReceiptFromOcr(ocrText: string): Partial<ReceiptData> {
     }
   }
 
-  // 8. Rp Tag PLN / Rp Bayar / Rp Tagihan / Nominal Transfer (Tagihan Murni / Nominal Token / Iuran BPJS / Transfer)
-  const tagihanMatch = text.match(/(?:NOMINAL\s*TRF|NOMINAL\s*TRANSFER|JUMLAH\s*TRANSFER|JML\s*TRANSFER|RP\s*TAGIHAN|TAGIHAN\s*BPJS|JUMLAH\s*TAGIHAN|TOTAL\s*PREMI|JUMLAH\s*PREMI|PREMI|JUMLAH\s*IURAN|RP\s*IURAN|IURAN|RP\s*BAYAR|RP\s*TAG\s*PLN|TAGIHAN\s*PLN|TAGIHAN|SUBTOTAL|NOMINAL|JML\s*BAYAR)\s*[:.]?\s*RP?\.?\s*([\d\.,Oo]+)/i);
+  // 8. Rp Tag Telkom / Rp Tag PLN / Rp Bayar / Rp Tagihan / Nominal Transfer
+  const tagihanMatch = text.match(/(?:RP\s*TAG\s*TELKOM|TAGIHAN\s*TELKOM|TAGIHAN\s*INDIHOME|RP\s*TELKOM|NOMINAL\s*TRF|NOMINAL\s*TRANSFER|JUMLAH\s*TRANSFER|JML\s*TRANSFER|RP\s*TAGIHAN|TAGIHAN\s*BPJS|JUMLAH\s*TAGIHAN|TOTAL\s*PREMI|JUMLAH\s*PREMI|PREMI|JUMLAH\s*IURAN|RP\s*IURAN|IURAN|RP\s*BAYAR|RP\s*TAG\s*PLN|TAGIHAN\s*PLN|TAGIHAN|SUBTOTAL|NOMINAL|JML\s*BAYAR)\s*[:.]?\s*RP?\.?\s*([\d\.,Oo]+)/i);
   if (tagihanMatch && tagihanMatch[1]) {
     parsed.tagihan = parseCleanNumber(tagihanMatch[1]);
   }
@@ -1131,26 +1158,44 @@ export const SAMPLE_PRESETS: Record<string, ReceiptData> = {
     footerGreeting: 'Terimakasih',
     extraFields: [],
   },
-  kirimUang: {
+  indihome: {
     loket: 'LOKET PPOB ATHAR DIGITAL',
     alamat: 'Jl. Raya Bapuhbandung Glagah',
-    headerTitle: 'STRUK TRANSAKSI KIRIM UANG',
+    headerTitle: 'STRUK PEMBAYARAN TAGIHAN INDIHOME',
     subHeader: '',
-    idPel: '',
-    bankTujuan: 'BANK BRI',
-    noRekening: '0123-01-089765-50-8',
-    namaPenerima: 'BAMBANG SETIAWAN',
-    namaPengirim: 'AHMAD MARZUKI',
-    statusTransaksi: 'BERHASIL / SUKSES',
+    idPel: '122409876543',
+    noTelkom: '122409876543',
     nama: 'BAMBANG SETIAWAN',
     tarifDaya: '',
     standMeter: '',
-    blnThn: '',
-    tagihan: 500000,
+    blnThn: 'OKT 2026',
+    produk: 'INDIHOME INTERNET 30 MBPS',
+    tagihan: 315000,
     adminBank: 5000,
-    totalBayar: 505000,
+    totalBayar: 320000,
     tanggal: '26/10/2026 14:15:30 WIB',
-    noRef: 'TRF261026987123',
+    noRef: 'TELKOM261026987123',
+    footerDisclaimer: 'Simpan struk ini sebagai bukti pembayaran',
+    footerGreeting: 'Terimakasih',
+    extraFields: [],
+  },
+  kirimUang: {
+    loket: 'LOKET PPOB ATHAR DIGITAL',
+    alamat: 'Jl. Raya Bapuhbandung Glagah',
+    headerTitle: 'STRUK PEMBAYARAN TAGIHAN INDIHOME',
+    subHeader: '',
+    idPel: '122409876543',
+    noTelkom: '122409876543',
+    nama: 'BAMBANG SETIAWAN',
+    tarifDaya: '',
+    standMeter: '',
+    blnThn: 'OKT 2026',
+    produk: 'INDIHOME INTERNET 30 MBPS',
+    tagihan: 315000,
+    adminBank: 5000,
+    totalBayar: 320000,
+    tanggal: '26/10/2026 14:15:30 WIB',
+    noRef: 'TELKOM261026987123',
     footerDisclaimer: 'Simpan struk ini sebagai bukti pembayaran',
     footerGreeting: 'Terimakasih',
     extraFields: [],

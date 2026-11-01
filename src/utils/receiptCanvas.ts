@@ -210,24 +210,45 @@ export function generateReceiptCanvas(data: ReceiptData, paperSize: PaperSize = 
       y += 13;
 
       // Prominent enlarged 20-digit token box (high contrast, ultra-bold font)
-      const tokenFormatted = formatToken20(tokenValue);
-      const boxH = is58 ? 27 : 33;
+      const cleanDigits = tokenValue.replace(/[^0-9]/g, '');
       const boxW = baseWidth - (paddingX * 2);
 
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(paddingX, y - 18, boxW, boxH);
-      ctx.strokeStyle = '#000000';
-      ctx.lineWidth = 1.5;
-      ctx.strokeRect(paddingX, y - 18, boxW, boxH);
+      if (is58 && cleanDigits.length === 20) {
+        // 58mm: 2 clean large rows with high-contrast bold font
+        const row1 = cleanDigits.slice(0, 4) + '-' + cleanDigits.slice(4, 8) + '-' + cleanDigits.slice(8, 12);
+        const row2 = cleanDigits.slice(12, 16) + '-' + cleanDigits.slice(16, 20);
+        const boxH = 40;
 
-      ctx.textAlign = 'center';
-      // Perbesar angka token stroom secara maksimal dan tegas
-      ctx.font = is58
-        ? '900 12.5px "Courier Prime", "Courier New", Courier, monospace'
-        : '900 16px "Courier Prime", "Courier New", Courier, monospace';
-      ctx.fillStyle = '#000000';
-      ctx.fillText(tokenFormatted, baseWidth / 2, y + 1.5);
-      y += 17;
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(paddingX, y - 18, boxW, boxH);
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(paddingX, y - 18, boxW, boxH);
+
+        ctx.textAlign = 'center';
+        ctx.font = '900 14px "Courier Prime", "Courier New", Courier, monospace';
+        ctx.fillStyle = '#000000';
+        ctx.fillText(row1, baseWidth / 2, y - 2);
+        ctx.fillText(row2, baseWidth / 2, y + 14);
+        y += 28;
+      } else {
+        const tokenFormatted = formatToken20(tokenValue);
+        const boxH = is58 ? 28 : 36;
+
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(paddingX, y - 18, boxW, boxH);
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(paddingX, y - 18, boxW, boxH);
+
+        ctx.textAlign = 'center';
+        ctx.font = is58
+          ? '900 13px "Courier Prime", "Courier New", Courier, monospace'
+          : '900 18px "Courier Prime", "Courier New", Courier, monospace';
+        ctx.fillStyle = '#000000';
+        ctx.fillText(tokenFormatted, baseWidth / 2, is58 ? y + 2 : y + 4);
+        y += is58 ? 18 : 24;
+      }
 
       drawDashedLine(ctx, paddingX, baseWidth - paddingX, y, 4, '#000000', 1.5);
       y += 12;

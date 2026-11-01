@@ -369,14 +369,34 @@ export const ThermalReceipt: React.FC<ThermalReceiptProps> = ({
 
                 {/* STROOM / TOKEN Section: 20-Digit Token Enlarged & Prominent */}
                 {isToken && tokenValue && (
-                  <div className="my-2 p-2 bg-slate-50 border-2 border-dashed border-slate-900 rounded-lg text-center shadow-xs">
-                    <div className={`grid ${is58 ? 'grid-cols-[74px_10px_1fr]' : 'grid-cols-[98px_12px_1fr]'} items-center mb-1 text-left`}>
-                      <span className="text-slate-900 font-extrabold uppercase text-[10px] sm:text-xs tracking-wider">STROOM / TOKEN</span>
-                      <span className="text-slate-900 font-extrabold text-center">:</span>
-                      <span className="text-slate-500 text-[9px] italic">20 Digit Token PLN</span>
+                  <div className="my-2.5 p-2 bg-slate-50 border-2 border-dashed border-slate-950 rounded-lg text-center shadow-xs">
+                    <div className="flex items-center justify-between mb-1.5 px-0.5">
+                      <span className="text-slate-950 font-black uppercase text-[11px] sm:text-xs tracking-wider">STROOM / TOKEN</span>
+                      <span className="text-slate-600 text-[10px] font-bold tracking-wide">20 DIGIT</span>
                     </div>
-                    <div className="text-sm sm:text-base font-black font-mono tracking-wider text-slate-950 py-1.5 px-1 bg-white border-2 border-slate-900 rounded shadow-inner select-all">
-                      {formatToken20(tokenValue)}
+                    <div className="bg-white border-2 border-slate-950 rounded-lg py-2 px-1 shadow-inner select-all">
+                      {is58 ? (
+                        <div className="flex flex-col items-center justify-center font-black font-mono text-slate-950 leading-tight gap-0.5">
+                          {tokenValue.replace(/[^0-9]/g, '').length === 20 ? (
+                            <>
+                              <div className="text-[17px] tracking-wider font-black">
+                                {tokenValue.replace(/[^0-9]/g, '').slice(0, 4)}-{tokenValue.replace(/[^0-9]/g, '').slice(4, 8)}-{tokenValue.replace(/[^0-9]/g, '').slice(8, 12)}
+                              </div>
+                              <div className="text-[17px] tracking-wider font-black">
+                                {tokenValue.replace(/[^0-9]/g, '').slice(12, 16)}-{tokenValue.replace(/[^0-9]/g, '').slice(16, 20)}
+                              </div>
+                            </>
+                          ) : (
+                            <div className="text-[17px] tracking-wider font-black break-all">
+                              {formatToken20(tokenValue)}
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="text-xl sm:text-2xl font-black font-mono tracking-widest text-slate-950 text-center py-0.5">
+                          {formatToken20(tokenValue)}
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}

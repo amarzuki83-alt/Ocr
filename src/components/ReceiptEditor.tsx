@@ -814,7 +814,7 @@ export const ReceiptEditor: React.FC<ReceiptEditorProps> = ({
                     onChange={(e) => handleTokenChange(e.target.value)}
                     placeholder="3829-1928-4402-9182-3819"
                     maxLength={24}
-                    className="w-full bg-slate-950 border border-amber-500/60 rounded-lg px-3 py-2.5 text-base sm:text-lg font-black font-mono tracking-widest text-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-500 text-center"
+                    className="w-full bg-slate-950 border border-amber-500/60 rounded-lg px-3 py-3 text-lg sm:text-xl font-black font-mono tracking-widest text-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-500 text-center"
                   />
                 </div>
 

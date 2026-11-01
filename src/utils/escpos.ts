@@ -34,10 +34,10 @@ export const ESC_POS = {
   ALIGN_RIGHT: [0x1B, 0x61, 0x02],
   BOLD_ON: [0x1B, 0x45, 0x01],
   BOLD_OFF: [0x1B, 0x45, 0x00],
-  DOUBLE_HEIGHT: [0x1B, 0x21, 0x10],
-  DOUBLE_WIDTH: [0x1B, 0x21, 0x20],
-  DOUBLE_SIZE: [0x1D, 0x21, 0x11],
-  NORMAL_SIZE: [0x1D, 0x21, 0x00],
+  DOUBLE_HEIGHT: [0x1D, 0x21, 0x01], // GS ! 0x01 (2x height, normal width)
+  DOUBLE_WIDTH: [0x1D, 0x21, 0x10],  // GS ! 0x10 (normal height, 2x width)
+  DOUBLE_SIZE: [0x1D, 0x21, 0x11],   // GS ! 0x11 (2x height + 2x width)
+  NORMAL_SIZE: [0x1D, 0x21, 0x00],   // GS ! 0x00 (Normal 1x size)
   LINE_FEED: [0x0A],
   PAPER_CUT: [0x1D, 0x56, 0x41, 0x00], // GS V A 0 (cut)
 };
@@ -480,15 +480,34 @@ export function buildEscPosBuffer(data: ReceiptData, paperSize: PaperSize = '58m
       addText(formatTwoColumns('JML KWH', kwhValue, width) + '\n');
     }
 
-    // STROOM / TOKEN: ENLARGED FONT (DOUBLE HEIGHT + DOUBLE WIDTH) FOR THERMAL PRINTER
+    // STROOM / TOKEN: ENLARGED FONT (DOUBLE SIZE) FOR THERMAL PRINTER
     if (isToken && tokenValue) {
       addText(doubleDivider);
       addBytes(ESC_POS.ALIGN_CENTER);
       addBytes(ESC_POS.BOLD_ON);
       addText('STROOM / TOKEN :\n');
-      addBytes(ESC_POS.DOUBLE_HEIGHT);
-      addBytes(ESC_POS.DOUBLE_WIDTH);
-      addText(formatToken20(tokenValue) + '\n');
+      
+      const cleanDigits = tokenValue.replace(/[^0-9]/g, '');
+      if (width < 42 && cleanDigits.length === 20) {
+        // 58mm Thermal Printer (32 columns max):
+        // Split into 2 rows in DOUBLE_SIZE (2x width + 2x height) for ultra-large, ultra-clear numbers!
+        // Row 1: 14 chars * 2 = 28 cols <= 32 cols
+        // Row 2: 9 chars * 2 = 18 cols <= 32 cols
+        addBytes(ESC_POS.DOUBLE_SIZE);
+        const line1 = cleanDigits.slice(0, 4) + '-' + cleanDigits.slice(4, 8) + '-' + cleanDigits.slice(8, 12);
+        const line2 = cleanDigits.slice(12, 16) + '-' + cleanDigits.slice(16, 20);
+        addText(line1 + '\n');
+        addText(line2 + '\n');
+      } else if (width >= 42) {
+        // 80mm Thermal Printer: All 24 chars in DOUBLE_SIZE on 1 line (24 * 2 = 48 cols)
+        addBytes(ESC_POS.DOUBLE_SIZE);
+        addText(formatToken20(tokenValue) + '\n');
+      } else {
+        // Fallback for non-standard token lengths on 58mm: Double Height + Bold
+        addBytes(ESC_POS.DOUBLE_HEIGHT);
+        addText(formatToken20(tokenValue) + '\n');
+      }
+
       addBytes(ESC_POS.NORMAL_SIZE);
       addBytes(ESC_POS.BOLD_OFF);
       addBytes(ESC_POS.ALIGN_LEFT);

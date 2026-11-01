@@ -1141,15 +1141,71 @@ export function parseReceiptFromOcr(ocrText: string): Partial<ReceiptData> {
     parsed.tanggal = `${d}/${m}/${y} ${hr}:${min} WIB`;
   }
 
-  // 14. No Referensi
-  const refMatch = text.match(/(?:NO\s*REF|REF|STRUK|NO\s*STRUK|TRX\s*ID)\s*[:.]?\s*([A-Za-z0-9\-]+)/i);
-  if (refMatch && refMatch[1]) {
-    parsed.noRef = refMatch[1].trim().substring(0, 24);
+  // 14. No Referensi: Gunakan nomor referensi yang ada di gambar yang diupload,
+  // apabila tidak ada, buat nomor acak tanpa huruf (murni angka).
+  const scannedRef = extractNoRefFromText(text, lines);
+  if (scannedRef) {
+    parsed.noRef = scannedRef;
   } else {
-    parsed.noRef = 'PLN' + Date.now().toString().slice(-10);
+    parsed.noRef = generateRandomNumericRef();
   }
 
   return parsed;
+}
+
+/**
+ * Generate a random numeric reference number without any letters (murni angka acak)
+ * Format: 16 digits pure numeric
+ */
+export function generateRandomNumericRef(): string {
+  const ts = Date.now().toString(); // 13 digits
+  const rnd = Math.floor(100 + Math.random() * 900).toString(); // 3 digits
+  return `${ts}${rnd}`;
+}
+
+/**
+ * Extracts reference number from OCR text strictly according to the uploaded image.
+ * Recognizes all Indonesian PPOB, Mobile Banking & PLN receipt reference labels.
+ */
+export function extractNoRefFromText(text: string, lines: string[]): string {
+  if (!text) return '';
+
+  // 1. Scan line-by-line for explicit reference labels
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+
+    const match = line.match(/(?:NO[\s/.]*REF(?:ERENSI)?|NOMOR[\s/.]*REF(?:ERENSI)?|KODE[\s/.]*REF(?:ERENSI)?|REF(?:ERENCE)?[\s/.]*NO(?:MOR)?|NO[\s/.]*STRUK|NOMOR[\s/.]*STRUK|TRX[\s/._-]*ID|ID[\s/.]*TRANSAKSI|NO[\s/.]*TRANSAKSI|NOMOR[\s/.]*TRANSAKSI|NO[\s/.]*REFF|REFF|REF)\s*[:.]?\s*(.*)/i);
+    if (match) {
+      let val = match[1].trim();
+
+      // If value is empty or just punctuation, inspect next line
+      if (!val || val === ':' || val === '-' || val === '.' || val.length < 3) {
+        if (i + 1 < lines.length && !/IDPEL|NAMA|TAGIHAN|TOTAL|ADMIN|TANGGAL|TERIMAKASIH/i.test(lines[i + 1])) {
+          val = lines[i + 1].trim();
+        }
+      }
+
+      // Extract candidate alphanumeric code/number
+      const cleanMatch = val.match(/([A-Za-z0-9\-_]{6,32})/);
+      if (cleanMatch) {
+        const candidate = cleanMatch[1].trim();
+        if (!/^(?:REF|NOREF|STRUK|NOMOR|BUKTI|SUKSES|BERHASIL)$/i.test(candidate)) {
+          return candidate;
+        }
+      }
+    }
+  }
+
+  // 2. Global regex fallback for reference numbers
+  const globalRef = text.match(/(?:NO[\s/.]*REF|NOMOR[\s/.]*REF|TRX[\s/._-]*ID|NO[\s/.]*STRUK)\s*[:.]?\s*([A-Za-z0-9\-_]{6,32})/i);
+  if (globalRef && globalRef[1]) {
+    const candidate = globalRef[1].trim();
+    if (!/^(?:REF|NOREF|STRUK|NOMOR|BUKTI|SUKSES|BERHASIL)$/i.test(candidate)) {
+      return candidate;
+    }
+  }
+
+  return '';
 }
 
 /**

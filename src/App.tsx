@@ -18,7 +18,7 @@ import {
   ScanLine
 } from 'lucide-react';
 import { ReceiptData, PaperSize, BluetoothPrinterState } from './types';
-import { SAMPLE_PRESETS } from './utils/ocrParser';
+import { SAMPLE_PRESETS, generateRandomNumericRef } from './utils/ocrParser';
 import { generatePlainTextReceipt } from './utils/escpos';
 import { getSharedImageFromIdb } from './utils/sharedImageHandler';
 import { ThermalReceipt } from './components/ThermalReceipt';
@@ -165,6 +165,7 @@ export default function App() {
         headerTitle: parsed.headerTitle || (isIndihomeScan ? 'STRUK PEMBAYARAN TAGIHAN INDIHOME' : isTransferScan ? 'STRUK TRANSAKSI KIRIM UANG' : isBpjsScan ? 'STRUK PEMBAYARAN IURAN BPJS' : isTokenScan ? 'STRUK PEMBELIAN LISTRIK PRABAYAR' : 'STRUK PEMBAYARAN TAGIHAN LISTRIK'),
         footerDisclaimer: parsed.footerDisclaimer || 'Simpan struk ini sebagai bukti pembayaran',
         footerGreeting: parsed.footerGreeting || 'Terimakasih',
+        noRef: parsed.noRef || generateRandomNumericRef(),
         extraFields: cleanExtra,
       };
     });
@@ -202,7 +203,7 @@ export default function App() {
       adminBank: 5000,
       totalBayar: 5000,
       tanggal: new Date().toLocaleDateString('id-ID') + ' ' + new Date().toLocaleTimeString('id-ID') + ' WIB',
-      noRef: 'PLN' + Date.now().toString().slice(-10),
+      noRef: generateRandomNumericRef(),
       footerDisclaimer: 'Simpan struk ini sebagai bukti pembayaran',
       footerGreeting: 'Terimakasih',
       extraFields: [],

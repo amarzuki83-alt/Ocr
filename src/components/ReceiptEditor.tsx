@@ -1,7 +1,7 @@
 import React from 'react';
 import { ReceiptData, ExtraReceiptField } from '../types';
 import { isTokenReceipt, isBpjsReceipt, isIndihomeReceipt, isTransferReceipt, getStroomToken, formatToken20, getReceiptKwh, calculateKwh } from '../utils/escpos';
-import { cleanTarifDaya } from '../utils/ocrParser';
+import { cleanTarifDaya, generateRandomNumericRef } from '../utils/ocrParser';
 import { 
   Building2, 
   User, 
@@ -237,8 +237,7 @@ export const ReceiptEditor: React.FC<ReceiptEditorProps> = ({
   };
 
   const generateRandomRef = () => {
-    const ref = 'PLN' + Math.floor(1000000000 + Math.random() * 9000000000);
-    handleFieldChange('noRef', ref);
+    handleFieldChange('noRef', generateRandomNumericRef());
   };
 
   const addExtraField = () => {

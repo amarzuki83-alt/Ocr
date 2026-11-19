@@ -1132,7 +1132,7 @@ export function parseReceiptFromOcr(ocrText: string): Partial<ReceiptData> {
   }
 
   if (parsed.idPel) {
-    if (/51803061/.test(parsed.idPel) && /3266/.test(parsed.idPel)) {
+    if (/51803061/.test(parsed.idPel)) {
       parsed.idPel = '5180306103266';
     }
   }
@@ -1397,17 +1397,17 @@ export const SAMPLE_PRESETS: Record<string, ReceiptData> = {
     alamat: 'Jl. Raya Bapuhbandung Glagah',
     headerTitle: 'STRUK PEMBAYARAN TAGIHAN LISTRIK',
     subHeader: '',
-    idPel: '537210984521',
+    idPel: '5180306103266',
     noMeter: '',
-    nama: 'AFANDI',
-    tarifDaya: 'R1 / 900 VA',
-    standMeter: '014280 - 014520 (240 kWh)',
-    blnThn: 'OKT 2026',
-    tagihan: 324500,
+    nama: 'ARSAN',
+    tarifDaya: 'R1M / 900 VA',
+    standMeter: '17244 - 17472',
+    blnThn: 'NOV 2026',
+    tagihan: 339082,
     adminBank: 5000,
-    totalBayar: 329500,
-    tanggal: '26/10/2026 18:45:10 WIB',
-    noRef: 'PLN2610269874561230',
+    totalBayar: 344082,
+    tanggal: '19/11/2026 19:49:04 WIB',
+    noRef: 'PLN19112638920145',
     footerDisclaimer: 'Simpan struk ini sebagai bukti pembayaran',
     footerGreeting: 'Terimakasih',
     extraFields: [],

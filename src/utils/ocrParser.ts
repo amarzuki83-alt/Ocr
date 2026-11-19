@@ -449,6 +449,74 @@ export function cleanBlnThn(raw: string): string {
 }
 
 /**
+ * Extracts and normalizes Bulan / Tahun (Periode) strictly matching what is in the uploaded receipt image.
+ * Recognizes BLN/THN, BULAN/TAHUN, MASA TAGIHAN, and month-year combinations (e.g. "OKT 2026").
+ */
+export function extractBlnThnFromText(text: string, lines: string[]): string {
+  if (!text) return '';
+
+  const monthMap: Record<string, string> = {
+    JAN: 'JAN', JANUARI: 'JAN',
+    FEB: 'FEB', FEBRUARI: 'FEB',
+    MAR: 'MAR', MARET: 'MAR',
+    APR: 'APR', APRIL: 'APR',
+    MEI: 'MEI', MAY: 'MEI',
+    JUN: 'JUN', JUNI: 'JUN',
+    JUL: 'JUL', JULI: 'JUL',
+    AGU: 'AGU', AGUSTUS: 'AGU', AUG: 'AGU',
+    SEP: 'SEP', SEPTEMBER: 'SEP', SEPT: 'SEP',
+    OKT: 'OKT', OKTOBER: 'OKT', OCT: 'OKT',
+    NOV: 'NOV', NOVEMBER: 'NOV',
+    DES: 'DES', DESEMBER: 'DES', DEC: 'DES',
+  };
+
+  // Strategy 1: Check lines with explicit BLN/THN or BULAN/TAHUN or PERIODE label
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (/(?:BLN[\s/]*THN|BULAN[\s/]*TAHUN|PERIODE|MASA[\s/]*TAGIHAN|TAGIHAN[\s/]*BLN|BLN\b)/i.test(line)) {
+      let val = line.replace(/(?:BLN[\s/]*THN|BULAN[\s/]*TAHUN|PERIODE|MASA[\s/]*TAGIHAN|TAGIHAN[\s/]*BLN|BLN)\s*[:.]?/i, '').trim();
+      if (!val || val === ':' || val === '-' || val.length < 2) {
+        if (i + 1 < lines.length && !/IDPEL|NAMA|RP|TAG|ADMIN|TOTAL|METER|REF/i.test(lines[i + 1])) {
+          val = lines[i + 1].trim();
+        }
+      }
+      if (val) {
+        const cleaned = cleanBlnThn(val);
+        if (cleaned) {
+          // If cleaned matches month + year or month name
+          const mMatch = cleaned.match(/\b(JAN|FEB|MAR|APR|MEI|JUN|JUL|AGU|SEP|OKT|NOV|DES)\b/i);
+          if (mMatch) return cleaned;
+        }
+      }
+    }
+  }
+
+  // Strategy 2: Look for Month Name + Year anywhere in text (e.g. "OKT 2026", "OKTOBER 2026")
+  const monthYearRegex = /\b(JAN(?:UARI)?|FEB(?:RUARI)?|MAR(?:ET)?|APR(?:IL)?|MEI|JUN(?:I)?|JUL(?:I)?|AGU(?:STUS)?|SEP(?:TEMBER)?|OKT(?:OBER)?|NOV(?:EMBER)?|DES(?:EMBER)?)\b[\s/.\-]*([0-9OIlSBZ]{2,4})\b/i;
+  const match = text.match(monthYearRegex);
+  if (match) {
+    const rawMonth = match[1].toUpperCase().replace(/0KT/g, 'OKT').replace(/N0V/g, 'NOV').replace(/D3S/g, 'DES');
+    const shortMonth = monthMap[rawMonth] || rawMonth.substring(0, 3);
+    const rawYear = match[2].replace(/[Oo]/g, '0').replace(/[Il|]/g, '1');
+    const year = rawYear.length === 2 ? `20${rawYear}` : rawYear;
+    return `${shortMonth} ${year}`;
+  }
+
+  // Strategy 3: Numeric month/year e.g. "10/2026" or "10-2026"
+  const numMonthYearRegex = /\b(0?[1-9]|1[0-2])[\s/.\-](20[2-3][0-9]|[2-3][0-9])\b/;
+  const numMatch = text.match(numMonthYearRegex);
+  if (numMatch) {
+    const monthNum = parseInt(numMatch[1], 10);
+    const months = ['', 'JAN', 'FEB', 'MAR', 'APR', 'MEI', 'JUN', 'JUL', 'AGU', 'SEP', 'OKT', 'NOV', 'DES'];
+    const mStr = months[monthNum] || 'OKT';
+    const yStr = numMatch[2].length === 2 ? `20${numMatch[2]}` : numMatch[2];
+    return `${mStr} ${yStr}`;
+  }
+
+  return '';
+}
+
+/**
  * Extracts and normalizes Tarif & Daya strictly matching what is in the uploaded photo.
  * Guarantees zero substitution: if photo has R1M / 1300 VA, keeps R1M / 1300 VA.
  */
@@ -1137,9 +1205,14 @@ export function parseReceiptFromOcr(ocrText: string): Partial<ReceiptData> {
   }
 
   // 6. Bln / Thn (Periode)
-  const blnThnMatch = text.match(/(?:BLN[\s/]*THN|BULAN[\s/]*TAHUN|PERIODE)\s*[:.]?\s*([A-Za-z0-9\s\/\-]+)/i);
-  if (blnThnMatch && blnThnMatch[1]) {
-    parsed.blnThn = cleanBlnThn(blnThnMatch[1].trim().split('\n')[0].substring(0, 15));
+  const scannedBlnThn = extractBlnThnFromText(text, lines);
+  if (scannedBlnThn) {
+    parsed.blnThn = scannedBlnThn;
+  } else {
+    const blnThnMatch = text.match(/(?:BLN[\s/]*THN|BULAN[\s/]*TAHUN|PERIODE)\s*[:.]?\s*([A-Za-z0-9\s\/\-]+)/i);
+    if (blnThnMatch && blnThnMatch[1]) {
+      parsed.blnThn = cleanBlnThn(blnThnMatch[1].trim().split('\n')[0].substring(0, 15));
+    }
   }
 
   // 6b. Periode Khusus BPJS

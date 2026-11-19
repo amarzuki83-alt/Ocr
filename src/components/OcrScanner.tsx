@@ -188,13 +188,6 @@ export const OcrScanner: React.FC<OcrScannerProps> = ({
           </button>
           <button
             type="button"
-            onClick={() => onLoadPreset(SAMPLE_PRESETS.plnPrepaid)}
-            className="px-2.5 py-1 text-xs font-medium rounded-lg bg-slate-700 hover:bg-slate-600 text-amber-300 border border-slate-600 transition active:scale-95"
-          >
-            Token Listrik
-          </button>
-          <button
-            type="button"
             onClick={() => onLoadPreset(SAMPLE_PRESETS.bpjs)}
             className="px-2.5 py-1 text-xs font-medium rounded-lg bg-slate-700 hover:bg-slate-600 text-emerald-300 border border-slate-600 transition active:scale-95"
           >

@@ -22,7 +22,6 @@ import { SAMPLE_PRESETS, generateRandomNumericRef } from './utils/ocrParser';
 import { generatePlainTextReceipt } from './utils/escpos';
 import { getSharedImageFromIdb } from './utils/sharedImageHandler';
 import { ThermalReceipt } from './components/ThermalReceipt';
-import { ReceiptEditor } from './components/ReceiptEditor';
 import { OcrScanner } from './components/OcrScanner';
 import { BluetoothModal } from './components/BluetoothModal';
 import { DeploymentGuideModal } from './components/DeploymentGuideModal';
@@ -34,7 +33,6 @@ export default function App() {
   const [receiptData, setReceiptData] = useState<ReceiptData>(SAMPLE_PRESETS.plnPostpaid);
   const [paperSize, setPaperSize] = useState<PaperSize>('58mm');
   const [autoCalculate, setAutoCalculate] = useState<boolean>(true);
-  const [activeTab, setActiveTab] = useState<'editor' | 'scanner'>('scanner');
   const [isCopied, setIsCopied] = useState<boolean>(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [incomingSharedFile, setIncomingSharedFile] = useState<File | null>(null);
@@ -68,7 +66,6 @@ export default function App() {
       const sharedFile = await getSharedImageFromIdb();
       if (sharedFile) {
         setIncomingSharedFile(sharedFile);
-        setActiveTab('scanner');
         showToast('Foto diterima dari Menu Bagikan Galeri HP! Memulai pemindaian OCR...');
         if (window.location.search.includes('shared=')) {
           window.history.replaceState({}, document.title, window.location.pathname);
@@ -169,8 +166,7 @@ export default function App() {
         extraFields: cleanExtra,
       };
     });
-    setActiveTab('editor');
-    showToast('Teks struk berhasil dipindai dan dipetakan ke formulir!');
+    showToast('Teks struk berhasil dipindai dan dirender ke preview struk!');
   };
 
   // Load sample preset
@@ -294,54 +290,16 @@ export default function App() {
 
       {/* Main App Container */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 w-full flex-1">
-        {/* Mobile View Switcher (OCR Scan vs Editor) */}
-        <div className="no-print lg:hidden flex bg-slate-900 p-1 rounded-xl border border-slate-800 mb-5">
-          <button
-            type="button"
-            onClick={() => setActiveTab('scanner')}
-            className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-semibold rounded-lg transition ${
-              activeTab === 'scanner' ? 'bg-cyan-600 text-white shadow' : 'text-slate-400'
-            }`}
-          >
-            <ScanLine className="w-4 h-4" />
-            <span>1. Scan Gambar OCR</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('editor')}
-            className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-semibold rounded-lg transition ${
-              activeTab === 'editor' ? 'bg-cyan-600 text-white shadow' : 'text-slate-400'
-            }`}
-          >
-            <FileText className="w-4 h-4" />
-            <span>2. Form Data Struk</span>
-          </button>
-        </div>
-
         {/* 2-Column Responsive Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-          {/* Left Column: Input, OCR, and Field Editor (7 cols) */}
+          {/* Left Column: OCR Scanner & Upload (7 cols) */}
           <div className="no-print lg:col-span-7 space-y-6">
-            {/* OCR Scanner Section */}
-            <div className={activeTab === 'scanner' ? 'block' : 'hidden lg:block'}>
-              <OcrScanner
-                onScanComplete={handleOcrScanComplete}
-                onLoadPreset={handleLoadPreset}
-                incomingFile={incomingSharedFile}
-                onClearIncomingFile={() => setIncomingSharedFile(null)}
-              />
-            </div>
-
-            {/* Interactive Form Editor Section */}
-            <div className={activeTab === 'editor' ? 'block' : 'hidden lg:block'}>
-              <ReceiptEditor
-                data={receiptData}
-                onChange={setReceiptData}
-                autoCalculate={autoCalculate}
-                onToggleAutoCalculate={setAutoCalculate}
-                onReset={handleResetForm}
-              />
-            </div>
+            <OcrScanner
+              onScanComplete={handleOcrScanComplete}
+              onLoadPreset={handleLoadPreset}
+              incomingFile={incomingSharedFile}
+              onClearIncomingFile={() => setIncomingSharedFile(null)}
+            />
           </div>
 
           {/* Right Column: Live Visual Thermal Receipt Preview (5 cols) */}

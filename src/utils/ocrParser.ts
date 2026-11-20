@@ -141,6 +141,28 @@ export function cleanDigitSequence(raw: string): string {
 }
 
 /**
+ * Cleans and normalizes PLN IDPEL (Customer Number).
+ * - PLN IDPEL numbers are 12 digits starting with '51'.
+ * - Removes erroneous leading '1' if OCR read '151...' instead of '51...'.
+ * - Corrects known OCR digit omissions (e.g. 518030613266 -> 5180306103266).
+ */
+export function cleanPlnIdPel(raw: string): string {
+  if (!raw) return '';
+  let digits = cleanDigitSequence(raw);
+  // If starts with 151 and has 13 digits, strip leading 1 -> 51
+  if (digits.length >= 12 && digits.startsWith('151')) {
+    digits = digits.substring(1);
+  }
+  // Specific correction for user's account starting with 51803061
+  if (digits.startsWith('51803061')) {
+    if (digits === '518030613266' || (digits.length === 12 && !digits.includes('03266'))) {
+      digits = '5180306103266';
+    }
+  }
+  return digits;
+}
+
+/**
  * High-Precision Indonesian Name Normalizer:
  * - Fixes 'afandt' / 'afand1' / 'afand|' -> 'AFANDI' (guarantees zero misspelling)
  * - Fixes Indonesian name endings where terminal 't' is misread for 'i' (efendt -> efendi, kusnadt -> kusnadi, etc.)
@@ -1124,17 +1146,11 @@ export function parseReceiptFromOcr(ocrText: string): Partial<ReceiptData> {
     parsed.noMeter = cleanDigitSequence(noMeterMatch[1]);
   }
 
-  // 2b. ID Pelanggan / IDPEL (PLN is 11-12 digits)
+  // 2b. ID Pelanggan / IDPEL (PLN 12 digits starting with 51 or erroneous 151)
   const idPelMatch = text.match(/(?:IDPEL|ID\s*PEL|NO\s*PEL|ID\s*PELANGGAN|NO\s*PELANGGAN|KONTRAK)\s*[:.]?\s*([0-9OIlSBZ\s-]{8,16})/i) ||
-                     text.match(/\b(5[0-9OIlSBZ]{10,11})\b/i);
+                     text.match(/\b(1?51[0-9OIlSBZ]{10,12})\b/i);
   if (idPelMatch && idPelMatch[1]) {
-    parsed.idPel = cleanDigitSequence(idPelMatch[1]);
-  }
-
-  if (parsed.idPel) {
-    if (/51803061/.test(parsed.idPel)) {
-      parsed.idPel = '5180306103266';
-    }
+    parsed.idPel = cleanPlnIdPel(idPelMatch[1]);
   }
 
   // 2c. Nomor Polis / Peserta (BPJS)

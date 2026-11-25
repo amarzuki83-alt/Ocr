@@ -325,6 +325,7 @@ export default function App() {
               onCopyText={handleCopyReceiptText}
               isCopied={isCopied}
               onToast={showToast}
+              onUpdateData={setReceiptData}
             />
 
             {/* Quick Actions under Preview */}

@@ -11,7 +11,8 @@ import {
   Share2, 
   Send, 
   X,
-  Phone
+  Phone,
+  Edit2
 } from 'lucide-react';
 
 interface ThermalReceiptProps {
@@ -22,6 +23,7 @@ interface ThermalReceiptProps {
   onCopyText: () => void;
   isCopied: boolean;
   onToast?: (msg: string) => void;
+  onUpdateData?: (updated: ReceiptData) => void;
 }
 
 export const ThermalReceipt: React.FC<ThermalReceiptProps> = ({
@@ -32,11 +34,52 @@ export const ThermalReceipt: React.FC<ThermalReceiptProps> = ({
   onCopyText,
   isCopied,
   onToast,
+  onUpdateData,
 }) => {
   const receiptRef = useRef<HTMLDivElement>(null);
   const [isSharingWa, setIsSharingWa] = useState(false);
   const [showWaModal, setShowWaModal] = useState(false);
   const [customerPhone, setCustomerPhone] = useState('');
+  const [editingField, setEditingField] = useState<{ key: keyof ReceiptData; label: string; value: any } | null>(null);
+
+  const handleSaveField = (val: string) => {
+    if (!editingField || !onUpdateData) return;
+    const updated = { ...data };
+    if (editingField.key === 'tagihan' || editingField.key === 'adminBank') {
+      const num = parseInt(val.replace(/[^0-9]/g, ''), 10) || 0;
+      (updated as any)[editingField.key] = num;
+      const tag = editingField.key === 'tagihan' ? num : (data.tagihan || 0);
+      const adm = editingField.key === 'adminBank' ? num : (data.adminBank || 5000);
+      updated.totalBayar = tag + adm;
+    } else {
+      (updated as any)[editingField.key] = val;
+    }
+    onUpdateData(updated);
+    setEditingField(null);
+    if (onToast) onToast(`Field "${editingField.label}" berhasil diperbarui!`);
+  };
+
+  const renderEditableRow = (key: keyof ReceiptData, label: string, value: any, boldValue = false, uppercase = false) => {
+    if (value === undefined || value === null) return null;
+    return (
+      <div
+        onClick={() => onUpdateData && setEditingField({ key, label, value: String(value) })}
+        className={`grid ${is58 ? 'grid-cols-[74px_10px_1fr]' : 'grid-cols-[98px_12px_1fr]'} items-baseline ${onUpdateData ? 'cursor-pointer hover:bg-cyan-100/70 rounded px-1 -mx-1 transition group relative' : ''}`}
+        title={onUpdateData ? `Klik untuk mengedit ${label}` : undefined}
+      >
+        <span className="text-slate-700 font-semibold">{label}</span>
+        <span className="text-slate-900 font-bold text-center">:</span>
+        <span className={`text-slate-950 text-left flex items-center justify-between ${boldValue ? 'font-bold' : ''} ${uppercase ? 'uppercase' : ''}`}>
+          <span className="truncate">{String(value)}</span>
+          {onUpdateData && (
+            <span className="opacity-0 group-hover:opacity-100 text-[10px] bg-cyan-600 text-white px-1.5 py-0.5 rounded flex items-center gap-0.5 shadow-xs shrink-0 ml-1">
+              <Edit2 className="w-2.5 h-2.5" /> Edit
+            </span>
+          )}
+        </span>
+      </div>
+    );
+  };
 
   // Download thermal receipt as high-res PNG
   const handleDownloadImage = () => {

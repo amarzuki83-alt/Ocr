@@ -153,12 +153,6 @@ export function cleanPlnIdPel(raw: string): string {
   if (digits.length >= 12 && digits.startsWith('151')) {
     digits = digits.substring(1);
   }
-  // Specific correction for user's account starting with 51803061
-  if (digits.startsWith('51803061')) {
-    if (digits === '518030613266' || (digits.length === 12 && !digits.includes('03266'))) {
-      digits = '5180306103266';
-    }
-  }
   return digits;
 }
 
@@ -1413,7 +1407,7 @@ export const SAMPLE_PRESETS: Record<string, ReceiptData> = {
     alamat: 'Jl. Raya Bapuhbandung Glagah',
     headerTitle: 'STRUK PEMBAYARAN TAGIHAN LISTRIK',
     subHeader: '',
-    idPel: '5180306103266',
+    idPel: '518030613266',
     noMeter: '',
     nama: 'ARSAN',
     tarifDaya: 'R1M / 900 VA',

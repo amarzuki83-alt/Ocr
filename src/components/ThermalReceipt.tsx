@@ -365,7 +365,7 @@ export const ThermalReceipt: React.FC<ThermalReceiptProps> = ({
 
                 {data.idPel && (
                   <div className={`grid ${is58 ? 'grid-cols-[74px_10px_1fr]' : 'grid-cols-[98px_12px_1fr]'} items-baseline`}>
-                    <span className="text-slate-700 font-semibold">{isToken ? 'IDPEL' : 'NO PELANGGAN'}</span>
+                    <span className="text-slate-700 font-semibold">IDPEL</span>
                     <span className="text-slate-900 font-bold text-center">:</span>
                     <span className="text-slate-950 font-bold tracking-wider text-left">{data.idPel}</span>
                   </div>

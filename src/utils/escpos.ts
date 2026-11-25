@@ -283,7 +283,7 @@ export function generatePlainTextReceipt(data: ReceiptData, paperSize: PaperSize
     if (isToken || data.noMeter) {
       lines.push(formatTwoColumns('NO METER', data.noMeter || '-', width));
     }
-    if (data.idPel) lines.push(formatTwoColumns(isToken ? 'IDPEL' : 'NO PELANGGAN', data.idPel, width));
+    if (data.idPel) lines.push(formatTwoColumns('IDPEL', data.idPel, width));
     if (data.nama) lines.push(formatTwoColumns('NAMA', data.nama, width));
     if (data.tarifDaya) lines.push(formatTwoColumns('TARIF/DAYA', data.tarifDaya, width));
 
